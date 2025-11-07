@@ -53,6 +53,7 @@ class Database {
         user_id UUID REFERENCES users(id) ON DELETE CASCADE,
         name VARCHAR(255) NOT NULL,
         status VARCHAR(50) DEFAULT 'active',
+        analysis_result JSONB,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )

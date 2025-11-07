@@ -8,6 +8,8 @@ class FunctionExecutor {
 
   FunctionExecutor(this.functionId);
 
+  /// Execute function with HTTP request structure
+  /// Input should contain 'body' and 'query' fields
   Future<Map<String, dynamic>> execute(Map<String, dynamic> input) async {
     final functionDir = path.join(Config.functionsDir, functionId);
     final functionDirObj = Directory(functionDir);
@@ -21,9 +23,26 @@ class FunctionExecutor {
     }
 
     try {
-      // Create a temporary file with the input data
+      // Validate input structure - must have body and query
+      if (!input.containsKey('body') && !input.containsKey('query')) {
+        return {
+          'success': false,
+          'error': 'Invalid input: must contain "body" or "query" fields',
+          'result': null,
+        };
+      }
+
+      // Prepare HTTP-like request structure
+      final httpRequest = {
+        'body': input['body'] ?? {},
+        'query': input['query'] ?? {},
+        'headers': input['headers'] ?? {},
+        'method': input['method'] ?? 'POST',
+      };
+
+      // Create a temporary file with the HTTP request data
       final tempInputFile = File(path.join(functionDir, '.input.json'));
-      await tempInputFile.writeAsString(jsonEncode(input));
+      await tempInputFile.writeAsString(jsonEncode(httpRequest));
 
       // Execute the Dart function
       // Look for main.dart or bin/main.dart
@@ -43,12 +62,19 @@ class FunctionExecutor {
         };
       }
 
-      // Run the function with a timeout
+      // Run the function with a timeout and HTTP request environment
       final process = await Process.start(
         'dart',
         ['run', mainFile],
         workingDirectory: functionDir,
-        environment: {'FUNCTION_INPUT': jsonEncode(input)},
+        environment: {
+          'FUNCTION_INPUT': jsonEncode(httpRequest),
+          'HTTP_BODY': jsonEncode(httpRequest['body']),
+          'HTTP_QUERY': jsonEncode(httpRequest['query']),
+          'HTTP_METHOD': httpRequest['method'] as String,
+          // Restrict dangerous operations
+          'DART_CLOUD_RESTRICTED': 'true',
+        },
       );
 
       final stdout = <String>[];
