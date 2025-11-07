@@ -1,0 +1,10 @@
+# Cloudflare Configuration
+cloudflare_api_token = "your-cloudflare-api-token"
+cloudflare_zone_id   = "your-zone-id"
+domain_name          = "example.com"
+
+# VPS Configuration
+vps_ip_address = "123.456.789.0"
+
+# Backend Configuration
+backend_subdomain = "api"

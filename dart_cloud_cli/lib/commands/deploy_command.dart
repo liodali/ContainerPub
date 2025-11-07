@@ -1,0 +1,70 @@
+import 'dart:io';
+import 'package:archive/archive_io.dart';
+import 'package:path/path.dart' as path;
+import 'package:dart_cloud_cli/api/api_client.dart';
+import 'package:dart_cloud_cli/config/config.dart';
+
+class DeployCommand {
+  Future<void> execute(List<String> args) async {
+    await Config.load();
+
+    if (!Config.isAuthenticated) {
+      print('Error: Not authenticated. Please run "dart_cloud login" first.');
+      exit(1);
+    }
+
+    if (args.isEmpty) {
+      print('Error: Please specify the function directory path');
+      print('Usage: dart_cloud deploy <path>');
+      exit(1);
+    }
+
+    final functionPath = args[0];
+    final functionDir = Directory(functionPath);
+
+    if (!functionDir.existsSync()) {
+      print('Error: Directory not found: $functionPath');
+      exit(1);
+    }
+
+    // Validate function structure
+    final pubspecFile = File(path.join(functionDir.path, 'pubspec.yaml'));
+    if (!pubspecFile.existsSync()) {
+      print('Error: pubspec.yaml not found in function directory');
+      exit(1);
+    }
+
+    final functionName = path.basename(functionDir.absolute.path);
+    print('Preparing to deploy function: $functionName');
+
+    try {
+      // Create archive
+      print('Creating archive...');
+      final tempDir = Directory.systemTemp.createTempSync('dart_cloud_');
+      final archivePath = path.join(tempDir.path, '$functionName.tar.gz');
+      
+      final encoder = TarFileEncoder();
+      encoder.create(archivePath);
+      encoder.addDirectory(functionDir);
+      encoder.close();
+
+      final archiveFile = File(archivePath);
+      print('Archive created: ${(archiveFile.lengthSync() / 1024).toStringAsFixed(2)} KB');
+
+      // Deploy
+      print('Deploying function...');
+      final response = await ApiClient.deployFunction(archiveFile, functionName);
+
+      print('✓ Function deployed successfully!');
+      print('  Function ID: ${response['id']}');
+      print('  Name: ${response['name']}');
+      print('  Endpoint: ${Config.serverUrl}/api/functions/${response['id']}/invoke');
+
+      // Cleanup
+      tempDir.deleteSync(recursive: true);
+    } catch (e) {
+      print('✗ Deployment failed: $e');
+      exit(1);
+    }
+  }
+}

@@ -1,0 +1,29 @@
+# Dart
+.dart_tool/
+.packages
+build/
+pubspec.lock
+
+# IDE
+.idea/
+.vscode/
+*.iml
+*.swp
+*.swo
+*~
+
+# Environment
+.env
+
+# Functions storage
+functions/
+
+# Logs
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Config
+dart_cloud_cli/.dart_cloud/

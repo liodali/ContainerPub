@@ -1,0 +1,7 @@
+name: data_processor
+description: A function that processes numerical data
+version: 1.0.0
+publish_to: none
+
+environment:
+  sdk: ^3.0.0
