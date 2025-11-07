@@ -130,9 +130,12 @@ ContainerPub is a Dart-based serverless platform that allows developers to deplo
 
 ### Function Isolation
 - Each function runs in a separate process
-- 30-second execution timeout
+- Configurable execution timeout (default: 5 seconds)
+- Memory limits enforced (default: 128 MB)
+- Concurrent execution limits (default: 10)
 - Environment variable-based input (no direct stdin)
-- Process killed on timeout
+- Process killed on timeout (SIGKILL)
+- Database connection pooling with timeout protection
 
 ## Database Schema
 
@@ -236,7 +239,9 @@ CLI (local)
 
 ### Backend Configuration
 - Environment variables via `.env` file
-- Supports: PORT, DATABASE_URL, JWT_SECRET, FUNCTIONS_DIR
+- Core settings: PORT, DATABASE_URL, JWT_SECRET, FUNCTIONS_DIR
+- Function execution limits: FUNCTION_TIMEOUT_SECONDS, FUNCTION_MAX_MEMORY_MB, FUNCTION_MAX_CONCURRENT
+- Database access: FUNCTION_DATABASE_URL, FUNCTION_DB_MAX_CONNECTIONS, FUNCTION_DB_TIMEOUT_MS
 - Defaults provided for development
 
 ## Error Handling

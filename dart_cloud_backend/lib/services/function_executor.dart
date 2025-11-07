@@ -5,6 +5,7 @@ import 'package:dart_cloud_backend/config/config.dart';
 
 class FunctionExecutor {
   final String functionId;
+  static int _activeExecutions = 0;
 
   FunctionExecutor(this.functionId);
 
@@ -32,6 +33,31 @@ class FunctionExecutor {
         };
       }
 
+      // Check concurrent execution limit
+      if (_activeExecutions >= Config.functionMaxConcurrentExecutions) {
+        return {
+          'success': false,
+          'error': 'Function execution limit reached. Try again later.',
+          'result': null,
+        };
+      }
+      
+      _activeExecutions++;
+      
+      try {
+        return await _executeFunction(input);
+      } finally {
+        _activeExecutions--;
+      }
+    } catch (e) {
+      return {'success': false, 'error': 'Execution error: $e', 'result': null};
+    }
+  }
+  
+  Future<Map<String, dynamic>> _executeFunction(Map<String, dynamic> input) async {
+    final functionDir = path.join(Config.functionsDir, functionId);
+    
+    try {
       // Prepare HTTP-like request structure
       final httpRequest = {
         'body': input['body'] ?? {},
@@ -62,19 +88,32 @@ class FunctionExecutor {
         };
       }
 
+      // Prepare environment with database access if configured
+      final environment = {
+        'FUNCTION_INPUT': jsonEncode(httpRequest),
+        'HTTP_BODY': jsonEncode(httpRequest['body']),
+        'HTTP_QUERY': jsonEncode(httpRequest['query']),
+        'HTTP_METHOD': httpRequest['method'] as String,
+        // Restrict dangerous operations
+        'DART_CLOUD_RESTRICTED': 'true',
+        // Resource limits
+        'FUNCTION_TIMEOUT_MS': (Config.functionTimeoutSeconds * 1000).toString(),
+        'FUNCTION_MAX_MEMORY_MB': Config.functionMaxMemoryMb.toString(),
+      };
+      
+      // Add database connection if configured
+      if (Config.functionDatabaseUrl != null) {
+        environment['DATABASE_URL'] = Config.functionDatabaseUrl!;
+        environment['DB_MAX_CONNECTIONS'] = Config.functionDatabaseMaxConnections.toString();
+        environment['DB_TIMEOUT_MS'] = Config.functionDatabaseConnectionTimeoutMs.toString();
+      }
+      
       // Run the function with a timeout and HTTP request environment
       final process = await Process.start(
         'dart',
         ['run', mainFile],
         workingDirectory: functionDir,
-        environment: {
-          'FUNCTION_INPUT': jsonEncode(httpRequest),
-          'HTTP_BODY': jsonEncode(httpRequest['body']),
-          'HTTP_QUERY': jsonEncode(httpRequest['query']),
-          'HTTP_METHOD': httpRequest['method'] as String,
-          // Restrict dangerous operations
-          'DART_CLOUD_RESTRICTED': 'true',
-        },
+        environment: environment,
       );
 
       final stdout = <String>[];
@@ -88,11 +127,11 @@ class FunctionExecutor {
         stderr.add(data);
       });
 
-      // Wait for process with timeout
+      // Wait for process with configurable timeout
       final exitCode = await process.exitCode.timeout(
-        const Duration(seconds: 30),
+        Duration(seconds: Config.functionTimeoutSeconds),
         onTimeout: () {
-          process.kill();
+          process.kill(ProcessSignal.sigkill);
           return -1;
         },
       );
@@ -105,7 +144,7 @@ class FunctionExecutor {
       if (exitCode == -1) {
         return {
           'success': false,
-          'error': 'Function execution timed out (30s)',
+          'error': 'Function execution timed out (${Config.functionTimeoutSeconds}s)',
           'result': null,
         };
       }
@@ -133,4 +172,7 @@ class FunctionExecutor {
       return {'success': false, 'error': 'Execution error: $e', 'result': null};
     }
   }
+  
+  /// Get current active executions count
+  static int get activeExecutions => _activeExecutions;
 }

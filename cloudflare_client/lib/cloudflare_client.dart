@@ -135,7 +135,6 @@ class CloudflareClient {
   /// Get a specific DNS record by ID
   Future<Map<String, dynamic>> getDNSRecord(String recordId) async {
     final url = Uri.parse('$baseUrl/zones/$zoneId/dns_records/$recordId');
-
     final response = await http.get(url, headers: _headers);
     final data = jsonDecode(response.body) as Map<String, dynamic>;
 

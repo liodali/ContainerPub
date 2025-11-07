@@ -1,0 +1,17 @@
+# Example variables file for local Podman deployment
+# Copy this file to variables.tfvars and customize as needed
+
+# Podman socket path
+# macOS: unix:///var/run/podman/podman.sock
+# Linux: unix:///run/podman/podman.sock
+podman_socket_path = "unix:///var/run/podman/podman.sock"
+
+# PostgreSQL configuration
+postgres_user     = "dart_cloud"
+postgres_password = "dev_password"
+postgres_db       = "dart_cloud"
+postgres_port     = 5432
+
+# Backend configuration
+backend_port = 8080
+jwt_secret   = "local-dev-secret-change-in-production"

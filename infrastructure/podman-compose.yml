@@ -1,0 +1,82 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: docker.io/library/postgres:15
+    container_name: containerpub-postgres
+    environment:
+      POSTGRES_USER: dart_cloud
+      POSTGRES_PASSWORD: dev_password
+      POSTGRES_DB: dart_cloud
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U dart_cloud"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - containerpub-network
+    restart: unless-stopped
+    labels:
+      app: containerpub
+      component: database
+      environment: local
+
+  backend:
+    build:
+      context: ..
+      dockerfile: infrastructure/Dockerfile.backend
+    container_name: containerpub-backend
+    image: containerpub-backend:latest
+    environment:
+      PORT: 8080
+      DATABASE_URL: postgres://dart_cloud:dev_password@postgres:5432/dart_cloud
+      FUNCTION_DATABASE_URL: postgres://dart_cloud:dev_password@postgres:5432/functions_db
+      JWT_SECRET: local-dev-secret-change-in-production
+      FUNCTIONS_DIR: /app/functions
+      FUNCTION_TIMEOUT_SECONDS: 5
+      FUNCTION_MAX_MEMORY_MB: 128
+      FUNCTION_MAX_CONCURRENT: 10
+      FUNCTION_DB_MAX_CONNECTIONS: 5
+      FUNCTION_DB_TIMEOUT_MS: 5000
+    ports:
+      - "8080:8080"
+    volumes:
+      - functions-data:/app/functions
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - containerpub-network
+    restart: unless-stopped
+    labels:
+      app: containerpub
+      component: backend
+      environment: local
+
+networks:
+  containerpub-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 10.89.0.0/24
+          gateway: 10.89.0.1
+
+volumes:
+  postgres-data:
+    labels:
+      app: containerpub
+      component: database
+  functions-data:
+    labels:
+      app: containerpub
+      component: functions
