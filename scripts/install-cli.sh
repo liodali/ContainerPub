@@ -17,6 +17,8 @@ PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 CLI_DIR="$PROJECT_ROOT/dart_cloud_cli"
 INSTALL_DIR="${HOME}/.local/bin"
 BINARY_NAME="dart_cloud"
+GITHUB_REPO="liodali/ContainerPub"  # Change to your GitHub username/repo
+LATEST_RELEASE_URL="https://api.github.com/repos/${GITHUB_REPO}/releases/latest"
 
 # Functions
 print_info() {
@@ -51,31 +53,176 @@ OPTIONS:
     -h, --help              Show this help message
     -u, --uninstall         Uninstall the CLI
     --dev                   Install in development mode (uses dart run)
+    --from-release          Download pre-built binary from GitHub releases
+    --version <version>     Specify version to install (default: latest)
     --path <path>           Custom installation directory (default: ~/.local/bin)
 
 EXAMPLES:
-    $0                      # Install CLI globally
+    $0                      # Compile and install from source
+    $0 --from-release       # Download pre-built binary
     $0 --uninstall          # Uninstall CLI
     $0 --path /usr/local/bin  # Install to custom directory
+    $0 --from-release --version v1.0.0  # Install specific version
 
 EOF
+}
+
+detect_platform() {
+    local os=$(uname -s | tr '[:upper:]' '[:lower:]')
+    local arch=$(uname -m)
+    
+    case "$os" in
+        linux*)
+            PLATFORM="linux"
+            BINARY_SUFFIX=""
+            ;;
+        darwin*)
+            PLATFORM="macos"
+            BINARY_SUFFIX=""
+            case "$arch" in
+                arm64|aarch64)
+                    ARCH="arm64"
+                    ;;
+                *)
+                    ARCH="x64"
+                    ;;
+            esac
+            ;;
+        msys*|mingw*|cygwin*)
+            PLATFORM="windows"
+            BINARY_SUFFIX=".exe"
+            ARCH="x64"
+            ;;
+        *)
+            print_error "Unsupported operating system: $os"
+            exit 1
+            ;;
+    esac
+    
+    if [ -z "$ARCH" ]; then
+        case "$arch" in
+            x86_64|amd64)
+                ARCH="x64"
+                ;;
+            aarch64|arm64)
+                ARCH="arm64"
+                ;;
+            *)
+                print_error "Unsupported architecture: $arch"
+                exit 1
+                ;;
+        esac
+    fi
+    
+    BINARY_NAME_PLATFORM="${BINARY_NAME}-${PLATFORM}-${ARCH}${BINARY_SUFFIX}"
 }
 
 check_dependencies() {
     print_header "Checking Dependencies"
     
-    if ! command -v dart &> /dev/null; then
-        print_error "Dart SDK is not installed"
+    if [ "$FROM_RELEASE" = true ]; then
+        # Only need curl for downloading releases
+        if ! command -v curl &> /dev/null; then
+            print_error "curl is not installed (required for downloading releases)"
+            exit 1
+        fi
+        print_success "curl found"
+    else
+        # Need Dart SDK for compiling from source
+        if ! command -v dart &> /dev/null; then
+            print_error "Dart SDK is not installed"
+            echo ""
+            echo "Install Dart SDK:"
+            echo "  macOS:   brew install dart-sdk"
+            echo "  Linux:   https://dart.dev/get-dart"
+            echo "  Windows: https://dart.dev/get-dart"
+            echo ""
+            echo "Or use --from-release to download pre-built binary"
+            exit 1
+        fi
+        
+        local dart_version=$(dart --version 2>&1 | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1)
+        print_success "Dart SDK found (version $dart_version)"
+    fi
+}
+
+download_from_release() {
+    print_header "Downloading CLI from GitHub Releases"
+    
+    detect_platform
+    
+    print_info "Platform: $PLATFORM-$ARCH"
+    print_info "Binary: $BINARY_NAME_PLATFORM"
+    
+    # Determine version to download
+    if [ -z "$VERSION" ]; then
+        print_info "Fetching latest release..."
+        VERSION=$(curl -s "$LATEST_RELEASE_URL" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')
+        
+        if [ -z "$VERSION" ]; then
+            print_error "Failed to fetch latest release version"
+            echo ""
+            echo "You can specify a version manually:"
+            echo "  $0 --from-release --version v1.0.0"
+            exit 1
+        fi
+        
+        print_success "Latest version: $VERSION"
+    else
+        print_info "Using specified version: $VERSION"
+    fi
+    
+    # Construct download URL
+    DOWNLOAD_URL="https://github.com/${GITHUB_REPO}/releases/download/${VERSION}/${BINARY_NAME_PLATFORM}"
+    CHECKSUM_URL="${DOWNLOAD_URL}.sha256"
+    
+    print_info "Downloading from: $DOWNLOAD_URL"
+    
+    # Create temp directory
+    TEMP_DIR=$(mktemp -d)
+    cd "$TEMP_DIR"
+    
+    # Download binary
+    if ! curl -L -f -o "$BINARY_NAME" "$DOWNLOAD_URL"; then
+        print_error "Failed to download binary"
         echo ""
-        echo "Install Dart SDK:"
-        echo "  macOS:   brew install dart-sdk"
-        echo "  Linux:   https://dart.dev/get-dart"
-        echo "  Windows: https://dart.dev/get-dart"
+        echo "URL: $DOWNLOAD_URL"
+        echo ""
+        echo "Available platforms:"
+        echo "  - dart_cloud-linux-x64"
+        echo "  - dart_cloud-macos-x64"
+        echo "  - dart_cloud-macos-arm64"
+        echo "  - dart_cloud-windows-x64.exe"
+        rm -rf "$TEMP_DIR"
         exit 1
     fi
     
-    local dart_version=$(dart --version 2>&1 | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1)
-    print_success "Dart SDK found (version $dart_version)"
+    print_success "Binary downloaded"
+    
+    # Download and verify checksum
+    print_info "Downloading checksum..."
+    if curl -L -f -o "${BINARY_NAME}.sha256" "$CHECKSUM_URL" 2>/dev/null; then
+        print_info "Verifying checksum..."
+        if command -v shasum &> /dev/null; then
+            if shasum -a 256 -c "${BINARY_NAME}.sha256" 2>/dev/null; then
+                print_success "Checksum verified"
+            else
+                print_warning "Checksum verification failed (continuing anyway)"
+            fi
+        else
+            print_warning "shasum not found, skipping checksum verification"
+        fi
+    else
+        print_warning "Checksum file not found, skipping verification"
+    fi
+    
+    # Make executable
+    chmod +x "$BINARY_NAME"
+    
+    # Move to CLI_DIR for installation
+    CLI_DIR="$TEMP_DIR"
+    
+    print_success "CLI downloaded successfully"
 }
 
 compile_cli() {
@@ -241,6 +388,8 @@ EOF
 # Parse arguments
 UNINSTALL=false
 DEV_MODE=false
+FROM_RELEASE=false
+VERSION=""
 
 while [[ $# -gt 0 ]]; do
     case $1 in
@@ -253,6 +402,13 @@ while [[ $# -gt 0 ]]; do
             ;;
         --dev)
             DEV_MODE=true
+            ;;
+        --from-release)
+            FROM_RELEASE=true
+            ;;
+        --version)
+            VERSION="$2"
+            shift
             ;;
         --path)
             INSTALL_DIR="$2"
@@ -280,6 +436,14 @@ main() {
     
     if [ "$DEV_MODE" = true ]; then
         install_dev_mode
+    elif [ "$FROM_RELEASE" = true ]; then
+        download_from_release
+        install_cli
+        # Clean up temp directory if used
+        if [ -n "$TEMP_DIR" ] && [ -d "$TEMP_DIR" ]; then
+            rm -rf "$TEMP_DIR"
+        fi
+        verify_installation
     else
         compile_cli
         install_cli

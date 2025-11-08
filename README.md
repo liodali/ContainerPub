@@ -36,6 +36,36 @@ ContainerPub/
 
 ## Quick Start
 
+### Installation
+
+**Automated Installation (Recommended):**
+```bash
+curl -fsSL https://raw.githubusercontent.com/liodali/ContainerPub/main/scripts/install.sh | bash
+```
+
+**Or download from releases:**
+```bash
+# Linux
+curl -L -o dart_cloud https://github.com/liodali/ContainerPub/releases/latest/download/dart_cloud-linux-x64
+chmod +x dart_cloud
+sudo mv dart_cloud /usr/local/bin/
+
+# macOS (Intel)
+curl -L -o dart_cloud https://github.com/liodali/ContainerPub/releases/latest/download/dart_cloud-macos-x64
+chmod +x dart_cloud
+sudo mv dart_cloud /usr/local/bin/
+
+# macOS (Apple Silicon)
+curl -L -o dart_cloud https://github.com/liodali/ContainerPub/releases/latest/download/dart_cloud-macos-arm64
+chmod +x dart_cloud
+sudo mv dart_cloud /usr/local/bin/
+```
+
+**Or compile from source:**
+```bash
+./scripts/install-cli.sh
+```
+
 ### CLI Usage
 
 ```bash

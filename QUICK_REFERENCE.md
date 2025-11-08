@@ -5,7 +5,12 @@
 ```bash
 make secrets      # Generate secure passwords
 make deploy       # Deploy infrastructure
-make install-cli  # Install CLI tool
+make install-cli  # Install CLI tool (compile from source)
+```
+
+**Or install pre-built CLI:**
+```bash
+curl -fsSL https://raw.githubusercontent.com/liodali/ContainerPub/main/scripts/install.sh | bash
 ```
 
 ## 🔐 Security Setup
@@ -41,11 +46,20 @@ chmod 600 .env
 ## 🛠️ CLI Installation
 
 ```bash
-# Install globally
+# One-line install (recommended)
+curl -fsSL https://raw.githubusercontent.com/liodali/ContainerPub/main/scripts/install.sh | bash
+
+# From GitHub releases
+./scripts/install-cli.sh --from-release
+
+# Compile from source
 ./scripts/install-cli.sh
 
 # Development mode
 ./scripts/install-cli.sh --dev
+
+# Specific version
+./scripts/install-cli.sh --from-release --version v1.0.0
 
 # Uninstall
 ./scripts/install-cli.sh --uninstall

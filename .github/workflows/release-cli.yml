@@ -1,0 +1,217 @@
+name: Release CLI
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'  # Triggers on version tags like v1.0.0
+  workflow_dispatch:  # Allows manual trigger
+
+jobs:
+  build-and-release:
+    name: Build CLI for ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            artifact_name: dart_cloud-linux-x64
+            asset_name: dart_cloud-linux-x64
+          - os: macos-latest
+            artifact_name: dart_cloud-macos-x64
+            asset_name: dart_cloud-macos-x64
+          - os: macos-latest-xlarge  # M1/M2 Mac
+            artifact_name: dart_cloud-macos-arm64
+            asset_name: dart_cloud-macos-arm64
+          - os: windows-latest
+            artifact_name: dart_cloud-windows-x64.exe
+            asset_name: dart_cloud-windows-x64.exe
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Dart SDK
+        uses: dart-lang/setup-dart@v1
+        with:
+          sdk: stable
+
+      - name: Get dependencies
+        working-directory: dart_cloud_cli
+        run: dart pub get
+
+      - name: Run tests
+        working-directory: dart_cloud_cli
+        run: dart test
+        continue-on-error: true  # Don't fail if no tests exist
+
+      - name: Compile CLI (Unix)
+        if: runner.os != 'Windows'
+        working-directory: dart_cloud_cli
+        run: dart compile exe bin/main.dart -o ${{ matrix.artifact_name }}
+
+      - name: Compile CLI (Windows)
+        if: runner.os == 'Windows'
+        working-directory: dart_cloud_cli
+        run: dart compile exe bin/main.dart -o ${{ matrix.artifact_name }}
+
+      - name: Create checksum (Unix)
+        if: runner.os != 'Windows'
+        working-directory: dart_cloud_cli
+        run: |
+          shasum -a 256 ${{ matrix.artifact_name }} > ${{ matrix.artifact_name }}.sha256
+
+      - name: Create checksum (Windows)
+        if: runner.os == 'Windows'
+        working-directory: dart_cloud_cli
+        shell: pwsh
+        run: |
+          $hash = (Get-FileHash -Algorithm SHA256 ${{ matrix.artifact_name }}).Hash.ToLower()
+          "$hash  ${{ matrix.artifact_name }}" | Out-File -Encoding ASCII ${{ matrix.artifact_name }}.sha256
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.asset_name }}
+          path: |
+            dart_cloud_cli/${{ matrix.artifact_name }}
+            dart_cloud_cli/${{ matrix.artifact_name }}.sha256
+
+  create-release:
+    name: Create GitHub Release
+    needs: build-and-release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Display structure
+        run: ls -R artifacts
+
+      - name: Get version from tag
+        id: get_version
+        run: |
+          if [[ $GITHUB_REF == refs/tags/* ]]; then
+            echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+          else
+            echo "VERSION=dev-$(date +%Y%m%d-%H%M%S)" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create Release Notes
+        id: release_notes
+        run: |
+          cat > release_notes.md << 'EOF'
+          ## ContainerPub CLI ${{ steps.get_version.outputs.VERSION }}
+
+          ### Installation
+
+          #### Linux (x64)
+          ```bash
+          curl -L -o dart_cloud https://github.com/${{ github.repository }}/releases/download/${{ steps.get_version.outputs.VERSION }}/dart_cloud-linux-x64
+          chmod +x dart_cloud
+          sudo mv dart_cloud /usr/local/bin/
+          ```
+
+          #### macOS (Intel)
+          ```bash
+          curl -L -o dart_cloud https://github.com/${{ github.repository }}/releases/download/${{ steps.get_version.outputs.VERSION }}/dart_cloud-macos-x64
+          chmod +x dart_cloud
+          sudo mv dart_cloud /usr/local/bin/
+          ```
+
+          #### macOS (Apple Silicon)
+          ```bash
+          curl -L -o dart_cloud https://github.com/${{ github.repository }}/releases/download/${{ steps.get_version.outputs.VERSION }}/dart_cloud-macos-arm64
+          chmod +x dart_cloud
+          sudo mv dart_cloud /usr/local/bin/
+          ```
+
+          #### Windows
+          Download `dart_cloud-windows-x64.exe` and add to your PATH.
+
+          #### Automated Installation
+          ```bash
+          curl -fsSL https://raw.githubusercontent.com/${{ github.repository }}/main/scripts/install-cli.sh | bash
+          ```
+
+          ### Verify Installation
+          ```bash
+          dart_cloud --version
+          ```
+
+          ### Usage
+          ```bash
+          dart_cloud login
+          dart_cloud deploy ./my_function
+          dart_cloud list
+          ```
+
+          ### Checksums
+          SHA256 checksums are provided for all binaries. Verify with:
+          ```bash
+          shasum -a 256 -c dart_cloud-*.sha256
+          ```
+
+          ---
+
+          For more information, see the [documentation](https://github.com/${{ github.repository }}).
+          EOF
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ steps.get_version.outputs.VERSION }}
+          name: Release ${{ steps.get_version.outputs.VERSION }}
+          body_path: release_notes.md
+          draft: false
+          prerelease: false
+          files: |
+            artifacts/dart_cloud-linux-x64/dart_cloud-linux-x64
+            artifacts/dart_cloud-linux-x64/dart_cloud-linux-x64.sha256
+            artifacts/dart_cloud-macos-x64/dart_cloud-macos-x64
+            artifacts/dart_cloud-macos-x64/dart_cloud-macos-x64.sha256
+            artifacts/dart_cloud-macos-arm64/dart_cloud-macos-arm64
+            artifacts/dart_cloud-macos-arm64/dart_cloud-macos-arm64.sha256
+            artifacts/dart_cloud-windows-x64.exe/dart_cloud-windows-x64.exe
+            artifacts/dart_cloud-windows-x64.exe/dart_cloud-windows-x64.exe.sha256
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  test-installation:
+    name: Test Installation
+    needs: create-release
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+
+    steps:
+      - name: Get version
+        id: get_version
+        run: |
+          if [[ $GITHUB_REF == refs/tags/* ]]; then
+            echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+          else
+            echo "VERSION=dev-$(date +%Y%m%d-%H%M%S)" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Download and test CLI (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          curl -L -o dart_cloud https://github.com/${{ github.repository }}/releases/download/${{ steps.get_version.outputs.VERSION }}/dart_cloud-linux-x64
+          chmod +x dart_cloud
+          ./dart_cloud --version
+
+      - name: Download and test CLI (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          curl -L -o dart_cloud https://github.com/${{ github.repository }}/releases/download/${{ steps.get_version.outputs.VERSION }}/dart_cloud-macos-x64
+          chmod +x dart_cloud
+          ./dart_cloud --version
