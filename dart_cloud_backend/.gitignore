@@ -1,0 +1,18 @@
+# Environment variables
+.env
+
+# Dart
+.dart_tool/
+.packages
+build/
+pubspec.lock
+
+# Functions directory
+functions/
+
+# Logs
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
