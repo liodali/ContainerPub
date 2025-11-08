@@ -1,5 +1,19 @@
 # Environment variables
 .env
+.env.production
+.env.*.local
+
+# SSL Certificates (NEVER commit these!)
+deploy/ssl/
+*.pem
+*.crt
+*.key
+*.csr
+
+# Backups
+deploy/backups/
+*.sql
+*.tar.gz
 
 # Dart
 .dart_tool/
@@ -12,6 +26,7 @@ functions/
 
 # Logs
 *.log
+deploy/log/
 
 # OS
 .DS_Store

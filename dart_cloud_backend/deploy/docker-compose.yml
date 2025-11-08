@@ -2,7 +2,7 @@ version: '3.8'
 
 services:
   postgres:
-    image: postgres:15-alpine
+    image: postgres:17-alpine
     container_name: dart_cloud_postgres
     restart: unless-stopped
     environment:
@@ -24,7 +24,7 @@ services:
 
   backend:
     build:
-      context: ..
+      context: ../..
       dockerfile: infrastructure/Dockerfile.backend
     container_name: dart_cloud_backend
     restart: unless-stopped

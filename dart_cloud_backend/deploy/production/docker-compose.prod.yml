@@ -1,0 +1,118 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: dart_cloud_postgres_prod
+    restart: always
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-dart_cloud}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+      POSTGRES_DB: ${POSTGRES_DB:-dart_cloud}
+      # SSL Configuration
+      POSTGRES_INITDB_ARGS: "--auth-host=scram-sha-256"
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      # Data persistence
+      - postgres_data:/var/lib/postgresql/data
+      # Database initialization
+      - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql:ro
+      # SSL Certificates
+      - ./ssl/server-cert.pem:/var/lib/postgresql/server.crt:ro
+      - ./ssl/server-key.pem:/var/lib/postgresql/server.key:ro
+      - ./ssl/ca-cert.pem:/var/lib/postgresql/root.crt:ro
+      # PostgreSQL SSL configuration
+      - ./postgresql.conf:/etc/postgresql/postgresql.conf:ro
+    command: >
+      postgres
+      -c ssl=on
+      -c ssl_cert_file=/var/lib/postgresql/server.crt
+      -c ssl_key_file=/var/lib/postgresql/server.key
+      -c ssl_ca_file=/var/lib/postgresql/root.crt
+      -c ssl_min_protocol_version=TLSv1.2
+      -c ssl_ciphers='HIGH:MEDIUM:+3DES:!aNULL'
+      -c ssl_prefer_server_ciphers=on
+      -c log_connections=on
+      -c log_disconnections=on
+    networks:
+      - dart_cloud_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-dart_cloud}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    security_opt:
+      - no-new-privileges:true
+    read_only: false
+    tmpfs:
+      - /tmp
+      - /run
+
+  backend:
+    build:
+      context: ../..
+      dockerfile: infrastructure/Dockerfile.backend
+    container_name: dart_cloud_backend_prod
+    restart: always
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      PORT: ${PORT:-8080}
+      # SSL-enabled DATABASE_URL
+      DATABASE_URL: postgres://${POSTGRES_USER:-dart_cloud}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}@postgres:5432/${POSTGRES_DB:-dart_cloud}?sslmode=verify-ca&sslcert=/app/ssl/client.crt&sslkey=/app/ssl/client.key&sslrootcert=/app/ssl/root.crt
+      FUNCTION_DATABASE_URL: postgres://${POSTGRES_USER:-dart_cloud}:${POSTGRES_PASSWORD}@postgres:5432/${FUNCTION_DB:-functions_db}?sslmode=verify-ca&sslcert=/app/ssl/client.crt&sslkey=/app/ssl/client.key&sslrootcert=/app/ssl/root.crt
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
+      FUNCTIONS_DIR: ${FUNCTIONS_DIR:-/app/functions}
+      FUNCTION_TIMEOUT_SECONDS: ${FUNCTION_TIMEOUT_SECONDS:-5}
+      FUNCTION_MAX_MEMORY_MB: ${FUNCTION_MAX_MEMORY_MB:-128}
+      FUNCTION_MAX_CONCURRENT: ${FUNCTION_MAX_CONCURRENT:-10}
+      FUNCTION_DB_MAX_CONNECTIONS: ${FUNCTION_DB_MAX_CONNECTIONS:-5}
+      FUNCTION_DB_TIMEOUT_MS: ${FUNCTION_DB_TIMEOUT_MS:-5000}
+      # Production settings
+      NODE_ENV: production
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+    ports:
+      - "${PORT:-8080}:${PORT:-8080}"
+    volumes:
+      # Functions storage
+      - functions_data:/app/functions
+      # SSL Certificates for client
+      - ./ssl/client-cert.pem:/app/ssl/client.crt:ro
+      - ./ssl/client-key.pem:/app/ssl/client.key:ro
+      - ./ssl/ca-cert.pem:/app/ssl/root.crt:ro
+    networks:
+      - dart_cloud_network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:${PORT:-8080}/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    security_opt:
+      - no-new-privileges:true
+    read_only: false
+    tmpfs:
+      - /tmp
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+
+volumes:
+  postgres_data:
+    driver: local
+  functions_data:
+    driver: local
+
+networks:
+  dart_cloud_network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.28.0.0/16
