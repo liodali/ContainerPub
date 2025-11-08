@@ -5,13 +5,13 @@ FROM dart:3.9.2 AS build
 WORKDIR /app
 
 # Copy pubspec files
-COPY ../dart_cloud_backend/pubspec.* ./
+COPY ./pubspec.* ./
 
 # Get dependencies
 RUN dart pub get
 
 # Copy source code
-COPY ../dart_cloud_backend/ ./
+COPY ./ ./
 
 # Compile to native executable for better performance
 RUN dart compile exe bin/server.dart -o bin/server
