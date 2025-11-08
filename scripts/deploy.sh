@@ -17,12 +17,34 @@ PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 INFRASTRUCTURE_DIR="$PROJECT_ROOT/infrastructure"
 BACKEND_IMAGE="containerpub-backend:latest"
 POSTGRES_IMAGE="containerpub-postgres:latest"
+ENV_FILE="$PROJECT_ROOT/.env"
 
 # Default values
 BUILD_BACKEND=true
 BUILD_POSTGRES=true
 START_CONTAINERS=true
 USE_TOFU=false
+
+# Load environment variables from .env file if it exists
+load_env() {
+    if [ -f "$ENV_FILE" ]; then
+        print_info "Loading environment variables from .env file..."
+        set -a  # automatically export all variables
+        source "$ENV_FILE"
+        set +a
+        print_success "Environment variables loaded"
+    else
+        print_warning ".env file not found at $ENV_FILE"
+        print_warning "Using default values. For production, create .env from .env.example"
+        # Set default values for development
+        export POSTGRES_USER="${POSTGRES_USER:-dart_cloud}"
+        export POSTGRES_PASSWORD="${POSTGRES_PASSWORD:-dev_password}"
+        export POSTGRES_DB="${POSTGRES_DB:-dart_cloud}"
+        export POSTGRES_PORT="${POSTGRES_PORT:-5432}"
+        export BACKEND_PORT="${BACKEND_PORT:-8080}"
+        export JWT_SECRET="${JWT_SECRET:-local-dev-secret-change-in-production}"
+    fi
+}
 
 # Functions
 print_info() {
@@ -180,11 +202,11 @@ deploy_manual() {
         --name containerpub-postgres \
         --network containerpub-network \
         --network-alias postgres \
-        -p 5432:5432 \
+        -p "${POSTGRES_PORT}:5432" \
         -v containerpub-postgres-data:/var/lib/postgresql/data \
-        -e POSTGRES_USER=dart_cloud \
-        -e POSTGRES_PASSWORD=dev_password \
-        -e POSTGRES_DB=dart_cloud \
+        -e POSTGRES_USER="${POSTGRES_USER}" \
+        -e POSTGRES_PASSWORD="${POSTGRES_PASSWORD}" \
+        -e POSTGRES_DB="${POSTGRES_DB}" \
         --restart unless-stopped \
         "$POSTGRES_IMAGE"
     
@@ -194,7 +216,7 @@ deploy_manual() {
     print_info "Waiting for PostgreSQL to be ready..."
     sleep 5
     for i in {1..30}; do
-        if podman exec containerpub-postgres pg_isready -U dart_cloud &>/dev/null; then
+        if podman exec containerpub-postgres pg_isready -U "${POSTGRES_USER}" &>/dev/null; then
             print_success "PostgreSQL is ready"
             break
         fi
@@ -211,18 +233,18 @@ deploy_manual() {
         --name containerpub-backend \
         --network containerpub-network \
         --network-alias backend \
-        -p 8080:8080 \
+        -p "${BACKEND_PORT}:${BACKEND_PORT}" \
         -v containerpub-functions-data:/app/functions \
-        -e PORT=8080 \
-        -e DATABASE_URL="postgres://dart_cloud:dev_password@postgres:5432/dart_cloud" \
-        -e FUNCTION_DATABASE_URL="postgres://dart_cloud:dev_password@postgres:5432/functions_db" \
-        -e JWT_SECRET="local-dev-secret-change-in-production" \
+        -e PORT="${BACKEND_PORT}" \
+        -e DATABASE_URL="postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}" \
+        -e FUNCTION_DATABASE_URL="postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/functions_db" \
+        -e JWT_SECRET="${JWT_SECRET}" \
         -e FUNCTIONS_DIR="/app/functions" \
-        -e FUNCTION_TIMEOUT_SECONDS=5 \
-        -e FUNCTION_MAX_MEMORY_MB=128 \
-        -e FUNCTION_MAX_CONCURRENT=10 \
-        -e FUNCTION_DB_MAX_CONNECTIONS=5 \
-        -e FUNCTION_DB_TIMEOUT_MS=5000 \
+        -e FUNCTION_TIMEOUT_SECONDS="${FUNCTION_TIMEOUT_SECONDS:-5}" \
+        -e FUNCTION_MAX_MEMORY_MB="${FUNCTION_MAX_MEMORY_MB:-128}" \
+        -e FUNCTION_MAX_CONCURRENT="${FUNCTION_MAX_CONCURRENT:-10}" \
+        -e FUNCTION_DB_MAX_CONNECTIONS="${FUNCTION_DB_MAX_CONNECTIONS:-5}" \
+        -e FUNCTION_DB_TIMEOUT_MS="${FUNCTION_DB_TIMEOUT_MS:-5000}" \
         --restart unless-stopped \
         "$BACKEND_IMAGE"
     
@@ -232,7 +254,7 @@ deploy_manual() {
     print_info "Waiting for backend to be ready..."
     sleep 3
     for i in {1..30}; do
-        if curl -sf http://localhost:8080/api/health &>/dev/null; then
+        if curl -sf "http://localhost:${BACKEND_PORT}/api/health" &>/dev/null; then
             print_success "Backend is ready"
             break
         fi
@@ -250,6 +272,14 @@ deploy_tofu() {
     
     print_info "Initializing OpenTofu..."
     tofu init
+    
+    # Export variables for OpenTofu
+    export TF_VAR_postgres_password="${POSTGRES_PASSWORD}"
+    export TF_VAR_postgres_user="${POSTGRES_USER}"
+    export TF_VAR_postgres_db="${POSTGRES_DB}"
+    export TF_VAR_postgres_port="${POSTGRES_PORT}"
+    export TF_VAR_backend_port="${BACKEND_PORT}"
+    export TF_VAR_jwt_secret="${JWT_SECRET}"
     
     print_info "Planning deployment..."
     tofu plan
@@ -277,10 +307,10 @@ show_status() {
     echo -e "${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}\n"
     
     echo -e "${BLUE}Access your services:${NC}"
-    echo -e "  Backend API:  ${GREEN}http://localhost:8080${NC}"
-    echo -e "  PostgreSQL:   ${GREEN}localhost:5432${NC}"
-    echo -e "  Database:     ${GREEN}dart_cloud${NC}"
-    echo -e "  User:         ${GREEN}dart_cloud${NC}"
+    echo -e "  Backend API:  ${GREEN}http://localhost:${BACKEND_PORT}${NC}"
+    echo -e "  PostgreSQL:   ${GREEN}localhost:${POSTGRES_PORT}${NC}"
+    echo -e "  Database:     ${GREEN}${POSTGRES_DB}${NC}"
+    echo -e "  User:         ${GREEN}${POSTGRES_USER}${NC}"
     echo ""
     echo -e "${BLUE}Useful commands:${NC}"
     echo -e "  View logs:    ${YELLOW}podman logs -f containerpub-backend${NC}"
@@ -329,6 +359,9 @@ done
 # Main execution
 main() {
     print_header "ContainerPub Deployment"
+    
+    # Load environment variables first
+    load_env
     
     check_dependencies
     

@@ -6,6 +6,7 @@ help:
 	@echo "=========================================="
 	@echo ""
 	@echo "Quick Start:"
+	@echo "  make secrets      - Generate secure secrets (.env file)"
 	@echo "  make deploy       - Deploy full infrastructure (recommended)"
 	@echo "  make install-cli  - Install CLI globally"
 	@echo ""
@@ -53,13 +54,16 @@ setup:
 # Start PostgreSQL
 start-db:
 	@echo "🐘 Starting PostgreSQL..."
-	@docker start containerpub-postgres 2>/dev/null || \
+	@if [ -f .env ]; then \
+		export $$(cat .env | grep -v '^#' | xargs); \
+	fi; \
+	docker start containerpub-postgres 2>/dev/null || \
 		docker run -d \
 			--name containerpub-postgres \
-			-e POSTGRES_USER=dart_cloud \
-			-e POSTGRES_PASSWORD=dev_password \
-			-e POSTGRES_DB=dart_cloud \
-			-p 5432:5432 \
+			-e POSTGRES_USER=$${POSTGRES_USER:-dart_cloud} \
+			-e POSTGRES_PASSWORD=$${POSTGRES_PASSWORD:-dev_password} \
+			-e POSTGRES_DB=$${POSTGRES_DB:-dart_cloud} \
+			-p $${POSTGRES_PORT:-5432}:5432 \
 			postgres:15
 	@echo "✓ PostgreSQL started"
 
@@ -246,8 +250,14 @@ uninstall-cli:
 	@chmod +x scripts/install-cli.sh
 	@./scripts/install-cli.sh --uninstall
 
+# Generate secure secrets
+secrets:
+	@echo "🔐 Generating secure secrets..."
+	@chmod +x scripts/generate-secrets.sh
+	@./scripts/generate-secrets.sh
+
 # Full setup workflow
-full-setup: deploy install-cli
+full-setup: secrets deploy install-cli
 	@echo ""
 	@echo "✅ Full setup complete!"
 	@echo ""

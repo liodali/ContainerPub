@@ -13,6 +13,27 @@ podman machine init
 podman machine start
 ```
 
+## Security Setup (Important!)
+
+**Before deploying, configure your secrets:**
+
+```bash
+# 1. Copy environment template
+cp .env.example .env
+
+# 2. Generate secure passwords
+openssl rand -base64 32  # For POSTGRES_PASSWORD
+openssl rand -base64 64  # For JWT_SECRET
+
+# 3. Edit .env with your secure values
+nano .env
+
+# 4. Secure the file
+chmod 600 .env
+```
+
+**See [SECURITY.md](SECURITY.md) for detailed security configuration.**
+
 ## Quick Start
 
 ### 1. Deploy Infrastructure (One Command)
@@ -21,20 +42,23 @@ podman machine start
 # Make scripts executable
 chmod +x scripts/*.sh
 
-# Deploy everything
+# Deploy everything (automatically loads .env)
 ./scripts/deploy.sh
 ```
 
 This will:
+- ✓ Load environment variables from .env
 - ✓ Build PostgreSQL image with initialization scripts
 - ✓ Build backend image (compiled Dart executable)
 - ✓ Create network and volumes
-- ✓ Start containers
+- ✓ Start containers with secure configuration
 - ✓ Run health checks
 
 **Access:**
-- Backend: http://localhost:8080
-- PostgreSQL: localhost:5432
+- Backend: http://localhost:8080 (or your BACKEND_PORT)
+- PostgreSQL: localhost:5432 (or your POSTGRES_PORT)
+
+**Note:** If `.env` file is not found, development defaults will be used (not secure for production!)
 
 ### 2. Install CLI
 

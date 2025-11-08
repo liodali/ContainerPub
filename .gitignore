@@ -12,8 +12,14 @@ pubspec.lock
 *.swo
 *~
 
-# Environment
+# Environment and Secrets
 .env
+*.tfvars
+!*.tfvars.example
+terraform.tfstate
+terraform.tfstate.backup
+.terraform/
+.terraform.lock.hcl
 
 # Functions storage
 functions/

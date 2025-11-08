@@ -4,7 +4,34 @@ This directory contains deployment and installation scripts for ContainerPub.
 
 ## Available Scripts
 
-### 1. `deploy.sh` - Infrastructure Deployment
+### 1. `generate-secrets.sh` - Secrets Generator
+
+Generates secure random passwords and creates a `.env` file with proper configuration.
+
+#### Usage
+
+```bash
+# Generate secure secrets
+./scripts/generate-secrets.sh
+```
+
+#### What It Does
+
+1. **Checks for existing .env** - Backs up if found
+2. **Generates secure passwords** - Uses openssl for randomness
+3. **Creates .env file** - With all required variables
+4. **Sets secure permissions** - chmod 600 for security
+5. **Shows summary** - Displays what was generated
+
+#### Requirements
+
+- **openssl** (recommended) or fallback to /dev/urandom
+
+**Always run this before deploying to production!**
+
+---
+
+### 2. `deploy.sh` - Infrastructure Deployment
 
 Builds and deploys the ContainerPub infrastructure using Podman or OpenTofu.
 
@@ -47,12 +74,15 @@ Builds and deploys the ContainerPub infrastructure using Podman or OpenTofu.
 
 #### What It Does
 
-1. **Checks dependencies** - Verifies Podman and OpenTofu (if needed) are installed
-2. **Builds Docker images** - Creates optimized container images
-3. **Creates network** - Sets up isolated container network
-4. **Creates volumes** - Sets up persistent storage
-5. **Starts containers** - Launches PostgreSQL and backend services
-6. **Verifies deployment** - Checks health of running services
+1. **Loads environment variables** - From .env file (or uses defaults)
+2. **Checks dependencies** - Verifies Podman and OpenTofu (if needed) are installed
+3. **Builds Docker images** - Creates optimized container images
+4. **Creates network** - Sets up isolated container network
+5. **Creates volumes** - Sets up persistent storage
+6. **Starts containers** - Launches PostgreSQL and backend services with secure configuration
+7. **Verifies deployment** - Checks health of running services
+
+**Security Note:** The script automatically loads secrets from `.env` file. If not found, it uses development defaults (not secure for production!).
 
 #### Requirements
 
@@ -203,13 +233,22 @@ The authentication token is stored securely in your home directory and is automa
 
 ## Quick Start Guide
 
-### 1. Deploy Infrastructure
+### 1. Generate Secure Secrets
 
 ```bash
 # Make scripts executable
 chmod +x scripts/*.sh
 
-# Deploy backend and database
+# Generate secure configuration
+./scripts/generate-secrets.sh
+```
+
+This creates a `.env` file with secure random passwords.
+
+### 2. Deploy Infrastructure
+
+```bash
+# Deploy backend and database (automatically loads .env)
 ./scripts/deploy.sh
 ```
 
@@ -220,7 +259,7 @@ Wait for deployment to complete. You should see:
 ✓ Deployment Complete!
 ```
 
-### 2. Install CLI
+### 3. Install CLI
 
 ```bash
 # Install CLI globally
@@ -233,7 +272,7 @@ echo 'export PATH="$PATH:$HOME/.local/bin"' >> ~/.zshrc
 source ~/.zshrc
 ```
 
-### 3. Use the CLI
+### 4. Use the CLI
 
 ```bash
 # Login (create account first via API or register endpoint)

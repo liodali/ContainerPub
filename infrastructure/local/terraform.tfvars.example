@@ -1,0 +1,23 @@
+# Example Terraform/OpenTofu variables file
+# Copy this file to terraform.tfvars and fill in your secure values
+# NEVER commit terraform.tfvars to version control!
+
+# PostgreSQL Configuration
+postgres_user     = "dart_cloud"
+postgres_password = "change_this_secure_password_123"
+postgres_db       = "dart_cloud"
+postgres_port     = 5432
+
+# Backend Configuration
+backend_port = 8080
+
+# JWT Secret (use a long random string)
+jwt_secret = "change_this_to_a_long_random_string_at_least_32_characters"
+
+# Podman Socket Path
+# macOS: "unix:///var/run/podman/podman.sock"
+# Linux: "unix:///run/podman/podman.sock"
+podman_socket_path = "unix:///var/run/podman/podman.sock"
+
+# Generate secure passwords with:
+# openssl rand -base64 32
