@@ -1,0 +1,27 @@
+# Custom PostgreSQL image with initialization scripts
+FROM postgres:15-alpine
+
+# Set environment variables (can be overridden at runtime)
+ENV POSTGRES_USER=dart_cloud \
+    POSTGRES_PASSWORD=dev_password \
+    POSTGRES_DB=dart_cloud \
+    POSTGRES_PORT=5432
+
+# Copy initialization scripts
+COPY infrastructure/postgres/init/ /docker-entrypoint-initdb.d/
+
+# Create directory for custom configuration
+RUN mkdir -p /etc/postgresql/conf.d
+
+# Copy custom PostgreSQL configuration if needed
+# COPY infrastructure/postgres/postgresql.conf /etc/postgresql/postgresql.conf
+
+# Expose PostgreSQL port
+EXPOSE $POSTGRES_PORT
+
+# Health check
+HEALTHCHECK --interval=10s --timeout=5s --start-period=10s --retries=5 \
+    CMD pg_isready -U $POSTGRES_USER -d $POSTGRES_DB || exit 1
+
+# Volume for data persistence
+VOLUME ["/var/lib/postgresql/data"]

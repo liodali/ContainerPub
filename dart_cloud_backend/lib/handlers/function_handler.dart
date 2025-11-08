@@ -8,7 +8,6 @@ import 'package:archive/archive_io.dart';
 import 'package:dart_cloud_backend/config/config.dart';
 import 'package:dart_cloud_backend/database/database.dart';
 import 'package:dart_cloud_backend/services/function_executor.dart';
-import 'package:dart_cloud_backend/services/function_analyzer.dart';
 
 class FunctionHandler {
   static const _uuid = Uuid();
@@ -68,56 +67,16 @@ class FunctionHandler {
       // Clean up temp file
       await archiveFile.delete();
 
-      // Analyze the function for security and compliance
-      await _logFunction(functionId, 'info', 'Analyzing function code...');
-      final analyzer = FunctionAnalyzer(functionDir.path);
-      final analysisResult = await analyzer.analyze();
-
-      // Check if analysis passed
-      if (!analysisResult.isValid) {
-        // Delete function directory if analysis fails
-        await functionDir.delete(recursive: true);
-
-        await _logFunction(
-          functionId,
-          'error',
-          'Function analysis failed: ${analysisResult.errors.join(', ')}',
-        );
-
-        return Response(
-          422,
-          body: jsonEncode({
-            'error': 'Function validation failed',
-            'details': {
-              'errors': analysisResult.errors,
-              'warnings': analysisResult.warnings,
-              'risks': analysisResult.detectedRisks,
-            },
-          }),
-          headers: {'Content-Type': 'application/json'},
-        );
-      }
-
-      // Store function metadata in database with analysis results
+      // Store function metadata in database
       await Database.connection.execute(
-        'INSERT INTO functions (id, user_id, name, status, analysis_result) VALUES (\$1, \$2, \$3, \$4, \$5)',
+        'INSERT INTO functions (id, user_id, name, status) VALUES (\$1, \$2, \$3, \$4)',
         parameters: [
           functionId,
           userId,
           functionName,
           'active',
-          jsonEncode(analysisResult.toJson()),
         ],
       );
-
-      // Log deployment with warnings if any
-      if (analysisResult.warnings.isNotEmpty) {
-        await _logFunction(
-          functionId,
-          'warning',
-          'Function deployed with warnings: ${analysisResult.warnings.join(', ')}',
-        );
-      }
 
       await _logFunction(functionId, 'info', 'Function deployed successfully');
 

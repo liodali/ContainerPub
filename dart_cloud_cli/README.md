@@ -43,6 +43,16 @@ dart_cloud deploy ./my-function
 
 The function directory must contain a `pubspec.yaml` file.
 
+**Security Analysis:**
+Before deployment, the CLI performs local static analysis:
+- Validates `@function` annotation is present
+- Scans for risky code patterns (Process execution, shell access, etc.)
+- Checks for dangerous imports (dart:mirrors, dart:ffi)
+- Validates function signature
+- Displays warnings and errors
+
+Only functions that pass analysis are uploaded to the server.
+
 ### list
 List all your deployed functions.
 
@@ -178,6 +188,10 @@ dart_cloud login
 - Ensure your function directory contains a valid `pubspec.yaml`
 - Check that you're authenticated
 - Verify the server is running
+- **Analysis errors**: Fix security issues reported by the CLI analyzer
+  - Add `@function` annotation if missing
+  - Remove dangerous operations (Process.run, Shell, etc.)
+  - Avoid restricted imports (dart:mirrors, dart:ffi)
 
 ### Connection Issues
 Make sure the backend server is running and accessible at the configured URL (default: http://localhost:8080).

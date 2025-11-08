@@ -5,6 +5,7 @@ import 'package:dart_cloud_cli/commands/list_command.dart';
 import 'package:dart_cloud_cli/commands/logs_command.dart';
 import 'package:dart_cloud_cli/commands/delete_command.dart';
 import 'package:dart_cloud_cli/commands/login_command.dart';
+import 'package:dart_cloud_cli/commands/logout_command.dart';
 import 'package:dart_cloud_cli/commands/invoke_command.dart';
 
 void main(List<String> arguments) async {
@@ -24,6 +25,9 @@ void main(List<String> arguments) async {
     switch (command) {
       case 'login':
         await LoginCommand().execute(commandArgs);
+        break;
+      case 'logout':
+        await LogoutCommand().execute(commandArgs);
         break;
       case 'deploy':
         await DeployCommand().execute(commandArgs);
@@ -69,6 +73,7 @@ Usage: dart_cloud <command> [arguments]
 
 Available commands:
   login              Authenticate with the Dart Cloud platform
+  logout             Clear authentication token and logout
   deploy <path>      Deploy a Dart function from the specified path
   list               List all deployed functions
   logs <id>          View logs for a specific function
@@ -79,6 +84,7 @@ Available commands:
 
 Examples:
   dart_cloud login
+  dart_cloud logout
   dart_cloud deploy ./my_function
   dart_cloud list
   dart_cloud logs my-function-id

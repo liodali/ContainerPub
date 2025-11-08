@@ -6,9 +6,11 @@ ContainerPub implements a comprehensive security system to ensure safe execution
 
 ## Security Architecture
 
-### 1. Function Analysis (Pre-Deployment)
+### 1. Function Analysis (Client-Side Pre-Deployment)
 
-Before a function is deployed, it undergoes rigorous static analysis:
+**Analysis is now performed on the client side (CLI) before deployment.**
+
+Before a function is uploaded to the server, the CLI performs rigorous static analysis locally:
 
 #### Analysis Components
 
@@ -90,35 +92,35 @@ Functions execute with restricted environment:
 
 ## Analysis Process
 
-### Step 1: Extraction
+### Step 1: Local Analysis (CLI)
 
-1. Function archive uploaded
-2. Extracted to temporary directory
-3. Located main.dart or bin/main.dart
+1. Developer runs `dart_cloud deploy <function-path>`
+2. CLI locates main.dart or bin/main.dart in the function directory
+3. CLI performs static analysis locally
 
-### Step 2: Static Analysis
+### Step 2: Static Analysis (Client-Side)
 
 ```
 ┌─────────────────────────────────────┐
-│   Function Code Submission          │
+│   Developer: dart_cloud deploy      │
 └──────────────┬──────────────────────┘
                │
                ▼
 ┌─────────────────────────────────────┐
-│   AST Analysis                      │
+│   CLI: AST Analysis (Local)         │
 │   - Parse Dart code                 │
 │   - Build syntax tree               │
 └──────────────┬──────────────────────┘
                │
                ▼
 ┌─────────────────────────────────────┐
-│   Annotation Check                  │
+│   CLI: Annotation Check             │
 │   - Verify @function present        │
 └──────────────┬──────────────────────┘
                │
                ▼
 ┌─────────────────────────────────────┐
-│   Security Scan                     │
+│   CLI: Security Scan                │
 │   - Check for risky patterns        │
 │   - Validate imports                │
 │   - Detect dangerous operations     │
@@ -126,33 +128,41 @@ Functions execute with restricted environment:
                │
                ▼
 ┌─────────────────────────────────────┐
-│   Signature Validation              │
+│   CLI: Signature Validation         │
 │   - Check handler function          │
 │   - Validate parameters             │
 └──────────────┬──────────────────────┘
                │
                ▼
 ┌─────────────────────────────────────┐
-│   Analysis Result                   │
+│   CLI: Display Analysis Result      │
+│   - Show errors, warnings, risks    │
 │   - isValid: bool                   │
-│   - errors: List<String>            │
-│   - warnings: List<String>          │
-│   - risks: List<String>             │
+│   - Exit if invalid                 │
+└──────────────┬──────────────────────┘
+               │
+               ▼ (Only if valid)
+┌─────────────────────────────────────┐
+│   CLI: Package & Upload             │
+│   - Create tar.gz archive           │
+│   - Upload to backend               │
 └─────────────────────────────────────┘
 ```
 
-### Step 3: Validation
+### Step 3: Validation & Upload
 
-If analysis passes:
-- Function stored in database
-- Analysis results saved as JSONB
-- Function marked as 'active'
-- Ready for invocation
+**If analysis passes (CLI):**
+- CLI displays success message with any warnings
+- CLI packages function into tar.gz
+- CLI uploads to backend
+- Backend stores function and marks as 'active'
+- Function ready for invocation
 
-If analysis fails:
-- Function directory deleted
-- Detailed error response returned
-- Deployment rejected (HTTP 422)
+**If analysis fails (CLI):**
+- CLI displays detailed errors and risks
+- CLI exits with error code
+- **No upload occurs** - function never reaches backend
+- Developer must fix issues before retry
 
 ## Detected Risks
 
@@ -289,35 +299,33 @@ CREATE TABLE functions (
 
 ### Analysis Result Structure
 
-```json
-{
-  "isValid": true,
-  "errors": [],
-  "warnings": [
-    "File write operations detected - ensure they are within function scope"
-  ],
-  "hasFunctionAnnotation": true,
-  "detectedRisks": []
-}
+**Note**: Analysis results are now displayed in the CLI output, not stored in the database.
+
+**CLI Output Example:**
+```
+Analyzing function code...
+
+⚠️  Warnings:
+  - File write operations detected - ensure they are within function scope
+
+✓ Function analysis passed
 ```
 
 ## Error Responses
 
-### Validation Failed (422)
+### Validation Failed (CLI Exit)
 
-```json
-{
-  "error": "Function validation failed",
-  "details": {
-    "errors": [
-      "Missing @function annotation. Functions must be annotated with @function"
-    ],
-    "warnings": [],
-    "risks": [
-      "Detected Process execution - command execution is not allowed"
-    ]
-  }
-}
+**Note**: Validation errors now appear in CLI output, not as HTTP responses.
+
+**CLI Output Example:**
+```
+Analyzing function code...
+
+⚠️  Detected Risks:
+  - Detected Process execution - command execution is not allowed
+
+✗ Function validation failed:
+  - Missing @function annotation. Functions must be annotated with @function
 ```
 
 ### Invalid Input (400)

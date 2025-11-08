@@ -1,6 +1,47 @@
-# Recent Changes - Documentation & Infrastructure
+# Recent Changes
 
-## Summary
+## Latest: Client-Side Function Analysis (Nov 2025)
+
+### Summary
+Moved function security analysis from backend to CLI for faster feedback and reduced server load.
+
+### Changes
+
+**CLI (`dart_cloud_cli/`)**
+- ✅ Added `analyzer` dependency for static code analysis
+- ✅ Created `lib/services/function_analyzer.dart` with security scanning
+- ✅ Updated `deploy_command.dart` to analyze before upload
+- ✅ Display warnings, errors, and risks to developers
+- ✅ Only upload functions that pass validation
+
+**Backend (`dart_cloud_backend/`)**
+- ✅ Removed analysis logic from `function_handler.dart`
+- ✅ Simplified deployment flow (no server-side analysis)
+- ✅ Database `analysis_result` column now optional
+
+**Documentation**
+- ✅ Updated `docs/ARCHITECTURE.md` with new deployment flow
+- ✅ Updated `docs/SECURITY.md` to reflect client-side analysis
+- ✅ Updated `dart_cloud_cli/README.md` with analysis details
+- ✅ Updated main `README.md` with new feature
+
+### Benefits
+
+- ⚡ **Faster feedback** - Developers see errors immediately
+- 💾 **Reduced bandwidth** - Invalid functions never uploaded
+- 🔒 **Same security** - All checks still performed
+- 🎯 **Better UX** - Clear error messages in CLI
+- 🚀 **Lower server load** - No expensive analysis on backend
+
+### Migration
+
+No action required. Existing functions continue to work. New deployments automatically use client-side analysis.
+
+---
+
+## Previous: Documentation & Infrastructure
+
+### Summary
 
 Organized documentation into `docs/` folder and created OpenTofu configuration for local Podman deployment.
 

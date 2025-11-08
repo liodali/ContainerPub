@@ -12,6 +12,7 @@ A serverless cloud platform for hosting and managing Dart functions with CLI dep
 ### Features
 
 - 🚀 Deploy Dart functions via CLI
+- 🔒 **Client-side security analysis before deployment**
 - 📊 Monitor function execution and performance
 - 🔄 Auto-scaling and load balancing
 - 📝 Function logs and metrics

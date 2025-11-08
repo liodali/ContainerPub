@@ -3,6 +3,7 @@ import 'package:archive/archive_io.dart';
 import 'package:path/path.dart' as path;
 import 'package:dart_cloud_cli/api/api_client.dart';
 import 'package:dart_cloud_cli/config/config.dart';
+import 'package:dart_cloud_cli/services/function_analyzer.dart';
 
 class DeployCommand {
   Future<void> execute(List<String> args) async {
@@ -38,6 +39,37 @@ class DeployCommand {
     print('Preparing to deploy function: $functionName');
 
     try {
+      // Analyze the function for security and compliance
+      print('Analyzing function code...');
+      final analyzer = FunctionAnalyzer(functionDir.path);
+      final analysisResult = await analyzer.analyze();
+
+      // Display analysis results
+      if (analysisResult.warnings.isNotEmpty) {
+        print('\n⚠️  Warnings:');
+        for (final warning in analysisResult.warnings) {
+          print('  - $warning');
+        }
+      }
+
+      if (analysisResult.detectedRisks.isNotEmpty) {
+        print('\n⚠️  Detected Risks:');
+        for (final risk in analysisResult.detectedRisks) {
+          print('  - $risk');
+        }
+      }
+
+      // Check if analysis passed
+      if (!analysisResult.isValid) {
+        print('\n✗ Function validation failed:');
+        for (final error in analysisResult.errors) {
+          print('  - $error');
+        }
+        exit(1);
+      }
+
+      print('✓ Function analysis passed');
+
       // Create archive
       print('Creating archive...');
       final tempDir = Directory.systemTemp.createTempSync('dart_cloud_');

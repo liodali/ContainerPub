@@ -1,9 +1,13 @@
-.PHONY: help setup start-backend start-db stop-db test clean podman-up podman-down podman-build tofu-init tofu-apply tofu-destroy
+.PHONY: help setup start-backend start-db stop-db test clean podman-up podman-down podman-build tofu-init tofu-apply tofu-destroy deploy install-cli
 
 # Default target
 help:
 	@echo "ContainerPub - Local Development Commands"
 	@echo "=========================================="
+	@echo ""
+	@echo "Quick Start:"
+	@echo "  make deploy       - Deploy full infrastructure (recommended)"
+	@echo "  make install-cli  - Install CLI globally"
 	@echo ""
 	@echo "Setup:"
 	@echo "  make setup        - Setup local environment (PostgreSQL + config)"
@@ -13,6 +17,15 @@ help:
 	@echo "Development:"
 	@echo "  make start-backend - Start backend server"
 	@echo "  make test         - Run integration tests"
+	@echo ""
+	@echo "Deployment Scripts:"
+	@echo "  make deploy       - Deploy with deploy.sh script"
+	@echo "  make deploy-clean - Clean deploy (removes existing data)"
+	@echo "  make deploy-tofu  - Deploy with OpenTofu"
+	@echo ""
+	@echo "CLI Management:"
+	@echo "  make install-cli  - Install CLI globally"
+	@echo "  make uninstall-cli - Uninstall CLI"
 	@echo ""
 	@echo "Podman (Container Deployment):"
 	@echo "  make podman-build - Build backend container image"
@@ -190,3 +203,56 @@ tofu-output:
 # Combined workflow
 podman-full: podman-build podman-up
 	@echo "✅ Full Podman deployment complete!"
+
+# New deployment script commands
+deploy:
+	@echo "🚀 Deploying ContainerPub infrastructure..."
+	@chmod +x scripts/deploy.sh
+	@./scripts/deploy.sh
+
+deploy-clean:
+	@echo "🧹 Clean deployment (removes existing data)..."
+	@chmod +x scripts/deploy.sh
+	@./scripts/deploy.sh --clean
+
+deploy-backend:
+	@echo "🔨 Deploying backend only..."
+	@chmod +x scripts/deploy.sh
+	@./scripts/deploy.sh --backend-only
+
+deploy-postgres:
+	@echo "🐘 Deploying PostgreSQL only..."
+	@chmod +x scripts/deploy.sh
+	@./scripts/deploy.sh --postgres-only
+
+deploy-tofu:
+	@echo "🔧 Deploying with OpenTofu..."
+	@chmod +x scripts/deploy.sh
+	@./scripts/deploy.sh --tofu
+
+# CLI installation commands
+install-cli:
+	@echo "📦 Installing Dart Cloud CLI..."
+	@chmod +x scripts/install-cli.sh
+	@./scripts/install-cli.sh
+
+install-cli-dev:
+	@echo "🔧 Installing CLI in development mode..."
+	@chmod +x scripts/install-cli.sh
+	@./scripts/install-cli.sh --dev
+
+uninstall-cli:
+	@echo "🗑️  Uninstalling Dart Cloud CLI..."
+	@chmod +x scripts/install-cli.sh
+	@./scripts/install-cli.sh --uninstall
+
+# Full setup workflow
+full-setup: deploy install-cli
+	@echo ""
+	@echo "✅ Full setup complete!"
+	@echo ""
+	@echo "Next steps:"
+	@echo "  1. dart_cloud login"
+	@echo "  2. dart_cloud deploy ./examples/hello-world"
+	@echo "  3. dart_cloud list"
+	@echo ""

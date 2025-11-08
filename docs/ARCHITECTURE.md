@@ -12,6 +12,7 @@ ContainerPub is a Dart-based serverless platform that allows developers to deplo
 **Key Features**:
 - User authentication (login/logout)
 - Function deployment
+- **Client-side function analysis and validation**
 - Function management (list, delete)
 - Function invocation
 - Log viewing
@@ -20,6 +21,7 @@ ContainerPub is a Dart-based serverless platform that allows developers to deplo
 - Dart SDK
 - HTTP client for API communication
 - Archive library for packaging functions
+- **Dart Analyzer for static code analysis**
 - Local configuration storage
 
 ### 2. Backend (dart_cloud_backend)
@@ -37,6 +39,7 @@ ContainerPub is a Dart-based serverless platform that allows developers to deplo
 - PostgreSQL (metadata storage)
 - JWT for authentication
 - Process isolation for function execution
+- **Note**: Function analysis moved to CLI (client-side)
 
 ## Architecture Diagram
 
@@ -78,6 +81,7 @@ ContainerPub is a Dart-based serverless platform that allows developers to deplo
 │  ┌──────────▼───────────────────┐  │
 │  │   Services                   │  │
 │  │   - FunctionExecutor         │  │
+│  │   (Analysis removed)         │  │
 │  └──────────┬───────────────────┘  │
 │             │                       │
 │  ┌──────────▼───────────────────┐  │
@@ -97,13 +101,18 @@ ContainerPub is a Dart-based serverless platform that allows developers to deplo
 ### Function Deployment Flow
 
 1. **Developer** creates a Dart function with `pubspec.yaml`
-2. **CLI** packages the function into a tar.gz archive
-3. **CLI** sends multipart request to `/api/functions/deploy`
-4. **Backend** authenticates the request via JWT
-5. **Backend** generates unique function ID
-6. **Backend** extracts archive to function storage directory
-7. **Backend** stores metadata in PostgreSQL
-8. **Backend** returns function details to CLI
+2. **CLI** performs static analysis and security validation (client-side)
+   - Checks for `@function` annotation
+   - Scans for risky code patterns
+   - Validates function signature
+   - Displays warnings and errors to developer
+3. **CLI** packages the function into a tar.gz archive (only if analysis passes)
+4. **CLI** sends multipart request to `/api/functions/deploy`
+5. **Backend** authenticates the request via JWT
+6. **Backend** generates unique function ID
+7. **Backend** extracts archive to function storage directory
+8. **Backend** stores metadata in PostgreSQL
+9. **Backend** returns function details to CLI
 
 ### Function Invocation Flow
 
