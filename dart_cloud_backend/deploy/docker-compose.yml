@@ -13,6 +13,7 @@ services:
       - "${POSTGRES_PORT:-5432}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - ./postgresql.conf:/etc/postgresql/postgresql.conf:ro
       - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql:ro
     networks:
       - dart_cloud_network
