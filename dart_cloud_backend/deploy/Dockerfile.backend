@@ -13,6 +13,8 @@ RUN dart pub get
 # Copy source code
 COPY ./ ./
 
+RUN dart pub get
+
 # Compile to native executable for better performance
 RUN dart compile exe bin/server.dart -o bin/server
 
@@ -31,6 +33,7 @@ WORKDIR /app
 
 # Copy compiled binary from build stage
 COPY --from=build /app/bin/server /app/server
+COPY --from=build /app/deploy/.env.example /app/.env
 
 # Create functions directory
 RUN mkdir -p /app/functions
