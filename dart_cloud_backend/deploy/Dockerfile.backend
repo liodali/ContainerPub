@@ -1,6 +1,8 @@
 # Multi-stage build for Dart Cloud Backend
 FROM dart:3.9.2 AS build
 
+# Add this label
+LABEL stage=builder-intermediate 
 # Set working directory
 WORKDIR /app
 

@@ -123,6 +123,7 @@ if [ "$POSTGRES_RUNNING" = true ] || [ "$BACKEND_RUNNING" = true ]; then
             print_info "Rebuilding backend only..."
             $CONTAINER_COMPOSE_RUNTIME stop backend-cloud 2>/dev/null || true
             $CONTAINER_COMPOSE_RUNTIME rm -f backend-cloud 2>/dev/null || true
+            $CONTAINER_RUNTIME rmi $($CONTAINER_RUNTIME images -f "label=stage=builder-intermediate" -q)
             ;;
         2)
             print_info "Rebuilding backend and removing its volume..."
@@ -138,6 +139,7 @@ if [ "$POSTGRES_RUNNING" = true ] || [ "$BACKEND_RUNNING" = true ]; then
             if [[ $REPLY =~ ^[Yy]$ ]]; then
                 print_info "Removing everything..."
                 $CONTAINER_COMPOSE_RUNTIME down -v
+                $CONTAINER_RUNTIME rmi $($CONTAINER_RUNTIME images -f "label=stage=builder-intermediate" -q)
                 print_success "All services and volumes removed"
             else
                 print_info "Cancelled"
@@ -234,7 +236,7 @@ done
 # Check Backend
 print_info "Checking Backend..."
 BACKEND_READY=false
-for i in {1..60}; do
+for i in {1..10}; do
     if curl -sf http://localhost:8080/health &>/dev/null; then
         print_success "Backend is ready"
         BACKEND_READY=true
@@ -258,10 +260,10 @@ fi
 
 print_header "Deployment Complete!"
 
-# Clean up temporary .env files
-rm -rf .env 2>/dev/null || true
-rm -rf ../.env 2>/dev/null || true
-print_success "Temporary .env files cleaned up"
+# # Clean up temporary .env files
+# rm -rf .env 2>/dev/null || true
+# rm -rf ../.env 2>/dev/null || true
+# print_success "Temporary .env files cleaned up"
 
 echo ""
 echo -e "${GREEN}✓ All services are running successfully!${NC}"

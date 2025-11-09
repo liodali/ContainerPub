@@ -60,6 +60,21 @@ CREATE TABLE IF NOT EXISTS function_invocations (
 );
 \echo "Function invocations table created"
 
+
+DO $$
+DECLARE
+    table_name TEXT;
+BEGIN
+    FOREACH table_name IN ARRAY ARRAY['users', 'functions', 'function_logs', 'function_invocations']
+    LOOP
+        IF EXISTS (SELECT FROM information_schema.tables WHERE table_schema = 'public' AND table_name = table_name) THEN
+            RAISE NOTICE 'Table % exists', table_name;
+        ELSE
+            RAISE NOTICE 'Table % does not exist', table_name;
+        END IF;
+    END LOOP;
+END $$;
+
 -- Create indexes for better performance
 -- UUID indexes for client-facing queries
 CREATE INDEX IF NOT EXISTS idx_users_uuid ON users(uuid);

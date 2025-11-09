@@ -10,11 +10,6 @@ class Database {
     try {
       // Parse database URL
       final uri = Uri.parse(Config.databaseUrl);
-      print(uri.toString());
-      print(uri.host);
-      print(uri.port);
-      print(uri.pathSegments);
-      print(uri.userInfo);
       final user = uri.userInfo.split(':').first;
       final password = uri.userInfo.contains(':') ? uri.userInfo.split(':')[1] : '';
       if (user.isEmpty || password.isEmpty) {
