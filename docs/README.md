@@ -2,193 +2,116 @@
 
 Complete documentation for ContainerPub - A serverless function platform with Dart.
 
-## 📚 Documentation Index
+## 📚 Documentation Structure
 
-### Getting Started
+### 🚀 Getting Started
+New to ContainerPub? Start here:
 
-- **[Local Development Quick Start](README_LOCAL_DEV.md)** - Get started in 3 steps
-- **[Local Deployment Guide](LOCAL_DEPLOYMENT.md)** - Complete setup instructions
-- **[Local Architecture](LOCAL_ARCHITECTURE.md)** - System architecture and diagrams
+- **[Introduction](getting-started/introduction.md)** - What is ContainerPub and why use it
+- **[Quick Start](getting-started/quick-start.md)** - Get running in 3 steps
+- **[Installation](getting-started/installation.md)** - Detailed setup instructions
+- **[First Function](getting-started/first-function.md)** - Create and deploy your first function
 
-### Security & Templates
+### 👥 User Guide
+For developers building functions:
 
-- **[Security Guide](SECURITY.md)** - Security architecture and best practices
-- **[Function Templates](FUNCTION_TEMPLATE.md)** - Function templates and examples
-- **[Quick Reference](QUICK_REFERENCE.md)** - Quick reference guide
+- **[Writing Functions](user-guide/writing-functions.md)** - Function development guide
+- **[Function Templates](user-guide/function-templates.md)** - Ready-to-use examples
+- **[Database Access](user-guide/database-access.md)** - Connect to PostgreSQL
+- **[Security Guidelines](user-guide/security-guidelines.md)** - Security model and restrictions
+- **[Testing & Debugging](user-guide/testing-debugging.md)** - Test and debug functions
 
-### Advanced Topics
+### 🔧 Deployment
+For DevOps and system administrators:
 
-- **[Database Access](DATABASE_ACCESS.md)** - Secure database access with timeouts
-- **[Migration Guide](MIGRATION_GUIDE.md)** - Migrating existing functions
-- **[Execution Protection](EXECUTION_PROTECTION_SUMMARY.md)** - Implementation details
-- **[Architecture](ARCHITECTURE.md)** - Complete system architecture
+- **[Local Deployment](deployment/local-deployment.md)** - Development environment setup
+- **[Production Deployment](deployment/production-deployment.md)** - Production-ready deployment
+- **[Configuration](deployment/configuration.md)** - Environment variables and settings
+- **[Monitoring](deployment/monitoring.md)** - Health checks, metrics, and logging
+- **[Troubleshooting](deployment/troubleshooting.md)** - Common issues and solutions
 
-### Implementation
+### 🏗️ Architecture
+For understanding the system design:
 
-- **[Implementation Complete](IMPLEMENTATION_COMPLETE.md)** - Feature implementation summary
-- **[Local Setup Complete](LOCAL_SETUP_COMPLETE.md)** - Setup verification
+- **[Architecture Overview](architecture/overview.md)** - High-level system design
+- **[CLI Architecture](architecture/cli-architecture.md)** - Command-line tool design
+- **[Backend Architecture](architecture/backend-architecture.md)** - Server platform design
+- **[Security Model](architecture/security-model.md)** - Security architecture and isolation
+- **[Database Schema](architecture/database-schema.md)** - Database design and relationships
 
-## 🚀 Quick Links
+### 🔒 Security
+Security and compliance information:
+
+- **[Security Configuration](security/security-configuration.md)** - Secrets and security setup
+- **[Execution Protection](security/execution-protection.md)** - Function isolation and limits
+- **[Compliance](security/compliance.md)** - Security best practices and standards
+
+### 📖 Reference
+Technical reference materials:
+
+- **[API Reference](reference/api-reference.md)** - Complete REST API documentation
+- **[CLI Commands](reference/cli-commands.md)** - All CLI commands and options
+- **[Environment Variables](reference/environment-variables.md)** - Complete configuration reference
+- **[Migration Guide](reference/migration-guide.md)** - Migrate from other platforms
+
+### 🛠️ Development
+For contributors and maintainers:
+
+- **[Contributing](development/contributing.md)** - How to contribute to ContainerPub
+- **[Development Setup](development/development-setup.md)** - Local development environment
+- **[Build Process](development/build-process.md)** - Build and release process
+- **[Release Process](development/release-process.md)** - Release automation and versioning
+
+## 🎯 Quick Navigation
 
 ### For Developers
-
-1. **First Time Setup**
-   - [Local Development Quick Start](README_LOCAL_DEV.md)
-   - [Function Templates](FUNCTION_TEMPLATE.md)
-
-2. **Writing Functions**
-   - [Quick Reference](QUICK_REFERENCE.md)
-   - [Security Guide](SECURITY.md)
-   - [Database Access](DATABASE_ACCESS.md)
-
-3. **Deployment**
-   - [Local Deployment Guide](LOCAL_DEPLOYMENT.md)
-   - [Migration Guide](MIGRATION_GUIDE.md)
+1. **First Time Setup** → [Quick Start](getting-started/quick-start.md)
+2. **Write Functions** → [Writing Functions](user-guide/writing-functions.md)
+3. **Add Database** → [Database Access](user-guide/database-access.md)
+4. **Test & Deploy** → [Testing & Debugging](user-guide/testing-debugging.md)
 
 ### For DevOps
+1. **Installation** → [Installation](getting-started/installation.md)
+2. **Deploy Locally** → [Local Deployment](deployment/local-deployment.md)
+3. **Go Production** → [Production Deployment](deployment/production-deployment.md)
+4. **Monitor** → [Monitoring](deployment/monitoring.md)
 
-1. **Infrastructure**
-   - [Architecture](ARCHITECTURE.md)
-   - [Local Architecture](LOCAL_ARCHITECTURE.md)
+### For Architects
+1. **System Overview** → [Architecture Overview](architecture/overview.md)
+2. **Security Model** → [Security Model](architecture/security-model.md)
+3. **CLI Design** → [CLI Architecture](architecture/cli-architecture.md)
+4. **Backend Design** → [Backend Architecture](architecture/backend-architecture.md)
 
-2. **Security**
-   - [Security Guide](SECURITY.md)
-   - [Execution Protection](EXECUTION_PROTECTION_SUMMARY.md)
-
-3. **Monitoring**
-   - [Local Deployment Guide](LOCAL_DEPLOYMENT.md#monitoring)
-   - [Quick Reference](QUICK_REFERENCE.md#monitoring)
-
-## 📖 Documentation by Topic
-
-### Security
-
-- [Security Architecture](SECURITY.md#security-architecture)
-- [Static Code Analysis](SECURITY.md#static-code-analysis)
-- [Execution Limits](EXECUTION_PROTECTION_SUMMARY.md#protection-mechanisms)
-- [Database Protection](DATABASE_ACCESS.md#security-model)
+## 🔍 Popular Topics
 
 ### Function Development
+- **@function annotation** → [Writing Functions](user-guide/writing-functions.md)
+- **HTTP requests** → [Function Templates](user-guide/function-templates.md)
+- **Database access** → [Database Access](user-guide/database-access.md)
+- **Error handling** → [Testing & Debugging](user-guide/testing-debugging.md)
 
-- [Function Structure](FUNCTION_TEMPLATE.md#basic-structure)
-- [HTTP Requests](FUNCTION_TEMPLATE.md#http-request-function)
-- [Database Access](DATABASE_ACCESS.md#implementation-examples)
-- [Error Handling](QUICK_REFERENCE.md#error-handling)
+### Security & Safety
+- **Security analysis** → [Security Guidelines](user-guide/security-guidelines.md)
+- **Execution limits** → [Execution Protection](security/execution-protection.md)
+- **Allowed operations** → [Security Model](architecture/security-model.md)
 
-### Deployment
-
-- [Local Setup](LOCAL_DEPLOYMENT.md#quick-start)
-- [Testing](LOCAL_DEPLOYMENT.md#testing-the-system)
-- [Troubleshooting](LOCAL_DEPLOYMENT.md#troubleshooting)
-
-### Configuration
-
-- [Environment Variables](QUICK_REFERENCE.md#environment-variables)
-- [Execution Limits](EXECUTION_PROTECTION_SUMMARY.md#configuration-tuning)
-- [Database Configuration](DATABASE_ACCESS.md#configuration)
-
-## 🎯 Common Tasks
-
-### Deploy a Function
-
-```bash
-# See: Local Deployment Guide
-cd dart_cloud_cli
-dart run bin/main.dart deploy my-func ../examples/simple-function
-```
-
-### Test Security Features
-
-```bash
-# See: Security Guide
-# Try deploying function without @function annotation
-# Expected: Deployment rejected
-```
-
-### Access Database from Function
-
-```dart
-// See: Database Access Guide
-final pool = FunctionDatabasePool.instance;
-final result = await pool.executeQuery('SELECT * FROM items');
-```
-
-### Monitor Execution
-
-```sql
--- See: Quick Reference
-SELECT AVG(duration_ms) FROM function_invocations;
-```
-
-## 🔍 Search Documentation
-
-- **@function annotation** → [Security Guide](SECURITY.md), [Function Templates](FUNCTION_TEMPLATE.md)
-- **Timeout** → [Execution Protection](EXECUTION_PROTECTION_SUMMARY.md), [Database Access](DATABASE_ACCESS.md)
-- **Database** → [Database Access](DATABASE_ACCESS.md), [Quick Reference](QUICK_REFERENCE.md)
-- **Security** → [Security Guide](SECURITY.md), [Execution Protection](EXECUTION_PROTECTION_SUMMARY.md)
-- **Deployment** → [Local Deployment](LOCAL_DEPLOYMENT.md), [Migration Guide](MIGRATION_GUIDE.md)
-- **Examples** → [Function Templates](FUNCTION_TEMPLATE.md), [Quick Reference](QUICK_REFERENCE.md)
-
-## 📝 Document Summaries
-
-### README_LOCAL_DEV.md
-Quick start guide for local development. Covers setup, deployment, and testing in 3 steps.
-
-### LOCAL_DEPLOYMENT.md
-Complete deployment guide with database setup, backend configuration, CLI usage, and troubleshooting.
-
-### LOCAL_ARCHITECTURE.md
-System architecture diagrams, request flows, security layers, and file structure.
-
-### SECURITY.md
-Security architecture, static analysis, allowed/blocked operations, and best practices.
-
-### FUNCTION_TEMPLATE.md
-Function templates, examples, security restrictions, and common patterns.
-
-### DATABASE_ACCESS.md
-Database access with connection pooling, timeouts, security model, and examples.
-
-### MIGRATION_GUIDE.md
-Step-by-step migration instructions, common scenarios, and troubleshooting.
-
-### QUICK_REFERENCE.md
-Quick reference for configuration, templates, common patterns, and troubleshooting.
-
-### EXECUTION_PROTECTION_SUMMARY.md
-Implementation details for execution protection, resource limits, and monitoring.
-
-### ARCHITECTURE.md
-Complete system architecture, data flow, security model, and scalability.
-
-### IMPLEMENTATION_COMPLETE.md
-Summary of implemented features, files created, and getting started guide.
-
-### LOCAL_SETUP_COMPLETE.md
-Verification guide for local setup with testing procedures and success indicators.
+### Deployment & Operations
+- **Environment setup** → [Installation](getting-started/installation.md)
+- **Configuration** → [Configuration](deployment/configuration.md)
+- **Monitoring** → [Monitoring](deployment/monitoring.md)
+- **Troubleshooting** → [Troubleshooting](deployment/troubleshooting.md)
 
 ## 🆘 Getting Help
 
-1. **Check Quick Reference** - [QUICK_REFERENCE.md](QUICK_REFERENCE.md)
-2. **Review Examples** - [FUNCTION_TEMPLATE.md](FUNCTION_TEMPLATE.md)
-3. **Troubleshooting** - [LOCAL_DEPLOYMENT.md](LOCAL_DEPLOYMENT.md#troubleshooting)
-4. **Security Issues** - [SECURITY.md](SECURITY.md)
+### Quick Help
+1. **Check the Quick Start** - [3-step setup](getting-started/quick-start.md)
+2. **Review Examples** - [Function templates](user-guide/function-templates.md)
+3. **Common Issues** - [Troubleshooting](deployment/troubleshooting.md)
 
-## 🔗 External Resources
-
-- [Dart Documentation](https://dart.dev/guides)
-- [PostgreSQL Documentation](https://www.postgresql.org/docs/)
-- [Shelf Framework](https://pub.dev/packages/shelf)
-
-## 📋 Checklist for New Users
-
-- [ ] Read [Local Development Quick Start](README_LOCAL_DEV.md)
-- [ ] Run setup: `./setup-local.sh`
-- [ ] Review [Function Templates](FUNCTION_TEMPLATE.md)
-- [ ] Deploy example function
-- [ ] Read [Security Guide](SECURITY.md)
-- [ ] Test security features
-- [ ] Review [Quick Reference](QUICK_REFERENCE.md)
+### Detailed Help
+1. **Architecture Questions** - [Architecture Overview](architecture/overview.md)
+2. **Security Concerns** - [Security Model](architecture/security-model.md)
+3. **API Issues** - [API Reference](reference/api-reference.md)
 
 ## ✨ Key Features Documented
 
@@ -196,11 +119,13 @@ Verification guide for local setup with testing procedures and success indicator
 - ✅ @function annotation enforcement
 - ✅ Security scanning (Process.run, shell, etc.)
 - ✅ HTTP request structure (body/query)
-- ✅ 5-second execution timeout (configurable)
-- ✅ Concurrent execution limits (10 max)
+- ✅ Execution timeout (configurable)
+- ✅ Concurrent execution limits
 - ✅ Database access with connection pooling
-- ✅ Query timeout protection (5 seconds)
+- ✅ Query timeout protection
 - ✅ Comprehensive logging
-- ✅ Error handling
+- ✅ Error handling and debugging
 
-All documentation is comprehensive, tested, and ready to use!
+---
+
+**Ready to get started?** Check out our [Quick Start Guide](getting-started/quick-start.md) to deploy your first function in minutes!
