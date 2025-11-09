@@ -18,7 +18,8 @@ void main(List<String> arguments) async {
     exit(0);
   }
   final commandParsed = parser.parse(arguments);
-  final command = commandParsed.command?.name;;
+  final command = commandParsed.command?.name;
+  ;
   final commandArgs = commandParsed.arguments;
 
   try {

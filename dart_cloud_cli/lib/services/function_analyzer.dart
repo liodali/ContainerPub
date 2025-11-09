@@ -86,7 +86,8 @@ class FunctionAnalyzer {
         // Check for @function annotation
         if (!hasFunctionAnnotation) {
           errors.add(
-              'Missing @function annotation. Functions must be annotated with @function');
+            'Missing @function annotation. Functions must be annotated with @function',
+          );
         }
 
         // Check for risky patterns in code
@@ -127,7 +128,8 @@ class FunctionAnalyzer {
     if (content.contains('Process.run') ||
         content.contains('Process.start') ||
         content.contains('Process.runSync')) {
-      risks.add('Detected Process execution - command execution is not allowed');
+      risks
+          .add('Detected Process execution - command execution is not allowed');
     }
 
     // Check for shell execution
@@ -138,7 +140,8 @@ class FunctionAnalyzer {
     // Check for file system write operations (except allowed patterns)
     if (content.contains('File(') && content.contains('.writeAs')) {
       warnings.add(
-          'File write operations detected - ensure they are within function scope');
+        'File write operations detected - ensure they are within function scope',
+      );
     }
 
     // Check for dangerous dart:io operations
@@ -194,7 +197,8 @@ class FunctionAnalyzer {
 
     if (!hasValidHandler) {
       warnings.add(
-          'No valid handler function found. Expected a function that accepts request parameters');
+        'No valid handler function found. Expected a function that accepts request parameters',
+      );
     }
   }
 }
@@ -249,7 +253,9 @@ class SecurityVisitor extends RecursiveAstVisitor<void> {
 
     if (uri.contains('dart:io') && !uri.contains('dart:io/http')) {
       // Allow dart:io but warn about usage
-      warnings.add('dart:io import detected - ensure only HTTP operations are used');
+      warnings.add(
+        'dart:io import detected - ensure only HTTP operations are used',
+      );
     }
 
     super.visitImportDirective(node);

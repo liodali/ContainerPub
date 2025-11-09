@@ -11,7 +11,8 @@ class Config {
   static String? get authToken => _authToken;
 
   static File get configFile {
-    final home = Platform.environment['HOME'] ?? Platform.environment['USERPROFILE'];
+    final home =
+        Platform.environment['HOME'] ?? Platform.environment['USERPROFILE'];
     if (home == null) {
       throw Exception('Could not determine home directory');
     }

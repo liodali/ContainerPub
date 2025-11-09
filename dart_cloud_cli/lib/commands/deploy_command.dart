@@ -74,23 +74,28 @@ class DeployCommand {
       print('Creating archive...');
       final tempDir = Directory.systemTemp.createTempSync('dart_cloud_');
       final archivePath = path.join(tempDir.path, '$functionName.tar.gz');
-      
+
       final encoder = TarFileEncoder();
       encoder.create(archivePath);
       encoder.addDirectory(functionDir);
       encoder.close();
 
       final archiveFile = File(archivePath);
-      print('Archive created: ${(archiveFile.lengthSync() / 1024).toStringAsFixed(2)} KB');
+      print(
+        'Archive created: ${(archiveFile.lengthSync() / 1024).toStringAsFixed(2)} KB',
+      );
 
       // Deploy
       print('Deploying function...');
-      final response = await ApiClient.deployFunction(archiveFile, functionName);
+      final response =
+          await ApiClient.deployFunction(archiveFile, functionName);
 
       print('✓ Function deployed successfully!');
       print('  Function ID: ${response['id']}');
       print('  Name: ${response['name']}');
-      print('  Endpoint: ${Config.serverUrl}/api/functions/${response['id']}/invoke');
+      print(
+        '  Endpoint: ${Config.serverUrl}/api/functions/${response['id']}/invoke',
+      );
 
       // Cleanup
       tempDir.deleteSync(recursive: true);

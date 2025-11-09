@@ -22,7 +22,9 @@ class ListCommand {
 
       print('\nDeployed Functions:');
       print('─' * 80);
-      print('${'ID'.padRight(20)} ${'Name'.padRight(25)} ${'Status'.padRight(15)} Created');
+      print(
+        '${'ID'.padRight(20)} ${'Name'.padRight(25)} ${'Status'.padRight(15)} Created',
+      );
       print('─' * 80);
 
       for (final func in functions) {

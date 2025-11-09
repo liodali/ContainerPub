@@ -19,7 +19,9 @@ class DeleteCommand {
 
     final functionId = args[0];
 
-    stdout.write('Are you sure you want to delete function "$functionId"? (y/N): ');
+    stdout.write(
+      'Are you sure you want to delete function "$functionId"? (y/N): ',
+    );
     final confirmation = stdin.readLineSync()?.toLowerCase() ?? 'n';
 
     if (confirmation != 'y' && confirmation != 'yes') {

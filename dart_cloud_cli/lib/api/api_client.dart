@@ -4,7 +4,10 @@ import 'package:http/http.dart' as http;
 import 'package:dart_cloud_cli/config/config.dart';
 
 class ApiClient {
-  static Future<Map<String, dynamic>> login(String email, String password) async {
+  static Future<Map<String, dynamic>> login(
+    String email,
+    String password,
+  ) async {
     final response = await http.post(
       Uri.parse('${Config.serverUrl}/api/auth/login'),
       headers: {'Content-Type': 'application/json'},
@@ -18,7 +21,10 @@ class ApiClient {
     }
   }
 
-  static Future<Map<String, dynamic>> deployFunction(File archive, String functionName) async {
+  static Future<Map<String, dynamic>> deployFunction(
+    File archive,
+    String functionName,
+  ) async {
     final request = http.MultipartRequest(
       'POST',
       Uri.parse('${Config.serverUrl}/api/functions/deploy'),
@@ -26,7 +32,8 @@ class ApiClient {
 
     request.headers['Authorization'] = 'Bearer ${Config.authToken}';
     request.fields['name'] = functionName;
-    request.files.add(await http.MultipartFile.fromPath('archive', archive.path));
+    request.files
+        .add(await http.MultipartFile.fromPath('archive', archive.path));
 
     final streamedResponse = await request.send();
     final response = await http.Response.fromStream(streamedResponse);

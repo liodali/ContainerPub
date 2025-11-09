@@ -30,6 +30,6 @@ analyzer:
 
 formatter:
   trailing_commas: preserve  
-  page_width: 90
+  page_width: 80
 # Additional information about this file can be found at
 # https://dart.dev/guides/language/analysis-options

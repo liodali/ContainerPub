@@ -14,7 +14,9 @@ class InvokeCommand {
 
     if (args.isEmpty) {
       print('Error: Please specify the function ID');
-      print('Usage: dart_cloud invoke <function-id> [--data \'{"key": "value"}\']');
+      print(
+        'Usage: dart_cloud invoke <function-id> [--data \'{"key": "value"}\']',
+      );
       exit(1);
     }
 
