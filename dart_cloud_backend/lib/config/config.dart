@@ -33,7 +33,7 @@ class Config {
     databaseUrl =
         env['DATABASE_URL'] ??
         Platform.environment['DATABASE_URL'] ??
-        'postgres://localhost:5432/dart_cloud';
+        'postgres://dart_cloud:dart_cloud@postgres:5432/dart_cloud';
     jwtSecret =
         env['JWT_SECRET'] ??
         Platform.environment['JWT_SECRET'] ??

@@ -34,18 +34,26 @@ print_error() {
 }
 
 # Check if Docker is installed
-if ! command -v docker &> /dev/null; then
-    print_error "Docker is not installed"
-    echo "Install Docker: https://docs.docker.com/get-docker/"
+if [ ! command -v docker &> /dev/null ] && [ ! command -v podman &> /dev/null ]; then
+    print_error "you dont have any container runtime installed"
+    echo "Install Docker: https://docs.docker.com/get-docker/ or Podman: https://podman.io/getting-started/installation"
     exit 1
 fi
 
 # Check if Docker Compose is available
-if ! docker compose version &> /dev/null; then
+if [ ! docker compose version &> /dev/null ] && [ ! podman-compose version &> /dev/null ]; then
     print_error "Docker Compose is not available"
-    echo "Install Docker Compose: https://docs.docker.com/compose/install/"
+    echo "Install Docker Compose: https://docs.docker.com/compose/install/ or Podman Compose: https://podman.io/getting-started/compose"
     exit 1
 fi
+
+CONTAINER_RUNTIME="sudo docker"
+CONTAINER_COMPOSE_RUNTIME="sudo docker compose"
+if ! command -v docker &> /dev/null; then
+    CONTAINER_RUNTIME="podman"
+    CONTAINER_COMPOSE_RUNTIME="podman-compose"
+fi
+
 
 print_header "Dart Cloud Backend - Quick Start"
 
@@ -56,22 +64,25 @@ if [ ! -f .env ]; then
     if [ -f .env.example ]; then
         print_info "Creating .env from .env.example..."
         cp .env.example .env
+        cp .env ../.env
         
         # Generate secure passwords
         if command -v openssl &> /dev/null; then
             print_info "Generating secure passwords..."
-            POSTGRES_PASSWORD=$(openssl rand -base64 32 | tr -d '\n')
-            JWT_SECRET=$(openssl rand -base64 64 | tr -d '\n')
+            POSTGRES_PASSWORD=$(openssl rand -base64 256 | tr -dc 'a-zA-Z0-9' | head -c 32)  #$(openssl rand -base64 32 | tr -d '\n')
+            JWT_SECRET=$(openssl rand -base64 256 | tr -dc 'a-zA-Z0-9' | head -c 128) #$(openssl rand -base64 128 | tr -d '\n')
             
             # Update .env file
             if [[ "$OSTYPE" == "darwin"* ]]; then
+                echo "POSTGRES_PASSWORD=${POSTGRES_PASSWORD:0:10}******"
+                echo "JWT_SECRET=${JWT_SECRET:0:10}******"
                 # macOS
-                sed -i '' "s/POSTGRES_PASSWORD=.*/POSTGRES_PASSWORD=$POSTGRES_PASSWORD/" .env
-                sed -i '' "s/JWT_SECRET=.*/JWT_SECRET=$JWT_SECRET/" .env
+                sed -i '' "s/POSTGRES_PASSWORD=.*/POSTGRES_PASSWORD=\"${POSTGRES_PASSWORD}\"/" .env
+                sed -i '' "s/JWT_SECRET=.*/JWT_SECRET=\"${JWT_SECRET}\"/" .env
             else
                 # Linux
-                sed -i "s/POSTGRES_PASSWORD=.*/POSTGRES_PASSWORD=$POSTGRES_PASSWORD/" .env
-                sed -i "s/JWT_SECRET=.*/JWT_SECRET=$JWT_SECRET/" .env
+                sed -i "s/POSTGRES_PASSWORD=.*/POSTGRES_PASSWORD=\"${POSTGRES_PASSWORD}\"/" .env
+                sed -i "s/JWT_SECRET=.*/JWT_SECRET=\"${JWT_SECRET}\"/" .env
             fi
             
             print_success "Secure passwords generated"
@@ -94,7 +105,7 @@ fi
 print_header "Starting Services"
 
 print_info "Building and starting containers..."
-docker compose up -d --build
+$CONTAINER_COMPOSE_RUNTIME up -d --build
 
 # Wait for services to be healthy
 print_info "Waiting for services to be ready..."
@@ -103,13 +114,13 @@ sleep 5
 # Check PostgreSQL
 print_info "Checking PostgreSQL..."
 for i in {1..30}; do
-    if docker compose exec -T postgres pg_isready -U dart_cloud &>/dev/null; then
+    if $CONTAINER_COMPOSE_RUNTIME exec -T postgres pg_isready -U dart_cloud &>/dev/null; then
         print_success "PostgreSQL is ready"
         break
     fi
     if [ $i -eq 30 ]; then
         print_error "PostgreSQL failed to start"
-        docker compose logs postgres
+        $CONTAINER_COMPOSE_RUNTIME logs postgres
         exit 1
     fi
     sleep 1
@@ -124,25 +135,31 @@ for i in {1..30}; do
     fi
     if [ $i -eq 30 ]; then
         print_error "Backend failed to start"
-        docker compose logs backend
+        $CONTAINER_COMPOSE_RUNTIME logs backend
+        $CONTAINER_COMPOSE_RUNTIME kill --all
+        print_success "Containers killed"
+        $CONTAINER_COMPOSE_RUNTIME down
+        print_success "Containers removed"
         exit 1
     fi
     sleep 1
 done
 
 print_header "Deployment Complete!"
-
+rm -rf .env
+rm -rf ../.env
+print_success ".env file deleted"
 echo -e "${GREEN}Services are running:${NC}"
 echo -e "  Backend API:  ${BLUE}http://localhost:8080${NC}"
 echo -e "  Health Check: ${BLUE}http://localhost:8080/api/health${NC}"
 echo -e "  PostgreSQL:   ${BLUE}localhost:5432${NC}"
 echo ""
 echo -e "${BLUE}Useful commands:${NC}"
-echo -e "  View logs:        ${YELLOW}docker compose logs -f${NC}"
-echo -e "  Stop services:    ${YELLOW}docker compose down${NC}"
-echo -e "  Restart backend:  ${YELLOW}docker compose restart backend${NC}"
-echo -e "  View status:      ${YELLOW}docker compose ps${NC}"
+echo -e "  View logs:        ${YELLOW}$CONTAINER_COMPOSE_RUNTIME logs -f${NC}"
+echo -e "  Stop services:    ${YELLOW}$CONTAINER_COMPOSE_RUNTIME down${NC}"
+echo -e "  Restart backend:  ${YELLOW}$CONTAINER_COMPOSE_RUNTIME restart backend${NC}"
+echo -e "  View status:      ${YELLOW}$CONTAINER_COMPOSE_RUNTIME ps${NC}"
 echo ""
 echo -e "${BLUE}Database access:${NC}"
-echo -e "  ${YELLOW}docker compose exec postgres psql -U dart_cloud -d dart_cloud${NC}"
+echo -e "  ${YELLOW}$CONTAINER_RUNTIME exec postgres psql -U dart_cloud -d dart_cloud${NC}"
 echo ""
