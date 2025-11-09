@@ -249,8 +249,7 @@ class FunctionHandler {
   static Future<Response> invoke(Request request, String id) async {
     try {
       final userId = request.context['userId'] as String;
-      final body =
-          jsonDecode(await request.readAsString()) as Map<String, dynamic>;
+      final body = jsonDecode(await request.readAsString()) as Map<String, dynamic>;
 
       // Verify function ownership
       final result = await Database.connection.execute(

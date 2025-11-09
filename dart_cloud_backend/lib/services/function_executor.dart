@@ -41,9 +41,9 @@ class FunctionExecutor {
           'result': null,
         };
       }
-      
+
       _activeExecutions++;
-      
+
       try {
         return await _executeFunction(input);
       } finally {
@@ -53,10 +53,10 @@ class FunctionExecutor {
       return {'success': false, 'error': 'Execution error: $e', 'result': null};
     }
   }
-  
+
   Future<Map<String, dynamic>> _executeFunction(Map<String, dynamic> input) async {
     final functionDir = path.join(Config.functionsDir, functionId);
-    
+
     try {
       // Prepare HTTP-like request structure
       final httpRequest = {
@@ -100,14 +100,16 @@ class FunctionExecutor {
         'FUNCTION_TIMEOUT_MS': (Config.functionTimeoutSeconds * 1000).toString(),
         'FUNCTION_MAX_MEMORY_MB': Config.functionMaxMemoryMb.toString(),
       };
-      
+
       // Add database connection if configured
       if (Config.functionDatabaseUrl != null) {
         environment['DATABASE_URL'] = Config.functionDatabaseUrl!;
-        environment['DB_MAX_CONNECTIONS'] = Config.functionDatabaseMaxConnections.toString();
-        environment['DB_TIMEOUT_MS'] = Config.functionDatabaseConnectionTimeoutMs.toString();
+        environment['DB_MAX_CONNECTIONS'] = Config.functionDatabaseMaxConnections
+            .toString();
+        environment['DB_TIMEOUT_MS'] = Config.functionDatabaseConnectionTimeoutMs
+            .toString();
       }
-      
+
       // Run the function with a timeout and HTTP request environment
       final process = await Process.start(
         'dart',
@@ -172,7 +174,7 @@ class FunctionExecutor {
       return {'success': false, 'error': 'Execution error: $e', 'result': null};
     }
   }
-  
+
   /// Get current active executions count
   static int get activeExecutions => _activeExecutions;
 }

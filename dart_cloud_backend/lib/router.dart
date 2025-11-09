@@ -31,7 +31,12 @@ Router createRouter() {
     '/api/functions/<id>',
     Pipeline()
         .addMiddleware(authMiddleware)
-        .addHandler((req) => FunctionHandler.get(req, req.params['id']!,),),
+        .addHandler(
+          (req) => FunctionHandler.get(
+            req,
+            req.params['id']!,
+          ),
+        ),
   );
 
   router.get(

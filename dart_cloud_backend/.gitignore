@@ -12,7 +12,8 @@ deploy/ssl/
 
 # Backups
 deploy/backups/
-*.sql
+backup*.sql
+dump*.sql
 *.tar.gz
 
 # Dart

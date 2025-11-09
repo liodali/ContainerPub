@@ -1,5 +1,7 @@
 #!/bin/bash
 
+clear
+
 # Quick start script for Dart Cloud Backend with Docker Compose
 
 set -e
@@ -57,6 +59,102 @@ fi
 
 print_header "Dart Cloud Backend - Quick Start"
 
+# Function to cleanup on failure
+cleanup_on_failure() {
+    print_error "Deployment failed. Cleaning up..."
+    
+    print_info "Stopping containers..."
+    $CONTAINER_COMPOSE_RUNTIME stop 2>/dev/null || true
+    
+    print_info "Removing containers..."
+    $CONTAINER_COMPOSE_RUNTIME rm -f backend-cloud postgres 2>/dev/null || true
+    
+    print_info "Removing network..."
+    $CONTAINER_COMPOSE_RUNTIME down 2>/dev/null || true
+    
+    # Clean up temporary .env files
+    rm -rf .env 2>/dev/null || true
+    rm -rf ../.env 2>/dev/null || true
+    
+    print_success "Cleanup completed"
+    exit 1
+}
+
+# Set trap for cleanup on error
+trap cleanup_on_failure ERR
+
+# Check if services are already running
+POSTGRES_RUNNING=false
+BACKEND_RUNNING=false
+
+print_info "Checking if services are already running..."
+
+if $CONTAINER_RUNTIME ps | grep -q "dart_cloud_postgres.*Up"; then
+    POSTGRES_RUNNING=true
+    print_info "PostgreSQL is already running"
+fi
+
+if $CONTAINER_RUNTIME ps | grep -q "dart_cloud_backend.*Up"; then
+    BACKEND_RUNNING=true
+    print_info "Backend is already running"
+fi
+
+# If services are running, ask what to do
+if [ "$POSTGRES_RUNNING" = true ] || [ "$BACKEND_RUNNING" = true ]; then
+    print_header "Services Already Running"
+    
+    echo -e "${BLUE}Current status:${NC}"
+    echo -e "  PostgreSQL: $([ "$POSTGRES_RUNNING" = true ] && echo "${GREEN}Running${NC}" || echo "${YELLOW}Stopped${NC}")"
+    echo -e "  Backend:    $([ "$BACKEND_RUNNING" = true ] && echo "${GREEN}Running${NC}" || echo "${YELLOW}Stopped${NC}")"
+    echo ""
+    
+    echo -e "${BLUE}What would you like to do?${NC}"
+    echo "  1) Rebuild backend only (keep PostgreSQL and data)"
+    echo "  2) Rebuild backend and remove its volume"
+    echo "  3) Remove everything (PostgreSQL + Backend + all volumes)"
+    echo "  4) Cancel and exit"
+    echo ""
+    
+    read -p "Enter your choice (1-4): " -n 1 -r
+    echo ""
+    
+    case $REPLY in
+        1)
+            print_info "Rebuilding backend only..."
+            $CONTAINER_COMPOSE_RUNTIME stop backend-cloud 2>/dev/null || true
+            $CONTAINER_COMPOSE_RUNTIME rm -f backend-cloud 2>/dev/null || true
+            ;;
+        2)
+            print_info "Rebuilding backend and removing its volume..."
+            $CONTAINER_COMPOSE_RUNTIME stop backend-cloud 2>/dev/null || true
+            $CONTAINER_COMPOSE_RUNTIME rm -f backend-cloud 2>/dev/null || true
+            $CONTAINER_RUNTIME volume rm dart_cloud_backend_functions_data 2>/dev/null || true
+            print_success "Backend volume removed"
+            ;;
+        3)
+            print_warning "This will remove all data!"
+            read -p "Are you sure? (y/N): " -n 1 -r
+            echo ""
+            if [[ $REPLY =~ ^[Yy]$ ]]; then
+                print_info "Removing everything..."
+                $CONTAINER_COMPOSE_RUNTIME down -v
+                print_success "All services and volumes removed"
+            else
+                print_info "Cancelled"
+                exit 0
+            fi
+            ;;
+        4)
+            print_info "Cancelled"
+            exit 0
+            ;;
+        *)
+            print_error "Invalid choice"
+            exit 1
+            ;;
+    esac
+fi
+
 # Check if .env exists
 if [ ! -f .env ]; then
     print_warning ".env file not found"
@@ -105,7 +203,10 @@ fi
 print_header "Starting Services"
 
 print_info "Building and starting containers..."
-$CONTAINER_COMPOSE_RUNTIME up -d --build
+if ! $CONTAINER_COMPOSE_RUNTIME -p dart_cloud up  -d --build; then
+    print_error "Failed to start services"
+    cleanup_on_failure
+fi
 
 # Wait for services to be healthy
 print_info "Waiting for services to be ready..."
@@ -113,53 +214,80 @@ sleep 5
 
 # Check PostgreSQL
 print_info "Checking PostgreSQL..."
+POSTGRES_READY=false
 for i in {1..30}; do
     if $CONTAINER_COMPOSE_RUNTIME exec -T postgres pg_isready -U dart_cloud &>/dev/null; then
         print_success "PostgreSQL is ready"
+        POSTGRES_READY=true
         break
     fi
     if [ $i -eq 30 ]; then
         print_error "PostgreSQL failed to start"
+        echo ""
+        print_info "PostgreSQL logs:"
         $CONTAINER_COMPOSE_RUNTIME logs postgres
-        exit 1
+        cleanup_on_failure
     fi
     sleep 1
 done
 
 # Check Backend
 print_info "Checking Backend..."
-for i in {1..30}; do
-    if curl -sf http://localhost:8080/api/health &>/dev/null; then
+BACKEND_READY=false
+for i in {1..60}; do
+    if curl -sf http://localhost:8080/health &>/dev/null; then
         print_success "Backend is ready"
+        BACKEND_READY=true
         break
     fi
-    if [ $i -eq 30 ]; then
+    if [ $i -eq 60 ]; then
         print_error "Backend failed to start"
-        $CONTAINER_COMPOSE_RUNTIME logs backend
-        $CONTAINER_COMPOSE_RUNTIME kill --all
-        print_success "Containers killed"
-        $CONTAINER_COMPOSE_RUNTIME down
-        print_success "Containers removed"
-        exit 1
+        echo ""
+        print_info "Backend logs:"
+        $CONTAINER_COMPOSE_RUNTIME logs backend-cloud
+        cleanup_on_failure
     fi
     sleep 1
 done
 
+# Verify both services are ready
+if [ "$POSTGRES_READY" = false ] || [ "$BACKEND_READY" = false ]; then
+    print_error "One or more services failed to start"
+    cleanup_on_failure
+fi
+
 print_header "Deployment Complete!"
-rm -rf .env
-rm -rf ../.env
-print_success ".env file deleted"
-echo -e "${GREEN}Services are running:${NC}"
-echo -e "  Backend API:  ${BLUE}http://localhost:8080${NC}"
-echo -e "  Health Check: ${BLUE}http://localhost:8080/api/health${NC}"
-echo -e "  PostgreSQL:   ${BLUE}localhost:5432${NC}"
+
+# Clean up temporary .env files
+rm -rf .env 2>/dev/null || true
+rm -rf ../.env 2>/dev/null || true
+print_success "Temporary .env files cleaned up"
+
 echo ""
-echo -e "${BLUE}Useful commands:${NC}"
-echo -e "  View logs:        ${YELLOW}$CONTAINER_COMPOSE_RUNTIME logs -f${NC}"
-echo -e "  Stop services:    ${YELLOW}$CONTAINER_COMPOSE_RUNTIME down${NC}"
-echo -e "  Restart backend:  ${YELLOW}$CONTAINER_COMPOSE_RUNTIME restart backend${NC}"
-echo -e "  View status:      ${YELLOW}$CONTAINER_COMPOSE_RUNTIME ps${NC}"
+echo -e "${GREEN}✓ All services are running successfully!${NC}"
 echo ""
-echo -e "${BLUE}Database access:${NC}"
-echo -e "  ${YELLOW}$CONTAINER_RUNTIME exec postgres psql -U dart_cloud -d dart_cloud${NC}"
+echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+echo -e "${BLUE}Service Endpoints:${NC}"
+echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+echo -e "  Backend API:  ${GREEN}http://localhost:8080${NC}"
+echo -e "  Health Check: ${GREEN}http://localhost:8080/health${NC}"
+echo -e "  PostgreSQL:   ${GREEN}postgres:5432${NC} (internal network)"
+echo ""
+echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+echo -e "${BLUE}Management Commands:${NC}"
+echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+echo -e "  View all logs:       ${YELLOW}$CONTAINER_COMPOSE_RUNTIME logs -f${NC}"
+echo -e "  View backend logs:   ${YELLOW}$CONTAINER_COMPOSE_RUNTIME logs -f backend-cloud${NC}"
+echo -e "  View postgres logs:  ${YELLOW}$CONTAINER_COMPOSE_RUNTIME logs -f postgres${NC}"
+echo -e "  Stop services:       ${YELLOW}$CONTAINER_COMPOSE_RUNTIME down${NC}"
+echo -e "  Restart backend:     ${YELLOW}$CONTAINER_COMPOSE_RUNTIME restart backend-cloud${NC}"
+echo -e "  Restart postgres:    ${YELLOW}$CONTAINER_COMPOSE_RUNTIME restart postgres${NC}"
+echo -e "  View status:         ${YELLOW}$CONTAINER_COMPOSE_RUNTIME ps${NC}"
+echo -e "  Rebuild & restart:   ${YELLOW}./start.sh${NC}"
+echo ""
+echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+echo -e "${BLUE}Database Access:${NC}"
+echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+echo -e "  Connect to DB:       ${YELLOW}$CONTAINER_COMPOSE_RUNTIME exec postgres psql -U dart_cloud -d dart_cloud${NC}"
+echo -e "  Check DB status:     ${YELLOW}$CONTAINER_COMPOSE_RUNTIME exec postgres pg_isready -U dart_cloud${NC}"
 echo ""

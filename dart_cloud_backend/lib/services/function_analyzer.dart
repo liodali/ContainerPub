@@ -22,12 +22,12 @@ class AnalysisResult {
   });
 
   Map<String, dynamic> toJson() => {
-        'isValid': isValid,
-        'errors': errors,
-        'warnings': warnings,
-        'hasFunctionAnnotation': hasFunctionAnnotation,
-        'detectedRisks': detectedRisks,
-      };
+    'isValid': isValid,
+    'errors': errors,
+    'warnings': warnings,
+    'hasFunctionAnnotation': hasFunctionAnnotation,
+    'detectedRisks': detectedRisks,
+  };
 }
 
 /// Analyzes Dart functions for security and compliance
@@ -86,7 +86,8 @@ class FunctionAnalyzer {
         // Check for @function annotation
         if (!hasFunctionAnnotation) {
           errors.add(
-              'Missing @function annotation. Functions must be annotated with @function');
+            'Missing @function annotation. Functions must be annotated with @function',
+          );
         }
 
         // Check for risky patterns in code
@@ -138,12 +139,12 @@ class FunctionAnalyzer {
     // Check for file system write operations (except allowed patterns)
     if (content.contains('File(') && content.contains('.writeAs')) {
       warnings.add(
-          'File write operations detected - ensure they are within function scope');
+        'File write operations detected - ensure they are within function scope',
+      );
     }
 
     // Check for dangerous dart:io operations
-    if (content.contains('Platform.executable') ||
-        content.contains('Platform.script')) {
+    if (content.contains('Platform.executable') || content.contains('Platform.script')) {
       risks.add('Detected platform script access - not allowed');
     }
 
@@ -194,7 +195,8 @@ class FunctionAnalyzer {
 
     if (!hasValidHandler) {
       warnings.add(
-          'No valid handler function found. Expected a function that accepts request parameters');
+        'No valid handler function found. Expected a function that accepts request parameters',
+      );
     }
   }
 }

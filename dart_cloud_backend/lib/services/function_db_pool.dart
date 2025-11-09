@@ -32,13 +32,9 @@ class FunctionDatabasePool {
           Endpoint(
             host: uri.host,
             port: uri.port,
-            database: uri.pathSegments.isNotEmpty
-                ? uri.pathSegments[0]
-                : 'functions_db',
+            database: uri.pathSegments.isNotEmpty ? uri.pathSegments[0] : 'functions_db',
             username: uri.userInfo.split(':').first,
-            password: uri.userInfo.contains(':')
-                ? uri.userInfo.split(':')[1]
-                : '',
+            password: uri.userInfo.contains(':') ? uri.userInfo.split(':')[1] : '',
           ),
           settings: ConnectionSettings(
             sslMode: SslMode.disable,
@@ -52,7 +48,9 @@ class FunctionDatabasePool {
       }
 
       _initialized = true;
-      print('✓ Function database pool initialized with ${_availableConnections.length} connections');
+      print(
+        '✓ Function database pool initialized with ${_availableConnections.length} connections',
+      );
     } catch (e) {
       print('⚠️  Failed to initialize function database pool: $e');
     }
@@ -66,8 +64,8 @@ class FunctionDatabasePool {
       return null;
     }
 
-    final timeoutDuration = timeout ??
-        Duration(milliseconds: Config.functionDatabaseConnectionTimeoutMs);
+    final timeoutDuration =
+        timeout ?? Duration(milliseconds: Config.functionDatabaseConnectionTimeoutMs);
 
     try {
       return await _getConnectionInternal().timeout(timeoutDuration);
@@ -106,8 +104,8 @@ class FunctionDatabasePool {
     }
 
     try {
-      final timeoutDuration = timeout ??
-          Duration(milliseconds: Config.functionDatabaseConnectionTimeoutMs);
+      final timeoutDuration =
+          timeout ?? Duration(milliseconds: Config.functionDatabaseConnectionTimeoutMs);
 
       final result = await connection
           .execute(

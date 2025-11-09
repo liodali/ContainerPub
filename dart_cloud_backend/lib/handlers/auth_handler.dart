@@ -8,8 +8,7 @@ import 'package:dart_cloud_backend/database/database.dart';
 class AuthHandler {
   static Future<Response> register(Request request) async {
     try {
-      final body =
-          jsonDecode(await request.readAsString()) as Map<String, dynamic>;
+      final body = jsonDecode(await request.readAsString()) as Map<String, dynamic>;
       final email = body['email'] as String?;
       final password = body['password'] as String?;
 
@@ -49,8 +48,7 @@ class AuthHandler {
 
   static Future<Response> login(Request request) async {
     try {
-      final body =
-          jsonDecode(await request.readAsString()) as Map<String, dynamic>;
+      final body = jsonDecode(await request.readAsString()) as Map<String, dynamic>;
       final email = body['email'] as String?;
       final password = body['password'] as String?;
 
