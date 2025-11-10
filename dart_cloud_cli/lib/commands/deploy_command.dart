@@ -1,15 +1,16 @@
 import 'dart:io';
 import 'package:archive/archive_io.dart';
+import 'package:dart_cloud_cli/commands/base_command.dart' show BaseCommand;
 import 'package:path/path.dart' as path;
 import 'package:dart_cloud_cli/api/api_client.dart';
 import 'package:dart_cloud_cli/config/config.dart';
 import 'package:dart_cloud_cli/services/function_analyzer.dart';
 
-class DeployCommand {
+class DeployCommand extends BaseCommand  {
   Future<void> execute(List<String> args) async {
-    await Config.load();
+    await loadConfig();
 
-    if (!Config.isAuthenticated) {
+    if (!isAuthenticated) {
       print('Error: Not authenticated. Please run "dart_cloud login" first.');
       exit(1);
     }

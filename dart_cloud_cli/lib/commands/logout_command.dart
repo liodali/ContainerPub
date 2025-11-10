@@ -1,18 +1,18 @@
 import 'dart:io';
-import 'package:dart_cloud_cli/config/config.dart';
+import 'package:dart_cloud_cli/commands/base_command.dart' show BaseCommand;
 
-class LogoutCommand {
+class LogoutCommand extends BaseCommand {
   Future<void> execute(List<String> args) async {
-    await Config.load();
+    await loadConfig();
 
-    if (!Config.isAuthenticated) {
+    if (!isAuthenticated) {
       print('You are not logged in.');
       return;
     }
 
     try {
       print('Logging out...');
-      await Config.clear();
+      await clearAuth();
       print('✓ Successfully logged out!');
       print('Your authentication token has been removed.');
     } catch (e) {

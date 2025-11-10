@@ -1,10 +1,10 @@
 import 'dart:io';
 import 'package:dart_cloud_cli/api/api_client.dart';
-import 'package:dart_cloud_cli/config/config.dart';
+import 'package:dart_cloud_cli/commands/base_command.dart' show BaseCommand;
 
-class LoginCommand {
+class LoginCommand extends BaseCommand {
   Future<void> execute(List<String> args) async {
-    await Config.load();
+    await loadConfig();
 
     stdout.write('Email: ');
     final email = stdin.readLineSync() ?? '';
@@ -24,8 +24,9 @@ class LoginCommand {
       print('Authenticating...');
       final response = await ApiClient.login(email, password);
       final token = response['token'] as String;
+      final refreshToken = response['refreshToken'] as String;
 
-      await Config.save(authToken: token);
+      await saveAuth(token: token, refreshToken: refreshToken);
       print('✓ Successfully logged in!');
     } catch (e) {
       print('✗ Login failed: $e');

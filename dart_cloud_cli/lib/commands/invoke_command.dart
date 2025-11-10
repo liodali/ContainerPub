@@ -1,13 +1,13 @@
 import 'dart:io';
 import 'dart:convert';
 import 'package:dart_cloud_cli/api/api_client.dart';
-import 'package:dart_cloud_cli/config/config.dart';
+import 'package:dart_cloud_cli/commands/base_command.dart' show BaseCommand;
 
-class InvokeCommand {
+class InvokeCommand extends BaseCommand {
   Future<void> execute(List<String> args) async {
-    await Config.load();
+    await loadConfig();
 
-    if (!Config.isAuthenticated) {
+    if (!isAuthenticated) {
       print('Error: Not authenticated. Please run "dart_cloud login" first.');
       exit(1);
     }

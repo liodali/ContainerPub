@@ -30,7 +30,7 @@ class ApiClient {
       Uri.parse('${Config.serverUrl}/api/functions/deploy'),
     );
 
-    request.headers['Authorization'] = 'Bearer ${Config.authToken}';
+    request.headers['Authorization'] = 'Bearer ${Config.token}';
     request.fields['name'] = functionName;
     request.files
         .add(await http.MultipartFile.fromPath('archive', archive.path));
@@ -48,7 +48,7 @@ class ApiClient {
   static Future<List<dynamic>> listFunctions() async {
     final response = await http.get(
       Uri.parse('${Config.serverUrl}/api/functions'),
-      headers: {'Authorization': 'Bearer ${Config.authToken}'},
+      headers: {'Authorization': 'Bearer ${Config.token}'},
     );
 
     if (response.statusCode == 200) {
@@ -61,7 +61,7 @@ class ApiClient {
   static Future<Map<String, dynamic>> getFunctionLogs(String functionId) async {
     final response = await http.get(
       Uri.parse('${Config.serverUrl}/api/functions/$functionId/logs'),
-      headers: {'Authorization': 'Bearer ${Config.authToken}'},
+      headers: {'Authorization': 'Bearer ${Config.token}'},
     );
 
     if (response.statusCode == 200) {
@@ -74,7 +74,7 @@ class ApiClient {
   static Future<void> deleteFunction(String functionId) async {
     final response = await http.delete(
       Uri.parse('${Config.serverUrl}/api/functions/$functionId'),
-      headers: {'Authorization': 'Bearer ${Config.authToken}'},
+      headers: {'Authorization': 'Bearer ${Config.token}'},
     );
 
     if (response.statusCode != 200 && response.statusCode != 204) {
@@ -89,7 +89,7 @@ class ApiClient {
     final response = await http.post(
       Uri.parse('${Config.serverUrl}/api/functions/$functionId/invoke'),
       headers: {
-        'Authorization': 'Bearer ${Config.authToken}',
+        'Authorization': 'Bearer ${Config.token}',
         'Content-Type': 'application/json',
       },
       body: jsonEncode(data ?? {}),
