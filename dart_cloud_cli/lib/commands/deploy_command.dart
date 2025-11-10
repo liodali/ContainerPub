@@ -8,9 +8,9 @@ import 'package:dart_cloud_cli/services/function_analyzer.dart';
 
 class DeployCommand extends BaseCommand  {
   Future<void> execute(List<String> args) async {
-    await loadConfig();
+    await config.loadConfig();
 
-    if (!isAuthenticated) {
+    if (!config.isAuthenticated) {
       print('Error: Not authenticated. Please run "dart_cloud login" first.');
       exit(1);
     }

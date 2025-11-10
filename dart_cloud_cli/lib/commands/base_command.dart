@@ -1,3 +1,8 @@
 import 'package:dart_cloud_cli/config/config.dart';
 
-abstract class BaseCommand extends Config {}
+class BaseCommand {
+  BaseCommand() : _config = Config();
+  final Config _config;
+
+  Config get config => _config;
+}

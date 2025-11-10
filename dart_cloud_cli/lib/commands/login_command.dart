@@ -4,7 +4,7 @@ import 'package:dart_cloud_cli/commands/base_command.dart' show BaseCommand;
 
 class LoginCommand extends BaseCommand {
   Future<void> execute(List<String> args) async {
-    await loadConfig();
+    await config.loadConfig();
 
     stdout.write('Email: ');
     final email = stdin.readLineSync() ?? '';
@@ -26,7 +26,7 @@ class LoginCommand extends BaseCommand {
       final token = response['token'] as String;
       final refreshToken = response['refreshToken'] as String;
 
-      await saveAuth(token: token, refreshToken: refreshToken);
+      await config.saveAuth(token: token, refreshToken: refreshToken);
       print('✓ Successfully logged in!');
     } catch (e) {
       print('✗ Login failed: $e');

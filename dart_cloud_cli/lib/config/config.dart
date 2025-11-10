@@ -13,14 +13,14 @@ class Config with AuthCache {
   static String? get token => _token;
   static String? get refreshToken => _refreshToken;
 
-  // Config._();
-  // static Config? _instance;
-  // factory Config() {
-  //   _instance ??= Config._();
-  //   return _instance!;
-  // }
+  Config._();
+  static Config? _instance;
+  factory Config() {
+    _instance ??= Config._();
+    return _instance!;
+  }
 
-  // static Config get instance => Config();
+  static Config get instance => Config();
 
   static File get configFile {
     final home =
