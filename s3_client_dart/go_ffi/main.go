@@ -4,10 +4,12 @@ import "C"
 import (
 	"context"
 	"encoding/json"
+	"fmt"
+	"io"
 	"log"
 	"os"
-
 	"sync"
+	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
@@ -96,14 +98,71 @@ func list() *C.char {
 }
 
 //export delete
-func delete(objectKey *C.char) {
+func delete(objectKey *C.char) *C.char {
 	_, err := s3Bucket.client.DeleteObject(context.TODO(), &s3.DeleteObjectInput{
 		Bucket: aws.String(s3Bucket.BucketName),
 		Key:    aws.String(C.GoString(objectKey)),
 	})
 	if err != nil {
-		log.Printf("Couldn't delete object %v. Here's why: %v\n", C.GoString(objectKey), err)
+		errMsg := fmt.Sprintf("Error deleting object: %v", err)
+		log.Println(errMsg)
+		return C.CString(errMsg)
 	}
+	return C.CString("")
+}
+
+//export download
+func download(objectKey *C.char, destinationPath *C.char) *C.char {
+	s3Mu.Lock()
+	defer s3Mu.Unlock()
+
+	result, err := s3Bucket.client.GetObject(context.TODO(), &s3.GetObjectInput{
+		Bucket: aws.String(s3Bucket.BucketName),
+		Key:    aws.String(C.GoString(objectKey)),
+	})
+	if err != nil {
+		errMsg := fmt.Sprintf("Error downloading object: %v", err)
+		log.Println(errMsg)
+		return C.CString(errMsg)
+	}
+	defer result.Body.Close()
+
+	file, err := os.Create(C.GoString(destinationPath))
+	if err != nil {
+		errMsg := fmt.Sprintf("Error creating file: %v", err)
+		log.Println(errMsg)
+		return C.CString(errMsg)
+	}
+	defer file.Close()
+
+	_, err = io.Copy(file, result.Body)
+	if err != nil {
+		errMsg := fmt.Sprintf("Error writing file: %v", err)
+		log.Println(errMsg)
+		return C.CString(errMsg)
+	}
+
+	return C.CString("")
+}
+
+//export getPresignedUrl
+func getPresignedUrl(objectKey *C.char, expirationSeconds int) *C.char {
+	presignClient := s3.NewPresignClient(s3Bucket.client)
+	
+	request, err := presignClient.PresignGetObject(context.TODO(), &s3.GetObjectInput{
+		Bucket: aws.String(s3Bucket.BucketName),
+		Key:    aws.String(C.GoString(objectKey)),
+	}, func(opts *s3.PresignOptions) {
+		opts.Expires = time.Duration(expirationSeconds) * time.Second
+	})
+	
+	if err != nil {
+		errMsg := fmt.Sprintf("Error generating presigned URL: %v", err)
+		log.Println(errMsg)
+		return C.CString("")
+	}
+	
+	return C.CString(request.URL)
 }
 
 func main() {

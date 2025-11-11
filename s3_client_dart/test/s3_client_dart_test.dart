@@ -2,15 +2,33 @@ import 'package:s3_client_dart/s3_client_dart.dart';
 import 'package:test/test.dart';
 
 void main() {
-  group('A group of tests', () {
-    final awesome = Awesome();
+  group('S3Client Tests', () {
+    late S3Client client;
 
     setUp(() {
-      // Additional setup goes here.
+      client = S3Client();
     });
 
-    test('First Test', () {
-      expect(awesome.isAwesome, isTrue);
+    test('S3Client can be instantiated', () {
+      expect(client, isNotNull);
+    });
+
+    test('S3Client throws StateError when not initialized', () {
+      expect(
+        () => client.listObjects(),
+        throwsA(isA<StateError>()),
+      );
+    });
+
+    test('S3Client can be initialized', () {
+      expect(
+        () => client.initialize(
+          bucketName: 'test-bucket',
+          accessKeyId: 'test-key',
+          secretAccessKey: 'test-secret',
+        ),
+        returnsNormally,
+      );
     });
   });
 }

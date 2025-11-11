@@ -1,8 +1,7 @@
-/// Support for doing something awesome.
+/// S3 Client for Dart using Go FFI
 ///
-/// More dartdocs go here.
+/// This library provides a Dart interface to AWS S3 operations
+/// using a Go shared library via FFI for high performance.
 library;
 
-export 'src/s3_client_dart_base.dart';
-
-// TODO: Export any libraries intended for clients of this package.
+export 'src/s3_client_dart_base.dart' show S3Client, S3Exception;
