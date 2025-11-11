@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 200" width="720" height="200" aria-labelledby="title desc" role="img">
+  <title id="title">ContainerPub Logo</title>
+  <desc id="desc">Logo with cloud-container mark and ContainerPub wordmark.</desc>
+  <defs>
+    <linearGradient id="cpGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#6366F1"/>
+      <stop offset="50%" stop-color="#22D3EE"/>
+      <stop offset="100%" stop-color="#A855F7"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Mark -->
+  <g transform="translate(20,28)">
+    <circle cx="78" cy="68" r="24" fill="url(#cpGrad)" opacity="0.85"/>
+    <circle cx="108" cy="54" r="30" fill="url(#cpGrad)"/>
+    <circle cx="138" cy="68" r="24" fill="url(#cpGrad)" opacity="0.85"/>
+    <rect x="62" y="68" width="108" height="42" rx="21" fill="url(#cpGrad)"/>
+    <g stroke="#FFFFFF" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round">
+      <polygon points="110,50 96,58 110,66 124,58" fill="#FFFFFF22"/>
+      <polygon points="96,58 96,74 110,82 110,66" fill="#FFFFFF18"/>
+      <polygon points="124,58 124,74 110,82 110,66" fill="#FFFFFF10"/>
+    </g>
+  </g>
+
+  <!-- Wordmark -->
+  <g transform="translate(220,95)">
+    <text x="0" y="0" font-family="system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial" font-weight="600" font-size="44" fill="#e5e7eb">Container</text>
+    <text x="196" y="0" font-family="system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial" font-weight="600" font-size="44" fill="#a78bfa">Pub</text>
+    <text x="0" y="32" font-family="system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial" font-size="16" fill="#9ca3af">Cloud service for Dart, containers, and webhooks</text>
+  </g>
+</svg>
