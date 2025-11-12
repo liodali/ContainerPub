@@ -14,11 +14,11 @@ const onSelect = (key: FeatureKey) => emit('select', key)
 </script>
 
 <template>
-  <nav class="mt-6">
-    <ul class="flex justify-center gap-2">
-      <li v-for="item in items" :key="item.key">
+  <nav class="mt-0">
+    <ul class="flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-2">
+      <li v-for="item in items" :key="item.key" class="w-full sm:w-auto">
         <button
-          class="inline-flex items-center gap-2 px-3 py-2 rounded border"
+          class="inline-flex w-full sm:w-auto justify-between sm:justify-center items-center gap-2 px-3 py-2 rounded border text-sm sm:text-base"
           :class="props.selected === item.key ? 'border-indigo-500 text-indigo-400' : 'border-transparent hover:border-neutral-300'"
           @click="onSelect(item.key)"
         >

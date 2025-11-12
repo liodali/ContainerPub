@@ -33,7 +33,9 @@ const logoMark = new URL('./assets/containerpub-mark.svg', import.meta.url).href
     <HeroSection @select="onSelect" />
   </section>
 
-  <FeatureNav :selected="selected" @select="onSelect" />
+  <section class="max-w-5xl mx-auto px-4 mt-8">
+    <FeatureNav :selected="selected" @select="onSelect" />
+  </section>
 
   <main class="max-w-5xl mx-auto px-4 mt-8">
     <FeaturesGrid @select="onSelect" />
