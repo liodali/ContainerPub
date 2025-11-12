@@ -5,6 +5,7 @@ import 'package:ffi/ffi.dart';
 /// FFI bindings for the Go S3 client shared library
 class S3FFIBindings {
   late final DynamicLibrary _dylib;
+  final String? _customLibraryPath;
   
   // Function signatures
   late final void Function(Pointer<Utf8>, Pointer<Utf8>, Pointer<Utf8>, Pointer<Utf8>) _initBucket;
@@ -14,7 +15,11 @@ class S3FFIBindings {
   late final Pointer<Utf8> Function(Pointer<Utf8>, Pointer<Utf8>) _download;
   late final Pointer<Utf8> Function(Pointer<Utf8>, int) _getPresignedUrl;
 
-  S3FFIBindings() {
+  /// Create S3FFIBindings with optional custom library path
+  /// 
+  /// [libraryPath] - Optional custom path to the Go shared library.
+  /// If not provided, will use platform-specific default paths.
+  S3FFIBindings({String? libraryPath}) : _customLibraryPath = libraryPath {
     _dylib = _loadLibrary();
     _initBucket = _dylib
         .lookup<NativeFunction<Void Function(Pointer<Utf8>, Pointer<Utf8>, Pointer<Utf8>, Pointer<Utf8>)>>('initBucket')
@@ -37,11 +42,20 @@ class S3FFIBindings {
   }
 
   /// Load the appropriate shared library based on the platform
+  /// 
+  /// Uses [_customLibraryPath] if provided, otherwise uses platform-specific defaults.
   DynamicLibrary _loadLibrary() {
+    // If custom path is provided, use it directly
+    final customPath = _customLibraryPath;
+    if (customPath != null && customPath.isNotEmpty) {
+      return DynamicLibrary.open(customPath);
+    }
+
+    // Use platform-specific default paths
     if (Platform.isMacOS) {
-      return DynamicLibrary.open('go_ffi/darwin/s3_client_dart_dylib');
+      return DynamicLibrary.open('go_ffi/darwin/s3_client_dart.dylib');
     } else if (Platform.isLinux) {
-      return DynamicLibrary.open('go_ffi/linux/s3_client_dart_so');
+      return DynamicLibrary.open('go_ffi/linux/s3_client_dart.so');
     } else if (Platform.isWindows) {
       return DynamicLibrary.open('go_ffi/windows/s3_client_dart.dll');
     } else {

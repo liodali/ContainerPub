@@ -19,5 +19,5 @@ fi
 
 rm -fdr "${DIR}"
 
-go build -buildmode=c-shared -ldflags="-s -w" -o "${DIR}/s3_client_dart_${TO}" main.go
+go build -buildmode=c-shared -ldflags="-s -w" -o "${DIR}/s3_client_dart.${TO}" main.go
 

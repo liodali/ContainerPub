@@ -23,9 +23,12 @@ void main() {
     test('S3Client can be initialized', () {
       expect(
         () => client.initialize(
-          bucketName: 'test-bucket',
-          accessKeyId: 'test-key',
-          secretAccessKey: 'test-secret',
+          configuration: S3Configuration(
+            bucketName: 'test-bucket',
+            accessKeyId: 'test-key',
+            secretAccessKey: 'test-secret',
+            sessionToken: 'test-token',
+          ),
         ),
         returnsNormally,
       );
