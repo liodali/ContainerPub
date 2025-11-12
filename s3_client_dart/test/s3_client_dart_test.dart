@@ -29,6 +29,7 @@ void main() {
             accessKeyId: 'test-key',
             secretAccessKey: 'test-secret',
             sessionToken: 'test-token',
+            accountId: 'test-account',
             region: 'us-east-1',
           ),
         ),

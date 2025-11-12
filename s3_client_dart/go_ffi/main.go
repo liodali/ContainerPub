@@ -2,6 +2,7 @@ package main
 
 import "C"
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -28,31 +29,68 @@ type S3Bucket struct {
 }
 
 //export initBucket
-func initBucket(endpoint *C.char, bucketName *C.char, keyId *C.char, secretAccessKey *C.char, bucketToken *C.char, region *C.char) {
+func initBucket(endpoint *C.char, bucketName *C.char, keyId *C.char, secretAccessKey *C.char, sessionToken *C.char, region *C.char, accountId *C.char) {
 	ctx := context.TODO()
 
+	// Convert C strings to Go strings and trim whitespace
+	endpointStr := C.GoString(endpoint)
+	regionStr := C.GoString(region)
+	accessKeyID := C.GoString(keyId)
+	secretKey := C.GoString(secretAccessKey)
+	sessionTokenStr := C.GoString(sessionToken)
+	accountIDStr := C.GoString(accountId)
+	
+	// Debug logging (remove in production)
+	fmt.Printf("Initializing S3 client:\n")
+	fmt.Printf("  Endpoint: %s\n", endpointStr)
+	fmt.Printf("  Region: %s\n", regionStr)
+	fmt.Printf("  Access Key ID length: %d\n", len(accessKeyID))
+	fmt.Printf("  Secret Key length: %d\n", len(secretKey))
+	fmt.Printf("  Session Token length: %d\n", len(sessionTokenStr))
+	fmt.Printf("  Account ID: %s\n", accountIDStr)
+
 	// Load default config with region
-	cfg, err := config.LoadDefaultConfig(ctx, config.WithRegion(C.GoString(region)))
+	cfg, err := config.LoadDefaultConfig(ctx, config.WithRegion(regionStr))
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	client := s3.NewFromConfig(cfg, func(o *s3.Options) {
-		o.BaseEndpoint = aws.String(C.GoString(endpoint))
+		// Set custom endpoint (for Cloudflare R2, MinIO, etc.)
+		if endpointStr != "" {
+			o.BaseEndpoint = aws.String(endpointStr)
+		}
+		
+		// Use path-style addressing (required for R2 and some S3-compatible services)
+		o.UsePathStyle = true
+		
+		// Set credentials
 		o.Credentials = aws.NewCredentialsCache(aws.CredentialsProviderFunc(func(ctx context.Context) (aws.Credentials, error) {
-			return aws.Credentials{
-				AccessKeyID:     C.GoString(keyId),
-				SecretAccessKey: C.GoString(secretAccessKey),
-				SessionToken:    C.GoString(bucketToken),
+			creds := aws.Credentials{
+				AccessKeyID:     accessKeyID,
+				SecretAccessKey: secretKey,
 				Source:          "static",
-			}, nil
+			}
+			
+			// Only set session token if provided
+			if sessionTokenStr != "" {
+				creds.SessionToken = sessionTokenStr
+			}
+			
+			// Only set account ID if provided
+			if accountIDStr != "" {
+				creds.AccountID = accountIDStr
+			}
+			
+			return creds, nil
 		}))
 	})
-
+	
 	s3Bucket = &S3Bucket{
 		BucketName: C.GoString(bucketName),
 		client:     client,
 	}
+	fmt.Println("S3 Bucket initialized successfully")
 }
 
 //export upload
@@ -65,11 +103,17 @@ func upload(filePath *C.char, objectKey *C.char) *C.char {
 	defer file.Close()
 
 	s3Mu.Lock()
+	// Read the contents of the file into a buffer
+	var buf bytes.Buffer
+	if _, err := io.Copy(&buf, file); err != nil {
+		fmt.Fprintln(os.Stderr, "Error reading file:", err)
+		return C.CString("Error")
+	}
 
 	_, err = s3Bucket.client.PutObject(context.TODO(), &s3.PutObjectInput{
 		Bucket: aws.String(s3Bucket.BucketName),
 		Key:    aws.String(C.GoString(objectKey)),
-		Body:   file,
+		Body:   bytes.NewReader(buf.Bytes()),
 	})
 	if err != nil {
 		log.Printf("Couldn't upload file %v to %v:%v. Here's why: %v\n",

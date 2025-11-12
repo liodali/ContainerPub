@@ -6,9 +6,18 @@ import 'package:ffi/ffi.dart';
 class S3FFIBindings {
   late final DynamicLibrary _dylib;
   final String? _customLibraryPath;
-  
+
   // Function signatures
-  late final void Function(Pointer<Utf8>, Pointer<Utf8>, Pointer<Utf8>, Pointer<Utf8>, Pointer<Utf8>, Pointer<Utf8>) _initBucket;
+  late final void Function(
+    Pointer<Utf8>,
+    Pointer<Utf8>,
+    Pointer<Utf8>,
+    Pointer<Utf8>,
+    Pointer<Utf8>,
+    Pointer<Utf8>,
+    Pointer<Utf8>,
+  )
+  _initBucket;
   late final Pointer<Utf8> Function(Pointer<Utf8>, Pointer<Utf8>) _upload;
   late final Pointer<Utf8> Function() _list;
   late final Pointer<Utf8> Function(Pointer<Utf8>) _delete;
@@ -16,16 +25,30 @@ class S3FFIBindings {
   late final Pointer<Utf8> Function(Pointer<Utf8>, int) _getPresignedUrl;
 
   /// Create S3FFIBindings with optional custom library path
-  /// 
+  ///
   /// [libraryPath] - Optional custom path to the Go shared library.
   /// If not provided, will use platform-specific default paths.
   S3FFIBindings({String? libraryPath}) : _customLibraryPath = libraryPath {
     _dylib = _loadLibrary();
     _initBucket = _dylib
-        .lookup<NativeFunction<Void Function(Pointer<Utf8>, Pointer<Utf8>, Pointer<Utf8>, Pointer<Utf8>, Pointer<Utf8>, Pointer<Utf8>)>>('initBucket')
+        .lookup<
+          NativeFunction<
+            Void Function(
+              Pointer<Utf8>,
+              Pointer<Utf8>,
+              Pointer<Utf8>,
+              Pointer<Utf8>,
+              Pointer<Utf8>,
+              Pointer<Utf8>,
+              Pointer<Utf8>,
+            )
+          >
+        >('initBucket')
         .asFunction();
     _upload = _dylib
-        .lookup<NativeFunction<Pointer<Utf8> Function(Pointer<Utf8>, Pointer<Utf8>)>>('upload')
+        .lookup<
+          NativeFunction<Pointer<Utf8> Function(Pointer<Utf8>, Pointer<Utf8>)>
+        >('upload')
         .asFunction();
     _list = _dylib
         .lookup<NativeFunction<Pointer<Utf8> Function()>>('list')
@@ -34,15 +57,19 @@ class S3FFIBindings {
         .lookup<NativeFunction<Pointer<Utf8> Function(Pointer<Utf8>)>>('delete')
         .asFunction();
     _download = _dylib
-        .lookup<NativeFunction<Pointer<Utf8> Function(Pointer<Utf8>, Pointer<Utf8>)>>('download')
+        .lookup<
+          NativeFunction<Pointer<Utf8> Function(Pointer<Utf8>, Pointer<Utf8>)>
+        >('download')
         .asFunction();
     _getPresignedUrl = _dylib
-        .lookup<NativeFunction<Pointer<Utf8> Function(Pointer<Utf8>, Int32)>>('getPresignedUrl')
+        .lookup<NativeFunction<Pointer<Utf8> Function(Pointer<Utf8>, Int32)>>(
+          'getPresignedUrl',
+        )
         .asFunction();
   }
 
   /// Load the appropriate shared library based on the platform
-  /// 
+  ///
   /// Uses [_customLibraryPath] if provided, otherwise uses platform-specific defaults.
   DynamicLibrary _loadLibrary() {
     // If custom path is provided, use it directly
@@ -59,21 +86,40 @@ class S3FFIBindings {
     } else if (Platform.isWindows) {
       return DynamicLibrary.open('go_ffi/windows/s3_client_dart.dll');
     } else {
-      throw UnsupportedError('Unsupported platform: ${Platform.operatingSystem}');
+      throw UnsupportedError(
+        'Unsupported platform: ${Platform.operatingSystem}',
+      );
     }
   }
 
   /// Initialize the S3 bucket with credentials, region, and endpoint
-  void initBucket(String endpoint, String bucketName, String accessKeyId, String secretAccessKey, String sessionToken, String region) {
+  void initBucket({
+    required String endpoint,
+    required String bucketName,
+    required String accessKeyId,
+    required String secretAccessKey,
+    required String sessionToken,
+    required String region,
+    required String accountId,
+  }) {
     final endpointPtr = endpoint.toNativeUtf8();
     final bucketNamePtr = bucketName.toNativeUtf8();
     final accessKeyIdPtr = accessKeyId.toNativeUtf8();
     final secretAccessKeyPtr = secretAccessKey.toNativeUtf8();
     final sessionTokenPtr = sessionToken.toNativeUtf8();
     final regionPtr = region.toNativeUtf8();
+    final accountIdPtr = accountId.toNativeUtf8();
 
     try {
-      _initBucket(endpointPtr, bucketNamePtr, accessKeyIdPtr, secretAccessKeyPtr, sessionTokenPtr, regionPtr);
+      _initBucket(
+        endpointPtr,
+        bucketNamePtr,
+        accessKeyIdPtr,
+        secretAccessKeyPtr,
+        sessionTokenPtr,
+        regionPtr,
+        accountIdPtr,
+      );
     } finally {
       malloc.free(endpointPtr);
       malloc.free(bucketNamePtr);
@@ -81,6 +127,7 @@ class S3FFIBindings {
       malloc.free(secretAccessKeyPtr);
       malloc.free(sessionTokenPtr);
       malloc.free(regionPtr);
+      malloc.free(accountIdPtr);
     }
   }
 

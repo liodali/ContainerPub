@@ -22,12 +22,13 @@ class S3Client {
     required S3Configuration configuration,
   }) {
     _bindings.initBucket(
-      configuration.endpoint,
-      configuration.bucketName,
-      configuration.accessKeyId,
-      configuration.secretAccessKey,
-      configuration.sessionToken,
-      configuration.region,
+      endpoint: configuration.endpoint,
+      bucketName: configuration.bucketName,
+      accessKeyId: configuration.accessKeyId,
+      secretAccessKey: configuration.secretAccessKey,
+      sessionToken: configuration.sessionToken,
+      region: configuration.region,
+      accountId: configuration.accountId,
     );
     _initialized = true;
   }
