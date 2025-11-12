@@ -20,6 +20,7 @@ var (
 	s3Bucket *S3Bucket
 	s3Mu     sync.Mutex
 )
+
 // S3Bucket holds the S3 client and bucket name.
 type S3Bucket struct {
 	BucketName string
@@ -27,13 +28,17 @@ type S3Bucket struct {
 }
 
 //export initBucket
-func initBucket(bucketName *C.char, keyId *C.char, secretAccessKey *C.char, bucketToken *C.char) {
-	cfg, err := config.LoadDefaultConfig(context.TODO())
+func initBucket(endpoint *C.char, bucketName *C.char, keyId *C.char, secretAccessKey *C.char, bucketToken *C.char, region *C.char) {
+	ctx := context.TODO()
+
+	// Load default config with region
+	cfg, err := config.LoadDefaultConfig(ctx, config.WithRegion(C.GoString(region)))
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	client := s3.NewFromConfig(cfg, func(o *s3.Options) {
+		o.BaseEndpoint = aws.String(C.GoString(endpoint))
 		o.Credentials = aws.NewCredentialsCache(aws.CredentialsProviderFunc(func(ctx context.Context) (aws.Credentials, error) {
 			return aws.Credentials{
 				AccessKeyID:     C.GoString(keyId),
@@ -71,7 +76,7 @@ func upload(filePath *C.char, objectKey *C.char) *C.char {
 			C.GoString(filePath), s3Bucket.BucketName, C.GoString(objectKey), err)
 		return C.CString("")
 	}
-    defer s3Mu.Unlock()		
+	defer s3Mu.Unlock()
 	return C.CString(C.GoString(objectKey))
 }
 
@@ -148,20 +153,20 @@ func download(objectKey *C.char, destinationPath *C.char) *C.char {
 //export getPresignedUrl
 func getPresignedUrl(objectKey *C.char, expirationSeconds int) *C.char {
 	presignClient := s3.NewPresignClient(s3Bucket.client)
-	
+
 	request, err := presignClient.PresignGetObject(context.TODO(), &s3.GetObjectInput{
 		Bucket: aws.String(s3Bucket.BucketName),
 		Key:    aws.String(C.GoString(objectKey)),
 	}, func(opts *s3.PresignOptions) {
 		opts.Expires = time.Duration(expirationSeconds) * time.Second
 	})
-	
+
 	if err != nil {
 		errMsg := fmt.Sprintf("Error generating presigned URL: %v", err)
 		log.Println(errMsg)
 		return C.CString("")
 	}
-	
+
 	return C.CString(request.URL)
 }
 

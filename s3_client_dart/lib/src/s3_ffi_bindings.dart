@@ -8,7 +8,7 @@ class S3FFIBindings {
   final String? _customLibraryPath;
   
   // Function signatures
-  late final void Function(Pointer<Utf8>, Pointer<Utf8>, Pointer<Utf8>, Pointer<Utf8>) _initBucket;
+  late final void Function(Pointer<Utf8>, Pointer<Utf8>, Pointer<Utf8>, Pointer<Utf8>, Pointer<Utf8>, Pointer<Utf8>) _initBucket;
   late final Pointer<Utf8> Function(Pointer<Utf8>, Pointer<Utf8>) _upload;
   late final Pointer<Utf8> Function() _list;
   late final Pointer<Utf8> Function(Pointer<Utf8>) _delete;
@@ -22,7 +22,7 @@ class S3FFIBindings {
   S3FFIBindings({String? libraryPath}) : _customLibraryPath = libraryPath {
     _dylib = _loadLibrary();
     _initBucket = _dylib
-        .lookup<NativeFunction<Void Function(Pointer<Utf8>, Pointer<Utf8>, Pointer<Utf8>, Pointer<Utf8>)>>('initBucket')
+        .lookup<NativeFunction<Void Function(Pointer<Utf8>, Pointer<Utf8>, Pointer<Utf8>, Pointer<Utf8>, Pointer<Utf8>, Pointer<Utf8>)>>('initBucket')
         .asFunction();
     _upload = _dylib
         .lookup<NativeFunction<Pointer<Utf8> Function(Pointer<Utf8>, Pointer<Utf8>)>>('upload')
@@ -63,20 +63,24 @@ class S3FFIBindings {
     }
   }
 
-  /// Initialize the S3 bucket with credentials
-  void initBucket(String bucketName, String accessKeyId, String secretAccessKey, String sessionToken) {
+  /// Initialize the S3 bucket with credentials, region, and endpoint
+  void initBucket(String endpoint, String bucketName, String accessKeyId, String secretAccessKey, String sessionToken, String region) {
+    final endpointPtr = endpoint.toNativeUtf8();
     final bucketNamePtr = bucketName.toNativeUtf8();
     final accessKeyIdPtr = accessKeyId.toNativeUtf8();
     final secretAccessKeyPtr = secretAccessKey.toNativeUtf8();
     final sessionTokenPtr = sessionToken.toNativeUtf8();
+    final regionPtr = region.toNativeUtf8();
 
     try {
-      _initBucket(bucketNamePtr, accessKeyIdPtr, secretAccessKeyPtr, sessionTokenPtr);
+      _initBucket(endpointPtr, bucketNamePtr, accessKeyIdPtr, secretAccessKeyPtr, sessionTokenPtr, regionPtr);
     } finally {
+      malloc.free(endpointPtr);
       malloc.free(bucketNamePtr);
       malloc.free(accessKeyIdPtr);
       malloc.free(secretAccessKeyPtr);
       malloc.free(sessionTokenPtr);
+      malloc.free(regionPtr);
     }
   }
 

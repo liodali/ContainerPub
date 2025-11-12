@@ -24,10 +24,12 @@ void main() {
       expect(
         () => client.initialize(
           configuration: S3Configuration(
+            endpoint: 'https://s3.amazonaws.com',
             bucketName: 'test-bucket',
             accessKeyId: 'test-key',
             secretAccessKey: 'test-secret',
             sessionToken: 'test-token',
+            region: 'us-east-1',
           ),
         ),
         returnsNormally,

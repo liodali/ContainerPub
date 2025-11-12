@@ -15,20 +15,19 @@ class S3Client {
   S3Client({String? libraryPath})
     : _bindings = S3FFIBindings(libraryPath: libraryPath);
 
-  /// Initialize the S3 client with bucket credentials
+  /// Initialize the S3 client with bucket credentials, region, and endpoint
   ///
-  /// [bucketName] - The name of the S3 bucket
-  /// [accessKeyId] - AWS access key ID
-  /// [secretAccessKey] - AWS secret access key
-  /// [sessionToken] - AWS session token (optional, use empty string if not needed)
+  /// [configuration] - S3Configuration object containing credentials, region, and endpoint
   void initialize({
     required S3Configuration configuration,
   }) {
     _bindings.initBucket(
+      configuration.endpoint,
       configuration.bucketName,
       configuration.accessKeyId,
       configuration.secretAccessKey,
       configuration.sessionToken,
+      configuration.region,
     );
     _initialized = true;
   }
