@@ -16,9 +16,24 @@ A high-performance S3 client for Dart using Go FFI (Foreign Function Interface).
 
 This package uses Dart FFI to call functions from a Go shared library (`.dylib` on macOS, `.so` on Linux, `.dll` on Windows). The Go library uses the official AWS SDK v2 for Go, providing robust and well-tested S3 operations.
 
-## Prerequisites
+## Installation
 
-Before using this package, you need to build the Go shared library:
+Add this to your package's `pubspec.yaml` file:
+
+```yaml
+dependencies:
+  s3_client_dart: ^1.0.0
+```
+
+### Automatic Library Download
+
+The package will **automatically download** the appropriate native library for your platform from GitHub releases on first use. No manual setup required!
+
+The library is downloaded to `~/.s3_client_dart/lib/` and reused for subsequent runs.
+
+### Manual Library Setup (Optional)
+
+If you prefer to build the library yourself or use a custom version:
 
 ```bash
 cd go_ffi
@@ -27,17 +42,18 @@ cd go_ffi
 
 # For Linux
 ./deploy.sh so
+
+# For Windows
+go build -buildmode=c-shared -ldflags="-s -w" -o windows/s3_client_dart.dll main.go
 ```
 
-This will generate the platform-specific shared library in the appropriate directory (`darwin/` or `linux/`).
+Then specify the custom path:
 
-## Installation
-
-Add this to your package's `pubspec.yaml` file:
-
-```yaml
-dependencies:
-  s3_client_dart: ^1.0.0
+```dart
+final client = S3Client(
+  libraryPath: '/path/to/s3_client_dart.dylib',
+  autoDownload: false,
+);
 ```
 
 ## Usage
@@ -134,11 +150,48 @@ The build script will:
 2. Generate the shared library with C bindings
 3. Place the output in the platform-specific directory
 
+## Advanced Usage
+
+### Manual Library Download
+
+You can manually control library downloads:
+
+```dart
+import 'package:s3_client_dart/s3_client_dart.dart';
+
+void main() async {
+  // Download specific version
+  final libraryPath = await LibraryDownloader.downloadLibrary(
+    version: 'v1.0.0',  // or 'latest'
+  );
+  
+  print('Library downloaded to: $libraryPath');
+  
+  // Use the downloaded library
+  final client = S3Client(
+    libraryPath: libraryPath,
+    autoDownload: false,
+  );
+}
+```
+
+### Disable Auto-Download
+
+If you want to use only locally built libraries:
+
+```dart
+final client = S3Client(
+  autoDownload: false,  // Will throw error if library not found
+);
+```
+
 ## Platform Support
 
-- ✅ macOS (ARM64 & x86_64)
-- ✅ Linux (x86_64)
-- ⚠️ Windows (requires additional setup)
+- ✅ macOS (ARM64 & x86_64) - Auto-download supported
+- ✅ Linux (x86_64) - Auto-download supported
+- ✅ Windows (x86_64) - Auto-download supported
+
+Pre-built libraries are available for all platforms via GitHub releases.
 
 ## Error Handling
 

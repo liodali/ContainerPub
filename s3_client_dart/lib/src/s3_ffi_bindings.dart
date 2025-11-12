@@ -1,11 +1,13 @@
 import 'dart:ffi';
 import 'dart:io';
 import 'package:ffi/ffi.dart';
+import 'library_downloader.dart';
 
 /// FFI bindings for the Go S3 client shared library
 class S3FFIBindings {
   late final DynamicLibrary _dylib;
   final String? _customLibraryPath;
+  final bool _autoDownload;
 
   // Function signatures
   late final void Function(
@@ -28,7 +30,12 @@ class S3FFIBindings {
   ///
   /// [libraryPath] - Optional custom path to the Go shared library.
   /// If not provided, will use platform-specific default paths.
-  S3FFIBindings({String? libraryPath}) : _customLibraryPath = libraryPath {
+  /// [autoDownload] - If true, automatically download library from GitHub releases if not found.
+  S3FFIBindings({
+    String? libraryPath,
+    bool autoDownload = true,
+  })  : _customLibraryPath = libraryPath,
+        _autoDownload = autoDownload {
     _dylib = _loadLibrary();
     _initBucket = _dylib
         .lookup<
@@ -71,25 +78,86 @@ class S3FFIBindings {
   /// Load the appropriate shared library based on the platform
   ///
   /// Uses [_customLibraryPath] if provided, otherwise uses platform-specific defaults.
+  /// If auto-download is enabled and library is not found, downloads from GitHub releases.
   DynamicLibrary _loadLibrary() {
     // If custom path is provided, use it directly
     final customPath = _customLibraryPath;
     if (customPath != null && customPath.isNotEmpty) {
-      return DynamicLibrary.open(customPath);
+      if (File(customPath).existsSync()) {
+        return DynamicLibrary.open(customPath);
+      } else if (!_autoDownload) {
+        throw Exception('Library not found at: $customPath');
+      }
     }
 
-    // Use platform-specific default paths
+    // Try platform-specific default paths first
+    String defaultPath;
     if (Platform.isMacOS) {
-      return DynamicLibrary.open('go_ffi/darwin/s3_client_dart.dylib');
+      defaultPath = 'go_ffi/darwin/s3_client_dart.dylib';
     } else if (Platform.isLinux) {
-      return DynamicLibrary.open('go_ffi/linux/s3_client_dart.so');
+      defaultPath = 'go_ffi/linux/s3_client_dart.so';
     } else if (Platform.isWindows) {
-      return DynamicLibrary.open('go_ffi/windows/s3_client_dart.dll');
+      defaultPath = 'go_ffi/windows/s3_client_dart.dll';
     } else {
       throw UnsupportedError(
         'Unsupported platform: ${Platform.operatingSystem}',
       );
     }
+
+    // Try to load from default path
+    if (File(defaultPath).existsSync()) {
+      return DynamicLibrary.open(defaultPath);
+    }
+
+    // If auto-download is disabled, throw error
+    if (!_autoDownload) {
+      throw Exception(
+        'Library not found at: $defaultPath\n'
+        'Set autoDownload: true to automatically download from GitHub releases.',
+      );
+    }
+
+    // Auto-download from GitHub releases
+    print('Library not found locally, downloading from GitHub releases...');
+    try {
+      // This is synchronous for simplicity - in production you might want async initialization
+      final downloadedPath = _downloadLibrarySync();
+      return DynamicLibrary.open(downloadedPath);
+    } catch (e) {
+      throw Exception(
+        'Failed to download library: $e\n'
+        'You can manually download from: '
+        'https://github.com/liodali/ContainerPub/releases',
+      );
+    }
+  }
+
+  /// Synchronous wrapper for library download
+  String _downloadLibrarySync() {
+    // Use a simple synchronous approach
+    String? downloadedPath;
+    Exception? error;
+
+    LibraryDownloader.downloadLibrary().then((path) {
+      downloadedPath = path;
+    }).catchError((e) {
+      error = e as Exception;
+    });
+
+    // Wait for download to complete (simple polling)
+    final startTime = DateTime.now();
+    while (downloadedPath == null && error == null) {
+      if (DateTime.now().difference(startTime).inSeconds > 60) {
+        throw Exception('Download timeout after 60 seconds');
+      }
+      sleep(Duration(milliseconds: 100));
+    }
+
+    if (error != null) {
+      throw error!;
+    }
+
+    return downloadedPath!;
   }
 
   /// Initialize the S3 bucket with credentials, region, and endpoint

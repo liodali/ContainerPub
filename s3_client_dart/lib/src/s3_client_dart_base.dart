@@ -12,8 +12,15 @@ class S3Client {
   ///
   /// [libraryPath] - Optional custom path to the Go shared library.
   /// If not provided, will use platform-specific default paths.
-  S3Client({String? libraryPath})
-    : _bindings = S3FFIBindings(libraryPath: libraryPath);
+  /// [autoDownload] - If true, automatically downloads library from GitHub releases if not found.
+  /// Defaults to true for convenience.
+  S3Client({
+    String? libraryPath,
+    bool autoDownload = true,
+  }) : _bindings = S3FFIBindings(
+          libraryPath: libraryPath,
+          autoDownload: autoDownload,
+        );
 
   /// Initialize the S3 client with bucket credentials, region, and endpoint
   ///
