@@ -24,7 +24,7 @@ echo "Description: $DESCRIPTION"
 echo ""
 
 
-tag="s3-client-dart-v$VERSION"
+tag="s3-client-dart-$VERSION"
 
 # Check if tag already exists
 if git rev-parse "$tag" >/dev/null 2>&1; then

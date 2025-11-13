@@ -22,6 +22,7 @@ jobs:
       - name: Build dylib
         working-directory: go_ffi
         run: |
+          cd s3_client_dart/go_ffi
           chmod +x deploy.sh
           ./deploy.sh dylib
 
@@ -47,6 +48,7 @@ jobs:
       - name: Build so
         working-directory: go_ffi
         run: |
+          cd s3_client_dart/go_ffi
           chmod +x deploy.sh
           ./deploy.sh so
 
@@ -73,6 +75,7 @@ jobs:
         working-directory: go_ffi
         shell: bash
         run: |
+          cd s3_client_dart/go_ffi
           mkdir -p windows
           go build -buildmode=c-shared -ldflags="-s -w" -o windows/s3_client_dart.dll main.go
 
@@ -113,7 +116,7 @@ jobs:
 
       - name: Create release archives
         run: |
-          cd artifacts
+          cd s3_client_dart/artifacts
           tar -czf s3_client_dart-darwin-amd64.tar.gz -C darwin s3_client_dart.dylib
           tar -czf s3_client_dart-linux-amd64.tar.gz -C linux s3_client_dart.so
           zip s3_client_dart-windows-amd64.zip windows/s3_client_dart.dll
