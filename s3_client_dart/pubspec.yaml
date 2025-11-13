@@ -1,6 +1,9 @@
 name: s3_client_dart
-description: A starting point for Dart libraries or applications.
-version: 1.0.0
+description: s3 client for dart based on go sdk
+tags:
+  - s3
+  - client
+version: 0.1.0
 # repository: https://github.com/my_org/my_repo
 
 environment:

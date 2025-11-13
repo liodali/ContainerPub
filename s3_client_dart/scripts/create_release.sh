@@ -23,9 +23,12 @@ echo "Creating release $VERSION"
 echo "Description: $DESCRIPTION"
 echo ""
 
+
+tag="s3-client-dart-v$VERSION"
+
 # Check if tag already exists
-if git rev-parse "$VERSION" >/dev/null 2>&1; then
-    echo "Error: Tag $VERSION already exists"
+if git rev-parse "$tag" >/dev/null 2>&1; then
+    echo "Error: Tag $tag already exists"
     exit 1
 fi
 
@@ -47,13 +50,13 @@ git add pubspec.yaml
 git commit -m "Bump version to $VERSION_NUMBER"
 
 # Create annotated tag
-echo "Creating tag $VERSION..."
-git tag -a "$VERSION" -m "$DESCRIPTION"
+echo "Creating tag $tag..."
+git tag -a "$tag" -m "$DESCRIPTION"
 
 # Push changes and tag
 echo "Pushing to origin..."
 git push origin main
-git push origin "$VERSION"
+git push origin --tags
 
 echo ""
 echo "✅ Release $VERSION created successfully!"
@@ -66,4 +69,4 @@ echo "Monitor progress at:"
 echo "  https://github.com/liodali/ContainerPub/actions"
 echo ""
 echo "Once complete, the release will be available at:"
-echo "  https://github.com/liodali/ContainerPub/releases/tag/$VERSION"
+echo "  https://github.com/liodali/ContainerPub/releases/tag/$tag"

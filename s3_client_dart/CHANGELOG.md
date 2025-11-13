@@ -1,4 +1,4 @@
-## 1.0.0
+## 0.1.0
 
 - Initial release of S3 Client Dart
 - Go FFI-based S3 client using AWS SDK for Go v2
