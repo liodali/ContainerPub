@@ -11,6 +11,7 @@ class Config {
   static late int functionTimeoutSeconds;
   static late int functionMaxMemoryMb;
   static late int functionMaxConcurrentExecutions;
+  static late int functionMaxRequestSizeMb;
 
   // Database access control
   static late String? functionDatabaseUrl;
@@ -67,6 +68,12 @@ class Config {
       env['FUNCTION_MAX_CONCURRENT'] ??
           Platform.environment['FUNCTION_MAX_CONCURRENT'] ??
           '10',
+    );
+
+    functionMaxRequestSizeMb = int.parse(
+      env['FUNCTION_MAX_REQUEST_SIZE_MB'] ??
+          Platform.environment['FUNCTION_MAX_REQUEST_SIZE_MB'] ??
+          '5',
     );
 
     // Database access for functions

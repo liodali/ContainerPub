@@ -1,0 +1,290 @@
+import 'dart:convert';
+import 'dart:io';
+import 'package:shelf/shelf.dart';
+import 'package:shelf_multipart/shelf_multipart.dart';
+import 'package:path/path.dart' as path;
+import 'package:uuid/uuid.dart';
+import 'package:archive/archive_io.dart';
+import 'package:s3_client_dart/s3_client_dart.dart';
+import 'package:dart_cloud_backend/config/config.dart';
+import 'package:dart_cloud_backend/database/database.dart';
+import 'package:dart_cloud_backend/services/docker_service.dart';
+import 'utils.dart';
+
+/// Handles function deployment operations including:
+/// - Creating new functions
+/// - Updating existing functions with versioning
+/// - Uploading archives to S3
+/// - Building Docker images
+/// - Managing deployment history
+class DeploymentHandler {
+  static const _uuid = Uuid();
+  static S3Client? _s3Client;
+
+  /// Initialize S3 client with configuration from environment
+  /// This should be called once at application startup
+  static void initializeS3() {
+    _s3Client = S3Client();
+    _s3Client!.initialize(
+      configuration: S3Configuration(
+        endpoint: Config.s3Endpoint,
+        bucketName: Config.s3BucketName,
+        accessKeyId: Config.s3AccessKeyId,
+        secretAccessKey: Config.s3SecretAccessKey,
+        sessionToken: Config.s3SessionToken ?? '',
+        region: Config.s3Region,
+        accountId: Config.s3AccountId ?? '',
+      ),
+    );
+  }
+
+  /// Deploy a new function or update an existing one
+  ///
+  /// This endpoint handles the complete deployment workflow:
+  /// 1. Parse multipart request (function name + archive)
+  /// 2. Check if function exists (new vs update)
+  /// 3. Upload archive to S3 with versioning
+  /// 4. Extract archive locally
+  /// 5. Build Docker image
+  /// 6. Create deployment record
+  /// 7. Update function status
+  ///
+  /// Request format:
+  /// - Content-Type: multipart/form-data
+  /// - Fields: name (string), archive (file)
+  ///
+  /// Response:
+  /// - 201: New function created
+  /// - 200: Existing function updated
+  /// - 400: Invalid request
+  /// - 500: Deployment failed
+  static Future<Response> deploy(Request request) async {
+    try {
+      // Extract user ID from authenticated request context
+      final userId = request.context['userId'] as String;
+
+      // Validate that request is multipart (required for file upload)
+      if (request.multipart() == null) {
+        return Response.badRequest(
+          body: jsonEncode({'error': 'Multipart request required'}),
+          headers: {'Content-Type': 'application/json'},
+        );
+      }
+
+      // Parse multipart request to extract function name and archive file
+      String? functionName;
+      File? archiveFile;
+      final multipart = request.multipart()!;
+
+      await for (final part in multipart.parts) {
+        final header = part.headers;
+
+        // Extract function name from 'name' field
+        if (header['name'] == 'name') {
+          functionName = await part.readString();
+        }
+        // Extract archive file from 'archive' field
+        else if (header['name'] == 'archive') {
+          // Create temporary directory for uploaded file
+          final tempDir = Directory.systemTemp.createTempSync(
+            'dart_cloud_upload_',
+          );
+          final tempFile = File(path.join(tempDir.path, 'function.tar.gz'));
+
+          // Stream uploaded file to temporary location
+          final sink = tempFile.openWrite();
+          await part.pipe(sink);
+          await sink.close();
+
+          archiveFile = tempFile;
+        }
+      }
+
+      // Validate that both required fields are present
+      if (functionName == null || archiveFile == null) {
+        return Response.badRequest(
+          body: jsonEncode({'error': 'Missing function name or archive'}),
+          headers: {'Content-Type': 'application/json'},
+        );
+      }
+
+      // Check if function with this name already exists for this user
+      final existingResult = await Database.connection.execute(
+        'SELECT id FROM functions WHERE user_id = \$1 AND name = \$2',
+        parameters: [userId, functionName],
+      );
+
+      String functionId;
+      int version = 1;
+      bool isNewFunction = existingResult.isEmpty;
+
+      if (isNewFunction) {
+        // === NEW FUNCTION WORKFLOW ===
+        // Generate unique ID for new function
+        functionId = _uuid.v4();
+
+        // Create function record in database with 'building' status
+        await Database.connection.execute(
+          'INSERT INTO functions (id, user_id, name, status) VALUES (\$1, \$2, \$3, \$4)',
+          parameters: [functionId, userId, functionName, 'building'],
+        );
+
+        // Log function creation
+        await FunctionUtils.logFunction(
+          functionId,
+          'info',
+          'Creating new function: $functionName',
+        );
+      } else {
+        // === UPDATE EXISTING FUNCTION WORKFLOW ===
+        // Get existing function ID
+        functionId = existingResult.first[0] as String;
+
+        // Get the latest version number for this function
+        final versionResult = await Database.connection.execute(
+          'SELECT COALESCE(MAX(version), 0) FROM function_deployments WHERE function_id = \$1',
+          parameters: [functionId],
+        );
+        // Increment version for new deployment
+        version = (versionResult.first[0] as int) + 1;
+
+        // Mark current active deployment as inactive (old version)
+        await Database.connection.execute(
+          'UPDATE function_deployments SET is_active = false WHERE function_id = \$1 AND is_active = true',
+          parameters: [functionId],
+        );
+
+        // Update function status to 'building' during deployment
+        await Database.connection.execute(
+          'UPDATE functions SET status = \$1 WHERE id = \$2',
+          parameters: ['building', functionId],
+        );
+
+        // Log function update
+        await FunctionUtils.logFunction(
+          functionId,
+          'info',
+          'Updating function: $functionName (version $version)',
+        );
+      }
+
+      // === S3 UPLOAD ===
+      // Upload archive to S3 with versioned path
+      await FunctionUtils.logFunction(
+        functionId,
+        'info',
+        'Uploading archive to S3...',
+      );
+
+      // S3 key format: functions/{function-id}/v{version}/function.tar.gz
+      final s3Key = 'functions/$functionId/v$version/function.tar.gz';
+
+      // Initialize S3 client if not already done
+      if (_s3Client == null) {
+        initializeS3();
+      }
+
+      // Upload file to S3
+      final uploadResult = await _s3Client!.upload(archiveFile.path, s3Key);
+      if (uploadResult.isEmpty) {
+        throw Exception('Failed to upload archive to S3');
+      }
+
+      await FunctionUtils.logFunction(
+        functionId,
+        'info',
+        'Archive uploaded to S3: $s3Key',
+      );
+
+      // === LOCAL EXTRACTION ===
+      // Create versioned directory for function code
+      final functionDir = Directory(
+        path.join(Config.functionsDir, functionId, 'v$version'),
+      );
+      await functionDir.create(recursive: true);
+
+      // Extract tar.gz archive to function directory
+      final inputStream = InputFileStream(archiveFile.path);
+      final archive = TarDecoder().decodeBytes(
+        GZipDecoder().decodeBytes(inputStream.toUint8List()),
+      );
+      extractArchiveToDisk(archive, functionDir.path);
+      inputStream.close();
+
+      // Clean up temporary uploaded file
+      await archiveFile.delete();
+
+      // === DOCKER IMAGE BUILD ===
+      // Build Docker image with versioned tag
+      await FunctionUtils.logFunction(
+        functionId,
+        'info',
+        'Building Docker image...',
+      );
+
+      // Image tag format: {registry}/dart-function-{id}-v{version}:latest
+      final imageTag = await DockerService.buildImage(
+        '$functionId-v$version',
+        functionDir.path,
+      );
+
+      await FunctionUtils.logFunction(
+        functionId,
+        'info',
+        'Docker image built: $imageTag',
+      );
+
+      // === CREATE DEPLOYMENT RECORD ===
+      // Generate unique ID for this deployment
+      final deploymentId = _uuid.v4();
+
+      // Store deployment metadata in database
+      await Database.connection.execute(
+        'INSERT INTO function_deployments (id, function_id, version, image_tag, s3_key, status, is_active) VALUES (\$1, \$2, \$3, \$4, \$5, \$6, \$7)',
+        parameters: [
+          deploymentId,
+          functionId,
+          version,
+          imageTag,
+          s3Key,
+          'active',
+          true, // Mark as active deployment
+        ],
+      );
+
+      // Update function record with active deployment reference
+      await Database.connection.execute(
+        'UPDATE functions SET active_deployment_id = \$1, status = \$2 WHERE id = \$3',
+        parameters: [deploymentId, 'active', functionId],
+      );
+
+      // Log successful deployment
+      await FunctionUtils.logFunction(
+        functionId,
+        'info',
+        'Function deployed successfully (version $version)',
+      );
+
+      // Return success response with deployment details
+      return Response(
+        isNewFunction ? 201 : 200, // 201 for new, 200 for update
+        body: jsonEncode({
+          'id': functionId,
+          'name': functionName,
+          'version': version,
+          'deploymentId': deploymentId,
+          'status': 'active',
+          'isNewFunction': isNewFunction,
+          'createdAt': DateTime.now().toIso8601String(),
+        }),
+        headers: {'Content-Type': 'application/json'},
+      );
+    } catch (e) {
+      // Handle any errors during deployment
+      return Response.internalServerError(
+        body: jsonEncode({'error': 'Deployment failed: $e'}),
+        headers: {'Content-Type': 'application/json'},
+      );
+    }
+  }
+}
