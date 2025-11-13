@@ -60,6 +60,20 @@ Router createRouter() {
         .addHandler((req) => FunctionHandler.invoke(req, req.params['id']!)),
   );
 
+  router.get(
+    '/api/functions/<id>/deployments',
+    Pipeline()
+        .addMiddleware(authMiddleware)
+        .addHandler((req) => FunctionHandler.getDeployments(req, req.params['id']!)),
+  );
+
+  router.post(
+    '/api/functions/<id>/rollback',
+    Pipeline()
+        .addMiddleware(authMiddleware)
+        .addHandler((req) => FunctionHandler.rollback(req, req.params['id']!)),
+  );
+
   // 404 handler
   router.all('/<ignored|.*>', (Request request) {
     return Response.notFound('Route not found');

@@ -17,6 +17,19 @@ class Config {
   static late int functionDatabaseMaxConnections;
   static late int functionDatabaseConnectionTimeoutMs;
 
+  // S3 Configuration
+  static late String s3Endpoint;
+  static late String s3BucketName;
+  static late String s3AccessKeyId;
+  static late String s3SecretAccessKey;
+  static late String s3Region;
+  static late String? s3SessionToken;
+  static late String? s3AccountId;
+
+  // Docker Configuration
+  static late String dockerBaseImage;
+  static late String dockerRegistry;
+
   static Future<void> load() async {
     final env = DotEnv();
     final envFile = File('.env');
@@ -71,6 +84,33 @@ class Config {
           Platform.environment['FUNCTION_DB_TIMEOUT_MS'] ??
           '5000',
     );
+
+    // S3 Configuration
+    s3Endpoint =
+        env['S3_ENDPOINT'] ??
+        Platform.environment['S3_ENDPOINT'] ??
+        'https://s3.amazonaws.com';
+    s3BucketName =
+        env['S3_BUCKET_NAME'] ??
+        Platform.environment['S3_BUCKET_NAME'] ??
+        'dart-cloud-functions';
+    s3AccessKeyId =
+        env['S3_ACCESS_KEY_ID'] ?? Platform.environment['S3_ACCESS_KEY_ID'] ?? '';
+    s3SecretAccessKey =
+        env['S3_SECRET_ACCESS_KEY'] ?? Platform.environment['S3_SECRET_ACCESS_KEY'] ?? '';
+    s3Region = env['S3_REGION'] ?? Platform.environment['S3_REGION'] ?? 'us-east-1';
+    s3SessionToken = env['S3_SESSION_TOKEN'] ?? Platform.environment['S3_SESSION_TOKEN'];
+    s3AccountId = env['S3_ACCOUNT_ID'] ?? Platform.environment['S3_ACCOUNT_ID'];
+
+    // Docker Configuration
+    dockerBaseImage =
+        env['DOCKER_BASE_IMAGE'] ??
+        Platform.environment['DOCKER_BASE_IMAGE'] ??
+        'dart:stable';
+    dockerRegistry =
+        env['DOCKER_REGISTRY'] ??
+        Platform.environment['DOCKER_REGISTRY'] ??
+        'localhost:5000';
 
     // Ensure functions directory exists
     final dir = Directory(functionsDir);

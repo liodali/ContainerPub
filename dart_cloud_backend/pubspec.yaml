@@ -22,7 +22,7 @@ dependencies:
     git:
       url: https://github.com/liodali/ContainerPub.git
       path: s3_client_dart
-      ref: main
+      ref: 7ee81dbee45a5737cf3d5786c122f3c0ace2677a
 
 dev_dependencies:
   lints: ^6.0.0

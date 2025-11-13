@@ -1,11 +1,14 @@
-import 'dart:convert';
 import 'dart:io';
+import 'dart:async';
 import 'package:path/path.dart' as path;
 import 'package:dart_cloud_backend/config/config.dart';
+import 'package:dart_cloud_backend/services/docker_service.dart';
+import 'package:dart_cloud_backend/database/database.dart';
 
 class FunctionExecutor {
   final String functionId;
   static int _activeExecutions = 0;
+  static final Map<String, Timer> _containerCleanupTimers = {};
 
   FunctionExecutor(this.functionId);
 
@@ -55,8 +58,6 @@ class FunctionExecutor {
   }
 
   Future<Map<String, dynamic>> _executeFunction(Map<String, dynamic> input) async {
-    final functionDir = path.join(Config.functionsDir, functionId);
-
     try {
       // Prepare HTTP-like request structure
       final httpRequest = {
@@ -66,113 +67,58 @@ class FunctionExecutor {
         'method': input['method'] ?? 'POST',
       };
 
-      // Create a temporary file with the HTTP request data
-      final tempInputFile = File(path.join(functionDir, '.input.json'));
-      await tempInputFile.writeAsString(jsonEncode(httpRequest));
-
-      // Execute the Dart function
-      // Look for main.dart or bin/main.dart
-      String? mainFile;
-      final mainDartFile = File(path.join(functionDir, 'main.dart'));
-      final binMainDartFile = File(path.join(functionDir, 'bin', 'main.dart'));
-
-      if (await mainDartFile.exists()) {
-        mainFile = mainDartFile.path;
-      } else if (await binMainDartFile.exists()) {
-        mainFile = binMainDartFile.path;
-      } else {
-        return {
-          'success': false,
-          'error': 'No main.dart or bin/main.dart found in function',
-          'result': null,
-        };
-      }
-
-      // Prepare environment with database access if configured
-      final environment = {
-        'FUNCTION_INPUT': jsonEncode(httpRequest),
-        'HTTP_BODY': jsonEncode(httpRequest['body']),
-        'HTTP_QUERY': jsonEncode(httpRequest['query']),
-        'HTTP_METHOD': httpRequest['method'] as String,
-        // Restrict dangerous operations
-        'DART_CLOUD_RESTRICTED': 'true',
-        // Resource limits
-        'FUNCTION_TIMEOUT_MS': (Config.functionTimeoutSeconds * 1000).toString(),
-        'FUNCTION_MAX_MEMORY_MB': Config.functionMaxMemoryMb.toString(),
-      };
-
-      // Add database connection if configured
-      if (Config.functionDatabaseUrl != null) {
-        environment['DATABASE_URL'] = Config.functionDatabaseUrl!;
-        environment['DB_MAX_CONNECTIONS'] = Config.functionDatabaseMaxConnections
-            .toString();
-        environment['DB_TIMEOUT_MS'] = Config.functionDatabaseConnectionTimeoutMs
-            .toString();
-      }
-
-      // Run the function with a timeout and HTTP request environment
-      final process = await Process.start(
-        'dart',
-        ['run', mainFile],
-        workingDirectory: functionDir,
-        environment: environment,
+      // Get active deployment image tag from database
+      final result = await Database.connection.execute(
+        '''
+        SELECT fd.image_tag
+        FROM functions f
+        JOIN function_deployments fd ON f.active_deployment_id = fd.id
+        WHERE f.id = \$1 AND fd.is_active = true
+        ''',
+        parameters: [functionId],
       );
 
-      final stdout = <String>[];
-      final stderr = <String>[];
+      if (result.isEmpty) {
+        return {
+          'success': false,
+          'error': 'No active deployment found for function',
+          'result': null,
+        };
+      }
 
-      process.stdout.transform(utf8.decoder).listen((data) {
-        stdout.add(data);
-      });
+      final imageTag = result.first[0] as String;
 
-      process.stderr.transform(utf8.decoder).listen((data) {
-        stderr.add(data);
-      });
-
-      // Wait for process with configurable timeout
-      final exitCode = await process.exitCode.timeout(
-        Duration(seconds: Config.functionTimeoutSeconds),
-        onTimeout: () {
-          process.kill(ProcessSignal.sigkill);
-          return -1;
-        },
+      // Run the function in a Docker container
+      final timeoutMs = Config.functionTimeoutSeconds * 1000;
+      final executionResult = await DockerService.runContainer(
+        imageTag: imageTag,
+        input: httpRequest,
+        timeoutMs: timeoutMs,
       );
 
-      // Clean up temp file
-      if (await tempInputFile.exists()) {
-        await tempInputFile.delete();
-      }
+      // Schedule container cleanup after 10ms
+      _scheduleContainerCleanup(functionId, imageTag);
 
-      if (exitCode == -1) {
-        return {
-          'success': false,
-          'error': 'Function execution timed out (${Config.functionTimeoutSeconds}s)',
-          'result': null,
-        };
-      }
-
-      if (exitCode != 0) {
-        return {
-          'success': false,
-          'error': 'Function exited with code $exitCode: ${stderr.join()}',
-          'result': null,
-        };
-      }
-
-      // Try to parse output as JSON, otherwise return as string
-      final output = stdout.join().trim();
-      dynamic result;
-
-      try {
-        result = jsonDecode(output);
-      } catch (e) {
-        result = output;
-      }
-
-      return {'success': true, 'error': null, 'result': result};
+      return executionResult;
     } catch (e) {
       return {'success': false, 'error': 'Execution error: $e', 'result': null};
     }
+  }
+
+  /// Schedule container cleanup after 10ms
+  static void _scheduleContainerCleanup(String functionId, String imageTag) {
+    // Cancel existing timer if any
+    _containerCleanupTimers[functionId]?.cancel();
+
+    // Schedule new cleanup timer for 10ms
+    _containerCleanupTimers[functionId] = Timer(
+      const Duration(milliseconds: 10),
+      () {
+        // Cleanup is handled by Docker's --rm flag
+        // This timer just ensures we track cleanup timing
+        _containerCleanupTimers.remove(functionId);
+      },
+    );
   }
 
   /// Get current active executions count

@@ -5,12 +5,31 @@ import 'package:shelf_multipart/shelf_multipart.dart';
 import 'package:path/path.dart' as path;
 import 'package:uuid/uuid.dart';
 import 'package:archive/archive_io.dart';
+import 'package:s3_client_dart/s3_client_dart.dart';
 import 'package:dart_cloud_backend/config/config.dart';
 import 'package:dart_cloud_backend/database/database.dart';
 import 'package:dart_cloud_backend/services/function_executor.dart';
+import 'package:dart_cloud_backend/services/docker_service.dart';
 
 class FunctionHandler {
   static const _uuid = Uuid();
+  static S3Client? _s3Client;
+
+  /// Initialize S3 client (call once at startup)
+  static void initializeS3() {
+    _s3Client = S3Client();
+    _s3Client!.initialize(
+      configuration: S3Configuration(
+        endpoint: Config.s3Endpoint,
+        bucketName: Config.s3BucketName,
+        accessKeyId: Config.s3AccessKeyId,
+        secretAccessKey: Config.s3SecretAccessKey,
+        sessionToken: Config.s3SessionToken ?? '',
+        region: Config.s3Region,
+        accountId: Config.s3AccountId ?? '',
+      ),
+    );
+  }
 
   static Future<Response> deploy(Request request) async {
     try {
@@ -49,11 +68,73 @@ class FunctionHandler {
         );
       }
 
-      // Generate function ID
-      final functionId = _uuid.v4();
+      // Check if function already exists
+      final existingResult = await Database.connection.execute(
+        'SELECT id FROM functions WHERE user_id = \$1 AND name = \$2',
+        parameters: [userId, functionName],
+      );
 
-      // Create function directory
-      final functionDir = Directory(path.join(Config.functionsDir, functionId));
+      String functionId;
+      int version = 1;
+      bool isNewFunction = existingResult.isEmpty;
+
+      if (isNewFunction) {
+        // Create new function
+        functionId = _uuid.v4();
+        await Database.connection.execute(
+          'INSERT INTO functions (id, user_id, name, status) VALUES (\$1, \$2, \$3, \$4)',
+          parameters: [functionId, userId, functionName, 'building'],
+        );
+        await _logFunction(functionId, 'info', 'Creating new function: $functionName');
+      } else {
+        // Update existing function
+        functionId = existingResult.first[0] as String;
+
+        // Get latest version number
+        final versionResult = await Database.connection.execute(
+          'SELECT COALESCE(MAX(version), 0) FROM function_deployments WHERE function_id = \$1',
+          parameters: [functionId],
+        );
+        version = (versionResult.first[0] as int) + 1;
+
+        // Mark current active deployment as inactive
+        await Database.connection.execute(
+          'UPDATE function_deployments SET is_active = false WHERE function_id = \$1 AND is_active = true',
+          parameters: [functionId],
+        );
+
+        // Update function status
+        await Database.connection.execute(
+          'UPDATE functions SET status = \$1 WHERE id = \$2',
+          parameters: ['building', functionId],
+        );
+
+        await _logFunction(
+          functionId,
+          'info',
+          'Updating function: $functionName (version $version)',
+        );
+      }
+
+      // Upload archive to S3 with version
+      await _logFunction(functionId, 'info', 'Uploading archive to S3...');
+      final s3Key = 'functions/$functionId/v$version/function.tar.gz';
+
+      if (_s3Client == null) {
+        initializeS3();
+      }
+
+      final uploadResult = await _s3Client!.upload(archiveFile.path, s3Key);
+      if (uploadResult.isEmpty) {
+        throw Exception('Failed to upload archive to S3');
+      }
+
+      await _logFunction(functionId, 'info', 'Archive uploaded to S3: $s3Key');
+
+      // Create function directory with version
+      final functionDir = Directory(
+        path.join(Config.functionsDir, functionId, 'v$version'),
+      );
       await functionDir.create(recursive: true);
 
       // Extract archive
@@ -67,25 +148,50 @@ class FunctionHandler {
       // Clean up temp file
       await archiveFile.delete();
 
-      // Store function metadata in database
+      // Build Docker image with version tag
+      await _logFunction(functionId, 'info', 'Building Docker image...');
+      final imageTag = await DockerService.buildImage(
+        '$functionId-v$version',
+        functionDir.path,
+      );
+      await _logFunction(functionId, 'info', 'Docker image built: $imageTag');
+
+      // Create deployment record
+      final deploymentId = _uuid.v4();
       await Database.connection.execute(
-        'INSERT INTO functions (id, user_id, name, status) VALUES (\$1, \$2, \$3, \$4)',
+        'INSERT INTO function_deployments (id, function_id, version, image_tag, s3_key, status, is_active) VALUES (\$1, \$2, \$3, \$4, \$5, \$6, \$7)',
         parameters: [
+          deploymentId,
           functionId,
-          userId,
-          functionName,
+          version,
+          imageTag,
+          s3Key,
           'active',
+          true,
         ],
       );
 
-      await _logFunction(functionId, 'info', 'Function deployed successfully');
+      // Update function with active deployment
+      await Database.connection.execute(
+        'UPDATE functions SET active_deployment_id = \$1, status = \$2 WHERE id = \$3',
+        parameters: [deploymentId, 'active', functionId],
+      );
+
+      await _logFunction(
+        functionId,
+        'info',
+        'Function deployed successfully (version $version)',
+      );
 
       return Response(
-        201,
+        isNewFunction ? 201 : 200,
         body: jsonEncode({
           'id': functionId,
           'name': functionName,
+          'version': version,
+          'deploymentId': deploymentId,
           'status': 'active',
+          'isNewFunction': isNewFunction,
           'createdAt': DateTime.now().toIso8601String(),
         }),
         headers: {'Content-Type': 'application/json'},
@@ -302,6 +408,137 @@ class FunctionHandler {
     } catch (e) {
       return Response.internalServerError(
         body: jsonEncode({'error': 'Failed to invoke function: $e'}),
+        headers: {'Content-Type': 'application/json'},
+      );
+    }
+  }
+
+  /// Get deployment history for a function
+  static Future<Response> getDeployments(Request request, String id) async {
+    try {
+      final userId = request.context['userId'] as String;
+
+      // Verify function ownership
+      final funcResult = await Database.connection.execute(
+        'SELECT id FROM functions WHERE id = \$1 AND user_id = \$2',
+        parameters: [id, userId],
+      );
+
+      if (funcResult.isEmpty) {
+        return Response.notFound(
+          jsonEncode({'error': 'Function not found'}),
+          headers: {'Content-Type': 'application/json'},
+        );
+      }
+
+      // Get deployment history
+      final deploymentsResult = await Database.connection.execute(
+        '''
+        SELECT id, version, image_tag, s3_key, status, is_active, deployed_at 
+        FROM function_deployments 
+        WHERE function_id = \$1 
+        ORDER BY version DESC
+        ''',
+        parameters: [id],
+      );
+
+      final deployments = deploymentsResult.map((row) {
+        return {
+          'id': row[0],
+          'version': row[1],
+          'imageTag': row[2],
+          's3Key': row[3],
+          'status': row[4],
+          'isActive': row[5],
+          'deployedAt': (row[6] as DateTime).toIso8601String(),
+        };
+      }).toList();
+
+      return Response.ok(
+        jsonEncode({'deployments': deployments}),
+        headers: {'Content-Type': 'application/json'},
+      );
+    } catch (e) {
+      return Response.internalServerError(
+        body: jsonEncode({'error': 'Failed to get deployments: $e'}),
+        headers: {'Content-Type': 'application/json'},
+      );
+    }
+  }
+
+  /// Rollback to a specific deployment version
+  static Future<Response> rollback(Request request, String id) async {
+    try {
+      final userId = request.context['userId'] as String;
+      final body = jsonDecode(await request.readAsString());
+      final version = body['version'] as int?;
+
+      if (version == null) {
+        return Response.badRequest(
+          body: jsonEncode({'error': 'Version is required'}),
+          headers: {'Content-Type': 'application/json'},
+        );
+      }
+
+      // Verify function ownership
+      final funcResult = await Database.connection.execute(
+        'SELECT id FROM functions WHERE id = \$1 AND user_id = \$2',
+        parameters: [id, userId],
+      );
+
+      if (funcResult.isEmpty) {
+        return Response.notFound(
+          jsonEncode({'error': 'Function not found'}),
+          headers: {'Content-Type': 'application/json'},
+        );
+      }
+
+      // Get the target deployment
+      final deploymentResult = await Database.connection.execute(
+        'SELECT id FROM function_deployments WHERE function_id = \$1 AND version = \$2',
+        parameters: [id, version],
+      );
+
+      if (deploymentResult.isEmpty) {
+        return Response.notFound(
+          jsonEncode({'error': 'Deployment version not found'}),
+          headers: {'Content-Type': 'application/json'},
+        );
+      }
+
+      final deploymentId = deploymentResult.first[0] as String;
+
+      // Deactivate current active deployment
+      await Database.connection.execute(
+        'UPDATE function_deployments SET is_active = false WHERE function_id = \$1 AND is_active = true',
+        parameters: [id],
+      );
+
+      // Activate target deployment
+      await Database.connection.execute(
+        'UPDATE function_deployments SET is_active = true WHERE id = \$1',
+        parameters: [deploymentId],
+      );
+
+      // Update function's active deployment
+      await Database.connection.execute(
+        'UPDATE functions SET active_deployment_id = \$1, status = \$2 WHERE id = \$3',
+        parameters: [deploymentId, 'active', id],
+      );
+
+      await _logFunction(id, 'info', 'Rolled back to version $version');
+
+      return Response.ok(
+        jsonEncode({
+          'message': 'Successfully rolled back to version $version',
+          'version': version,
+          'deploymentId': deploymentId,
+        }),
+        headers: {'Content-Type': 'application/json'},
+      );
+    } catch (e) {
+      return Response.internalServerError(
+        body: jsonEncode({'error': 'Failed to rollback: $e'}),
         headers: {'Content-Type': 'application/json'},
       );
     }

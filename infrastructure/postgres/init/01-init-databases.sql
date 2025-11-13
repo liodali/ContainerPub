@@ -27,13 +27,28 @@ CREATE TABLE IF NOT EXISTS functions (
     name VARCHAR(255) NOT NULL,
     description TEXT,
     runtime VARCHAR(50) DEFAULT 'dart',
-    code TEXT NOT NULL,
+    status VARCHAR(50) DEFAULT 'active',
+    active_deployment_id UUID,
     environment JSONB DEFAULT '{}',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     last_invoked_at TIMESTAMP,
     invocation_count INTEGER DEFAULT 0,
     UNIQUE(user_id, name)
+);
+
+-- Create function_deployments table for deployment history
+CREATE TABLE IF NOT EXISTS function_deployments (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    function_id UUID NOT NULL REFERENCES functions(id) ON DELETE CASCADE,
+    version INTEGER NOT NULL,
+    image_tag VARCHAR(255) NOT NULL,
+    s3_key VARCHAR(500) NOT NULL,
+    status VARCHAR(50) DEFAULT 'building',
+    is_active BOOLEAN DEFAULT false,
+    build_logs TEXT,
+    deployed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(function_id, version)
 );
 
 -- Create function_logs table
@@ -49,6 +64,10 @@ CREATE TABLE IF NOT EXISTS function_logs (
 -- Create indexes for better performance
 CREATE INDEX IF NOT EXISTS idx_functions_user_id ON functions(user_id);
 CREATE INDEX IF NOT EXISTS idx_functions_name ON functions(name);
+CREATE INDEX IF NOT EXISTS idx_functions_active_deployment ON functions(active_deployment_id);
+CREATE INDEX IF NOT EXISTS idx_function_deployments_function_id ON function_deployments(function_id);
+CREATE INDEX IF NOT EXISTS idx_function_deployments_is_active ON function_deployments(function_id, is_active);
+CREATE INDEX IF NOT EXISTS idx_function_deployments_version ON function_deployments(function_id, version DESC);
 CREATE INDEX IF NOT EXISTS idx_function_logs_function_id ON function_logs(function_id);
 CREATE INDEX IF NOT EXISTS idx_function_logs_created_at ON function_logs(created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
