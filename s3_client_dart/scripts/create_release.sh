@@ -47,7 +47,7 @@ rm pubspec.yaml.bak
 
 # Commit version change
 git add pubspec.yaml
-git commit -m "Bump version to $VERSION_NUMBER"
+git commit -m "release go ffi: Bump version to $VERSION_NUMBER"
 
 # Create annotated tag
 echo "Creating tag $tag..."
