@@ -3,8 +3,8 @@ name: Build and Release Go FFI Native Libraries
 on:
   push:
     tags:
-      - 's3-client-dart-v*.*.*'  # Triggers on version tags like v1.0.0
-  workflow_dispatch:  # Allows manual trigger
+      - "s3-client-dart-v*.*.*" # Triggers on version tags like v1.0.0
+  workflow_dispatch: # Allows manual trigger
 
 jobs:
   build-macos:
@@ -17,7 +17,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.25.4'
+          go-version: "1.25.4"
 
       - name: Build dylib
         working-directory: s3_client_dart/go_ffi
@@ -29,7 +29,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: s3_client_dart-macos
-          path: go_ffi/darwin/s3_client_dart.dylib
+          path: s3_client_dart/go_ffi/darwin/s3_client_dart.dylib
           retention-days: 1
 
   build-linux:
@@ -42,7 +42,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.25.4'
+          go-version: "1.25.4"
 
       - name: Build so
         working-directory: s3_client_dart/go_ffi
@@ -54,7 +54,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: s3_client_dart-linux
-          path: go_ffi/linux/s3_client_dart.so
+          path: s3_client_dart/go_ffi/linux/s3_client_dart.so
           retention-days: 1
 
   build-windows:
@@ -67,7 +67,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.25.4'
+          go-version: "1.25.4"
 
       - name: Build dll
         working-directory: s3_client_dart/go_ffi
@@ -80,7 +80,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: s3_client_dart-windows
-          path: go_ffi/windows/s3_client_dart.dll
+          path: s3_client_dart/go_ffi/windows/s3_client_dart.dll
           retention-days: 1
 
   create-release:
@@ -113,10 +113,10 @@ jobs:
 
       - name: Create release archives
         run: |
-          cd s3_client_dart/artifacts
-          tar -czf s3_client_dart-darwin-amd64.tar.gz -C darwin s3_client_dart.dylib
-          tar -czf s3_client_dart-linux-amd64.tar.gz -C linux s3_client_dart.so
-          zip s3_client_dart-windows-amd64.zip windows/s3_client_dart.dll
+          mkdir -p artifacts
+          tar -czf artifacts/s3_client_dart-darwin-amd64.tar.gz -C artifacts/darwin s3_client_dart.dylib
+          tar -czf artifacts/s3_client_dart-linux-amd64.tar.gz -C artifacts/linux s3_client_dart.so
+          cd artifacts && zip s3_client_dart-windows-amd64.zip windows/s3_client_dart.dll && cd ..
 
       - name: Get version from tag
         id: get_version
@@ -134,30 +134,30 @@ jobs:
             artifacts/s3_client_dart-windows-amd64.zip
           body: |
             ## S3 Client Dart - Native Libraries
-            
+
             This release contains pre-built native libraries for:
             - macOS (darwin-amd64): `s3_client_dart.dylib`
             - Linux (linux-amd64): `s3_client_dart.so`
             - Windows (windows-amd64): `s3_client_dart.dll`
-            
+
             ### Installation
-            
+
             The Dart package will automatically download the appropriate library for your platform.
-            
+
             Alternatively, you can manually download and extract:
             ```bash
             # macOS
             tar -xzf s3_client_dart-darwin-amd64.tar.gz
-            
+
             # Linux
             tar -xzf s3_client_dart-linux-amd64.tar.gz
-            
+
             # Windows
             unzip s3_client_dart-windows-amd64.zip
             ```
-            
+
             ### Checksums
-            
+
             See the checksums file for verification.
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
