@@ -1,4 +1,4 @@
-name: Build and Release Native Libraries
+name: Build and Release Go FFI Native Libraries
 
 on:
   push:
@@ -17,12 +17,11 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.21'
+          go-version: '1.25.4'
 
       - name: Build dylib
-        working-directory: go_ffi
+        working-directory: s3_client_dart/go_ffi
         run: |
-          cd s3_client_dart/go_ffi
           chmod +x deploy.sh
           ./deploy.sh dylib
 
@@ -43,12 +42,11 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.21'
+          go-version: '1.25.4'
 
       - name: Build so
-        working-directory: go_ffi
+        working-directory: s3_client_dart/go_ffi
         run: |
-          cd s3_client_dart/go_ffi
           chmod +x deploy.sh
           ./deploy.sh so
 
@@ -69,13 +67,12 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.21'
+          go-version: '1.25.4'
 
       - name: Build dll
-        working-directory: go_ffi
+        working-directory: s3_client_dart/go_ffi
         shell: bash
         run: |
-          cd s3_client_dart/go_ffi
           mkdir -p windows
           go build -buildmode=c-shared -ldflags="-s -w" -o windows/s3_client_dart.dll main.go
 
