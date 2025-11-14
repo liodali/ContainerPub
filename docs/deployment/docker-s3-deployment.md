@@ -1,8 +1,10 @@
-# Docker & S3 Deployment Architecture
+# Container & S3 Deployment Architecture
 
 ## Overview
 
-The ContainerPub backend now uses a modern deployment architecture that combines S3 storage with Docker containerization for secure, scalable function execution.
+The ContainerPub backend uses a modern deployment architecture that combines S3 storage with **Podman** containerization for secure, scalable function execution.
+
+> **Note**: This system uses **Podman** instead of Docker. Podman is a daemonless, rootless container engine that provides better security while maintaining 100% Docker CLI compatibility. See [Podman Infrastructure](./podman-infrastructure.md) for details.
 
 ## Architecture Components
 
@@ -12,11 +14,13 @@ The ContainerPub backend now uses a modern deployment architecture that combines
 - **Location**: Configurable S3-compatible storage (AWS S3, Cloudflare R2, MinIO, etc.)
 - **Structure**: `functions/{function-id}/function.tar.gz`
 
-### 2. Docker Containers
+### 2. Podman Containers
 
 - **Purpose**: Isolated execution environment for each function
+- **Runtime**: Podman (rootless, daemonless container engine)
 - **Base Image**: Configurable (default: `dart:stable`)
 - **Lifecycle**: Created on-demand, automatically removed after execution
+- **Security**: Rootless execution, no daemon required
 
 ### 3. Function Executor
 
