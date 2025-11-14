@@ -12,7 +12,7 @@ Complete reference for ContainerPub CLI commands and API endpoints.
 ### Authentication
 
 #### Login
-```bash
+```dart
 dart_cloud login
 ```
 Authenticate with ContainerPub platform.
@@ -24,7 +24,7 @@ Authenticate with ContainerPub platform.
 ### Function Management
 
 #### Deploy
-```bash
+```dart
 dart_cloud deploy <path> [options]
 ```
 Deploy a new function or update existing one.
@@ -36,7 +36,7 @@ Deploy a new function or update existing one.
 - `--timeout` - Execution timeout (default: 30s)
 
 **Example:**
-```bash
+```dart
 dart_cloud deploy ./my_function \
   --name my-function \
   --env DATABASE_URL=postgresql://... \
@@ -44,7 +44,7 @@ dart_cloud deploy ./my_function \
 ```
 
 #### List
-```bash
+```dart
 dart_cloud list [options]
 ```
 List all deployed functions.
@@ -54,7 +54,7 @@ List all deployed functions.
 - `--limit` - Number of results (default: 10)
 
 #### Delete
-```bash
+```dart
 dart_cloud delete <function-id>
 ```
 Delete a function.
@@ -62,7 +62,7 @@ Delete a function.
 **Confirmation:** Will prompt for confirmation.
 
 #### Status
-```bash
+```dart
 dart_cloud status <function-id>
 ```
 Check function status and details.
@@ -70,7 +70,7 @@ Check function status and details.
 ### Monitoring
 
 #### Logs
-```bash
+```dart
 dart_cloud logs <function-id> [options]
 ```
 View function execution logs.
@@ -81,13 +81,13 @@ View function execution logs.
 - `--since` - Show logs since timestamp
 
 **Example:**
-```bash
+```dart
 dart_cloud logs my-function-id --follow
 dart_cloud logs my-function-id --lines 50
 ```
 
 #### Metrics
-```bash
+```dart
 dart_cloud metrics <function-id> [options]
 ```
 View function metrics and statistics.
@@ -99,19 +99,19 @@ View function metrics and statistics.
 ### Configuration
 
 #### Set Environment Variable
-```bash
+```dart
 dart_cloud env set <function-id> <key> <value>
 ```
 Set environment variable for function.
 
 #### Get Environment Variable
-```bash
+```dart
 dart_cloud env get <function-id> <key>
 ```
 Get environment variable value.
 
 #### List Environment Variables
-```bash
+```dart
 dart_cloud env list <function-id>
 ```
 List all environment variables for function.
@@ -124,7 +124,7 @@ List all environment variables for function.
 Login to platform.
 
 **Request:**
-```json
+```dart
 {
   "email": "user@example.com",
   "password": "password"
@@ -132,7 +132,7 @@ Login to platform.
 ```
 
 **Response:**
-```json
+```dart
 {
   "token": "eyJhbGc...",
   "user": {
@@ -159,7 +159,7 @@ Content-Type: multipart/form-data
 - `env` - Environment variables (JSON)
 
 **Response:**
-```json
+```dart
 {
   "id": "function-id",
   "name": "my-function",
@@ -181,7 +181,7 @@ Authorization: Bearer <token>
 - `offset` - Pagination offset
 
 **Response:**
-```json
+```dart
 {
   "functions": [
     {
@@ -204,7 +204,7 @@ Authorization: Bearer <token>
 ```
 
 **Response:**
-```json
+```dart
 {
   "id": "function-id",
   "name": "my-function",
@@ -236,7 +236,7 @@ Content-Type: application/json
 ```
 
 **Request:**
-```json
+```dart
 {
   "body": {
     "key": "value"
@@ -245,7 +245,7 @@ Content-Type: application/json
 ```
 
 **Response:**
-```json
+```dart
 {
   "execution_id": "exec-id",
   "status": "success",
@@ -285,7 +285,7 @@ Authorization: Bearer <token>
 ## Error Responses
 
 ### 400 Bad Request
-```json
+```dart
 {
   "error": "Invalid request",
   "details": "Missing required field: name"
@@ -293,7 +293,7 @@ Authorization: Bearer <token>
 ```
 
 ### 401 Unauthorized
-```json
+```dart
 {
   "error": "Unauthorized",
   "details": "Invalid or expired token"
@@ -301,7 +301,7 @@ Authorization: Bearer <token>
 ```
 
 ### 404 Not Found
-```json
+```dart
 {
   "error": "Not found",
   "details": "Function not found"
@@ -309,7 +309,7 @@ Authorization: Bearer <token>
 ```
 
 ### 500 Internal Server Error
-```json
+```dart
 {
   "error": "Internal server error",
   "details": "An unexpected error occurred"

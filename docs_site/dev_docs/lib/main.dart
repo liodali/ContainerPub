@@ -49,9 +49,6 @@ void main() {
         CodeBlock(
           defaultLanguage: 'dart',
         ),
-        CodeBlock(
-          defaultLanguage: 'bash',
-        ),
         // Adds zooming and caption support to images.
         Image(zoom: true),
       ],

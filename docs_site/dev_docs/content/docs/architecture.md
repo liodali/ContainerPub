@@ -140,7 +140,7 @@ Container → Metrics Collector → Database → Dashboard
 ## Database Schema
 
 ### Functions Table
-```sql
+```dart
 CREATE TABLE functions (
   id UUID PRIMARY KEY,
   name VARCHAR(255),
@@ -153,7 +153,7 @@ CREATE TABLE functions (
 ```
 
 ### Executions Table
-```sql
+```dart
 CREATE TABLE executions (
   id UUID PRIMARY KEY,
   function_id UUID,

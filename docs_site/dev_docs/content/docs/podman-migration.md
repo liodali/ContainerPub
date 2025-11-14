@@ -43,14 +43,14 @@ ContainerPub uses **Podman** as its container runtime instead of Docker, providi
 ## Installation
 
 ### macOS
-```bash
+```dart
 brew install podman
 podman machine init
 podman machine start
 ```
 
 ### Linux
-```bash
+```dart
 # Ubuntu/Debian
 sudo apt-get install -y podman
 
@@ -59,7 +59,7 @@ sudo dnf install -y podman
 ```
 
 ### Verify Installation
-```bash
+```dart
 podman --version
 podman info
 ```
@@ -67,13 +67,13 @@ podman info
 ## Usage in ContainerPub
 
 ### Building Functions
-```bash
+```dart
 # Automatic - uses Podman internally
 dart_cloud deploy ./my_function
 ```
 
 ### Manual Container Operations
-```bash
+```dart
 # Build image
 podman build -t my-function .
 
@@ -122,7 +122,7 @@ podman rmi my-function
 ## Troubleshooting
 
 ### Podman Not Found
-```bash
+```dart
 # Install Podman
 brew install podman  # macOS
 sudo apt-get install podman  # Linux
@@ -133,7 +133,7 @@ podman machine start
 ```
 
 ### Permission Denied
-```bash
+```dart
 # Verify rootless mode
 podman system info | grep rootless
 # Should show: rootless: true
@@ -146,7 +146,7 @@ podman machine start
 ```
 
 ### Build Fails
-```bash
+```dart
 # Check Podman status
 podman info
 
