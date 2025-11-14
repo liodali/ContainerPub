@@ -1,0 +1,62 @@
+---
+title: ContainerPub Documentation
+description: Development and Architecture Documentation for the ContainerPub Serverless Platform
+---
+
+# ContainerPub Documentation
+
+Welcome to the **ContainerPub** development and architecture documentation. This site contains comprehensive guides for building, deploying, and managing Dart functions on the ContainerPub serverless platform.
+
+## 📚 Documentation Categories
+
+### Development
+Learn how to develop, build, and deploy Dart functions with ContainerPub.
+
+- **Getting Started** - Installation and quick start guide
+- **CLI Commands** - Complete CLI reference
+- **Build Process** - Understanding the build pipeline
+- **Contributing** - Contributing guidelines
+
+### Architecture
+Understand the system design and architecture of ContainerPub.
+
+- **System Overview** - High-level architecture overview
+- **Database Schema** - Database design and structure
+- **Security Model** - Security architecture and best practices
+- **Deployment** - Deployment architecture and infrastructure
+
+## 🚀 Quick Links
+
+- **[Development Guide]({{links.quickstart}})** - Get started with ContainerPub
+- **[Architecture Overview]({{links.docs}})** - Understand the system design
+- **[GitHub Repository]({{links.website}})** - Source code and issues
+
+## 🎯 Key Features
+
+- **🚀 Deploy Dart Functions** - Simple CLI for deploying functions
+- **🔒 Security First** - Client-side security analysis before deployment
+- **📊 Monitoring** - Built-in function execution monitoring
+- **🔄 Auto-scaling** - Automatic scaling and load balancing
+- **📝 Logging** - Comprehensive function logs and metrics
+- **🌐 HTTP Endpoints** - Direct HTTP access to deployed functions
+
+## 📖 What You'll Find Here
+
+This documentation covers:
+
+- **Development Workflows** - How to develop and test Dart functions
+- **Deployment Process** - Step-by-step deployment instructions
+- **System Architecture** - Technical details of ContainerPub
+- **API Reference** - CLI commands and environment variables
+- **Best Practices** - Recommendations for production deployments
+
+## 🔗 Getting Help
+
+- Check the relevant documentation section
+- Visit the [GitHub Repository]({{links.website}})
+- Review code examples and guides
+
+---
+
+**Last Updated**: November 2025  
+**Version**: 1.0.0

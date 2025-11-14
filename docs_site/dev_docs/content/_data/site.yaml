@@ -1,0 +1,11 @@
+# ContainerPub Documentation Site Configuration
+titleBase: ContainerPub Docs
+favicon: favicon.ico
+description: Development and Architecture Documentation for ContainerPub
+
+# Social media links
+social:
+  - name: Github
+    url: https://github.com/liodali/ContainerPub
+  - name: Documentation
+    url: https://github.com/liodali/ContainerPub/tree/main/docs
