@@ -52,6 +52,8 @@ Technical reference materials:
 - **[API Reference](reference/api-reference.md)** - Complete REST API documentation
 - **[CLI Commands](reference/cli-commands.md)** - All CLI commands and options
 - **[Environment Variables](reference/environment-variables.md)** - Complete configuration reference
+- **[Analyzer Rules](reference/analyzer-rules.md)** - Code validation and security rules
+- **[Deployment Configuration](reference/deployment-config.md)** - Deployment restrictions and configuration
 - **[Migration Guide](reference/migration-guide.md)** - Migrate from other platforms
 
 ### 🛠️ Development
