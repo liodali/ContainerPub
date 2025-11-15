@@ -5,8 +5,9 @@ import 'package:path/path.dart' as path;
 import 'package:dart_cloud_cli/api/api_client.dart';
 import 'package:dart_cloud_cli/config/config.dart';
 import 'package:dart_cloud_cli/services/function_analyzer.dart';
+import 'package:dart_cloud_cli/services/deployment_validator.dart';
 
-class DeployCommand extends BaseCommand  {
+class DeployCommand extends BaseCommand {
   Future<void> execute(List<String> args) async {
     await config.loadConfig();
 
@@ -40,14 +41,38 @@ class DeployCommand extends BaseCommand  {
     print('Preparing to deploy function: $functionName');
 
     try {
-      // Analyze the function for security and compliance
-      print('Analyzing function code...');
+      // Step 1: Validate deployment restrictions
+      print('Validating deployment restrictions...');
+      final deploymentValidator = DeploymentValidator(functionDir.path);
+      final deploymentResult = await deploymentValidator.validate();
+
+      if (deploymentResult.warnings.isNotEmpty) {
+        print('\n⚠️  Deployment Warnings:');
+        for (final warning in deploymentResult.warnings) {
+          print('  - $warning');
+        }
+      }
+
+      if (!deploymentResult.isValid) {
+        print('\n✗ Deployment validation failed:');
+        for (final error in deploymentResult.errors) {
+          print('  - $error');
+        }
+        exit(1);
+      }
+
+      print(
+        '✓ Deployment restrictions passed (${deploymentResult.sizeInMB.toStringAsFixed(2)} MB)',
+      );
+
+      // Step 2: Analyze the function for security and compliance
+      print('\nAnalyzing function code...');
       final analyzer = FunctionAnalyzer(functionDir.path);
       final analysisResult = await analyzer.analyze();
 
       // Display analysis results
       if (analysisResult.warnings.isNotEmpty) {
-        print('\n⚠️  Warnings:');
+        print('\n⚠️  Code Analysis Warnings:');
         for (final warning in analysisResult.warnings) {
           print('  - $warning');
         }
@@ -62,14 +87,14 @@ class DeployCommand extends BaseCommand  {
 
       // Check if analysis passed
       if (!analysisResult.isValid) {
-        print('\n✗ Function validation failed:');
+        print('\n✗ Code validation failed:');
         for (final error in analysisResult.errors) {
           print('  - $error');
         }
         exit(1);
       }
 
-      print('✓ Function analysis passed');
+      print('✓ Code analysis passed');
 
       // Create archive
       print('Creating archive...');
