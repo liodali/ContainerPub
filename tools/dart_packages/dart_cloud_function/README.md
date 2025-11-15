@@ -1,29 +1,13 @@
-
----
-
 # dart_cloud_function
 
-Minimal, opinionated foundation for serverless-style HTTP functions in Dart. Implement a single `handle` method and let the package take care of the HTTP server, request parsing, and response writing.
-
-## Features
-
-- Simple abstract base: implement `handle({required CloudRequest request, Map<String, String>? env})` and return `CloudResponse`.
-- Lightweight request/response models to keep business logic focused.
-- Automatic parsing guidance for method, path, headers, query, and body (JSON/text).
-- Convenience response helpers: `CloudResponse.json(...)`, `CloudResponse.text(...)`.
-- Support for binary responses via `List<int>` body.
-- Access to the underlying `HttpRequest` when needed.
+Minimal foundation for serverless HTTP functions in Dart. Extend `CloudDartFunction`, implement `handle()`, and deploy.
 
 ## Install
-
-Add to your `pubspec.yaml`:
 
 ```yaml
 dependencies:
   dart_cloud_function: ^1.0.0
 ```
-
-Import the library:
 
 ```dart
 import 'package:dart_cloud_function/dart_cloud_function.dart';
@@ -31,11 +15,10 @@ import 'package:dart_cloud_function/dart_cloud_function.dart';
 
 ## Quick Start
 
-Create a function by extending `CloudDartFunction` and implement `handle`. Export a single handler your platform can invoke with a `CloudRequest` and environment map:
-
 ```dart
 import 'package:dart_cloud_function/dart_cloud_function.dart';
 
+@cloudFunction
 class EchoFunction extends CloudDartFunction {
   @override
   Future<CloudResponse> handle({
@@ -50,13 +33,49 @@ class EchoFunction extends CloudDartFunction {
     });
   }
 }
+```
 
-Future<CloudResponse> functionHandler(CloudRequest request, Map<String, String> env) {
-  return EchoFunction().handle(request: request, env: env);
+## Required Structure
+
+When deploying with `dart_cloud_cli`, your function **must** follow these rules:
+
+### ✓ Exactly One CloudDartFunction Class
+Your `main.dart` must contain exactly one class extending `CloudDartFunction`.
+
+### ✓ @cloudFunction Annotation
+The class must be annotated with `@cloudFunction`.
+
+### ✓ No main() Function
+Do not include a `main()` function. The platform handles invocation.
+
+### Example - Valid ✅
+```dart
+@cloudFunction
+class MyFunction extends CloudDartFunction {
+  @override
+  Future<CloudResponse> handle({
+    required CloudRequest request,
+    Map<String, String>? env,
+  }) async {
+    return CloudResponse.json({'message': 'Hello'});
+  }
 }
 ```
 
-See the runnable example in `example/dart_cloud_function_example.dart`.
+### Example - Invalid ❌
+```dart
+// Missing @cloudFunction annotation
+class MyFunction extends CloudDartFunction { ... }
+
+// Multiple classes not allowed
+@cloudFunction
+class Function1 extends CloudDartFunction { ... }
+@cloudFunction
+class Function2 extends CloudDartFunction { ... }
+
+// main() not allowed
+void main() { }
+```
 
 ## API Reference
 

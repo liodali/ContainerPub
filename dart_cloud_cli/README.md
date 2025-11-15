@@ -43,15 +43,15 @@ dart_cloud deploy ./my-function
 
 The function directory must contain a `pubspec.yaml` file.
 
-**Security Analysis:**
-Before deployment, the CLI performs local static analysis:
-- Validates `@function` annotation is present
-- Scans for risky code patterns (Process execution, shell access, etc.)
-- Checks for dangerous imports (dart:mirrors, dart:ffi)
-- Validates function signature
-- Displays warnings and errors
+**Function Validation:**
+Before deployment, the CLI performs strict validation:
+- **Exactly one CloudDartFunction class** - Must have one class extending `CloudDartFunction`
+- **@cloudFunction annotation required** - The class must be annotated with `@cloudFunction`
+- **No main() function** - The `main.dart` file must not contain a `main()` function
+- **Security checks** - Scans for risky patterns (Process execution, shell access, etc.)
+- **Import validation** - Checks for dangerous imports (dart:mirrors, dart:ffi)
 
-Only functions that pass analysis are uploaded to the server.
+Only functions that pass all validations are uploaded to the server.
 
 ### list
 List all your deployed functions.
@@ -115,30 +115,40 @@ cd my-function
 dart create -t console-simple .
 ```
 
-3. Write your function in `bin/main.dart`:
-```dart
-import 'dart:convert';
-import 'dart:io';
+3. Add the `dart_cloud_function` dependency to `pubspec.yaml`:
+```yaml
+dependencies:
+  dart_cloud_function: ^1.0.0
+```
 
-void main() {
-  // Read input from environment variable
-  final inputJson = Platform.environment['FUNCTION_INPUT'] ?? '{}';
-  final input = jsonDecode(inputJson) as Map<String, dynamic>;
-  
-  // Your function logic
-  final result = {
-    'message': 'Hello, ${input['name'] ?? 'World'}!',
-    'timestamp': DateTime.now().toIso8601String(),
-  };
-  
-  // Output result as JSON
-  print(jsonEncode(result));
+4. Write your function in `main.dart`:
+```dart
+import 'package:dart_cloud_function/dart_cloud_function.dart';
+
+@cloudFunction
+class MyFunction extends CloudDartFunction {
+  @override
+  Future<CloudResponse> handle({
+    required CloudRequest request,
+    Map<String, String>? env,
+  }) async {
+    final name = request.query['name'] ?? 'World';
+    
+    return CloudResponse.json({
+      'message': 'Hello, $name!',
+      'timestamp': DateTime.now().toIso8601String(),
+    });
+  }
 }
 ```
 
-4. Deploy your function:
+**Important:** 
+- Your function must have exactly **one** class extending `CloudDartFunction`
+- The class must be annotated with `@cloudFunction`
+- Do **not** include a `main()` function
+
+5. Deploy your function:
 ```bash
-cd ..
 dart_cloud deploy ./my-function
 ```
 
@@ -147,32 +157,55 @@ dart_cloud deploy ./my-function
 ### Simple Hello World Function
 
 ```dart
-import 'dart:convert';
-import 'dart:io';
+import 'package:dart_cloud_function/dart_cloud_function.dart';
 
-void main() {
-  final input = jsonDecode(Platform.environment['FUNCTION_INPUT'] ?? '{}');
-  print(jsonEncode({'message': 'Hello, ${input['name'] ?? 'World'}!'}));
+@cloudFunction
+class HelloFunction extends CloudDartFunction {
+  @override
+  Future<CloudResponse> handle({
+    required CloudRequest request,
+    Map<String, String>? env,
+  }) async {
+    final name = request.body?['name'] ?? 'World';
+    
+    return CloudResponse.json({
+      'message': 'Hello, $name!',
+    });
+  }
 }
 ```
 
 ### Data Processing Function
 
 ```dart
-import 'dart:convert';
-import 'dart:io';
+import 'package:dart_cloud_function/dart_cloud_function.dart';
 
-void main() {
-  final input = jsonDecode(Platform.environment['FUNCTION_INPUT'] ?? '{}');
-  final numbers = (input['numbers'] as List?)?.cast<num>() ?? [];
-  
-  final result = {
-    'sum': numbers.fold(0, (a, b) => a + b),
-    'average': numbers.isEmpty ? 0 : numbers.reduce((a, b) => a + b) / numbers.length,
-    'count': numbers.length,
-  };
-  
-  print(jsonEncode(result));
+@cloudFunction
+class DataProcessorFunction extends CloudDartFunction {
+  @override
+  Future<CloudResponse> handle({
+    required CloudRequest request,
+    Map<String, String>? env,
+  }) async {
+    final numbers = (request.body?['numbers'] as List?)?.cast<num>() ?? [];
+    
+    if (numbers.isEmpty) {
+      return CloudResponse.json(
+        {'error': 'No numbers provided'},
+        statusCode: 400,
+      );
+    }
+    
+    final result = {
+      'sum': numbers.fold(0, (a, b) => a + b),
+      'average': numbers.reduce((a, b) => a + b) / numbers.length,
+      'count': numbers.length,
+      'min': numbers.reduce((a, b) => a < b ? a : b),
+      'max': numbers.reduce((a, b) => a > b ? a : b),
+    };
+    
+    return CloudResponse.json(result);
+  }
 }
 ```
 
@@ -188,8 +221,10 @@ dart_cloud login
 - Ensure your function directory contains a valid `pubspec.yaml`
 - Check that you're authenticated
 - Verify the server is running
-- **Analysis errors**: Fix security issues reported by the CLI analyzer
-  - Add `@function` annotation if missing
+- **Validation errors**: Fix issues reported by the CLI analyzer
+  - Ensure exactly **one** class extends `CloudDartFunction`
+  - Add `@cloudFunction` annotation to your CloudDartFunction class
+  - Remove any `main()` function from your code
   - Remove dangerous operations (Process.run, Shell, etc.)
   - Avoid restricted imports (dart:mirrors, dart:ffi)
 

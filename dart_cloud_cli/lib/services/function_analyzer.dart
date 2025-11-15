@@ -12,6 +12,8 @@ class AnalysisResult {
   final List<String> warnings;
   final bool hasFunctionAnnotation;
   final List<String> detectedRisks;
+  final int cloudFunctionCount;
+  final bool hasMainFunction;
 
   AnalysisResult({
     required this.isValid,
@@ -19,6 +21,8 @@ class AnalysisResult {
     required this.warnings,
     required this.hasFunctionAnnotation,
     required this.detectedRisks,
+    required this.cloudFunctionCount,
+    required this.hasMainFunction,
   });
 
   Map<String, dynamic> toJson() => {
@@ -27,6 +31,8 @@ class AnalysisResult {
         'warnings': warnings,
         'hasFunctionAnnotation': hasFunctionAnnotation,
         'detectedRisks': detectedRisks,
+        'cloudFunctionCount': cloudFunctionCount,
+        'hasMainFunction': hasMainFunction,
       };
 }
 
@@ -42,6 +48,8 @@ class FunctionAnalyzer {
     final warnings = <String>[];
     final risks = <String>[];
     bool hasFunctionAnnotation = false;
+    int cloudFunctionCount = 0;
+    bool hasMainFunction = false;
 
     try {
       // Find main.dart file
@@ -61,6 +69,8 @@ class FunctionAnalyzer {
           warnings: warnings,
           hasFunctionAnnotation: false,
           detectedRisks: risks,
+          cloudFunctionCount: 0,
+          hasMainFunction: false,
         );
       }
 
@@ -80,24 +90,27 @@ class FunctionAnalyzer {
         result.unit.visitChildren(visitor);
 
         hasFunctionAnnotation = visitor.hasFunctionAnnotation;
+        cloudFunctionCount = visitor.cloudFunctionCount;
+        hasMainFunction = visitor.hasMainFunction;
         risks.addAll(visitor.risks);
         warnings.addAll(visitor.warnings);
 
-        // Check for @function annotation
-        if (!hasFunctionAnnotation) {
-          errors.add(
-            'Missing @function annotation. Functions must be annotated with @function',
-          );
-        }
+        // Validate CloudDartFunction requirements
+        _validateCloudFunctionRequirements(
+          cloudFunctionCount,
+          hasMainFunction,
+          hasFunctionAnnotation,
+          errors,
+        );
 
         // Check for risky patterns in code
         _checkRiskyPatterns(content, risks, warnings);
-
-        // Validate function signature
-        _validateFunctionSignature(result.unit, errors, warnings);
       }
 
-      final isValid = errors.isEmpty && hasFunctionAnnotation;
+      final isValid = errors.isEmpty &&
+          hasFunctionAnnotation &&
+          cloudFunctionCount == 1 &&
+          !hasMainFunction;
 
       return AnalysisResult(
         isValid: isValid,
@@ -105,6 +118,8 @@ class FunctionAnalyzer {
         warnings: warnings,
         hasFunctionAnnotation: hasFunctionAnnotation,
         detectedRisks: risks,
+        cloudFunctionCount: cloudFunctionCount,
+        hasMainFunction: hasMainFunction,
       );
     } catch (e) {
       errors.add('Analysis failed: $e');
@@ -114,6 +129,41 @@ class FunctionAnalyzer {
         warnings: warnings,
         hasFunctionAnnotation: false,
         detectedRisks: risks,
+        cloudFunctionCount: 0,
+        hasMainFunction: false,
+      );
+    }
+  }
+
+  /// Validate CloudDartFunction requirements
+  void _validateCloudFunctionRequirements(
+    int cloudFunctionCount,
+    bool hasMainFunction,
+    bool hasFunctionAnnotation,
+    List<String> errors,
+  ) {
+    // Check for exactly one CloudDartFunction class
+    if (cloudFunctionCount == 0) {
+      errors.add(
+        'No CloudDartFunction class found. You must have exactly one class extending CloudDartFunction',
+      );
+    } else if (cloudFunctionCount > 1) {
+      errors.add(
+        'Multiple CloudDartFunction classes found ($cloudFunctionCount). Only one class extending CloudDartFunction is allowed',
+      );
+    }
+
+    // Check for main function
+    if (hasMainFunction) {
+      errors.add(
+        'main() function is not allowed. Remove the main function from your code',
+      );
+    }
+
+    // Check for @cloudFunction annotation
+    if (cloudFunctionCount == 1 && !hasFunctionAnnotation) {
+      errors.add(
+        'Missing @cloudFunction annotation. The CloudDartFunction class must be annotated with @cloudFunction',
       );
     }
   }
@@ -170,52 +220,46 @@ class FunctionAnalyzer {
       warnings.add('Isolate spawning detected - may impact performance');
     }
   }
-
-  /// Validate function signature requirements
-  void _validateFunctionSignature(
-    CompilationUnit unit,
-    List<String> errors,
-    List<String> warnings,
-  ) {
-    bool hasValidHandler = false;
-
-    for (final declaration in unit.declarations) {
-      if (declaration is FunctionDeclaration) {
-        final name = declaration.name.lexeme;
-
-        // Look for handler function
-        if (name == 'handler' || name == 'main') {
-          final params = declaration.functionExpression.parameters?.parameters;
-
-          if (params != null && params.isNotEmpty) {
-            // Check if it accepts request-like parameters
-            hasValidHandler = true;
-          }
-        }
-      }
-    }
-
-    if (!hasValidHandler) {
-      warnings.add(
-        'No valid handler function found. Expected a function that accepts request parameters',
-      );
-    }
-  }
 }
 
-/// AST visitor to detect security issues
+/// AST visitor to detect security issues and validate structure
 class SecurityVisitor extends RecursiveAstVisitor<void> {
   bool hasFunctionAnnotation = false;
+  int cloudFunctionCount = 0;
+  bool hasMainFunction = false;
   final List<String> risks = [];
   final List<String> warnings = [];
 
   @override
   void visitAnnotation(Annotation node) {
     final name = node.name.toString();
-    if (name == 'function' || name == 'Function') {
+    if (name == 'cloudFunction' || name == 'CloudFunction') {
       hasFunctionAnnotation = true;
     }
     super.visitAnnotation(node);
+  }
+
+  @override
+  void visitClassDeclaration(ClassDeclaration node) {
+    // Check if class extends CloudDartFunction
+    final extendsClause = node.extendsClause;
+    if (extendsClause != null) {
+      final superclassType = extendsClause.superclass;
+      final superclass = superclassType.toString();
+      if (superclass == 'CloudDartFunction') {
+        cloudFunctionCount++;
+      }
+    }
+    super.visitClassDeclaration(node);
+  }
+
+  @override
+  void visitFunctionDeclaration(FunctionDeclaration node) {
+    // Check for main function
+    if (node.name.lexeme == 'main') {
+      hasMainFunction = true;
+    }
+    super.visitFunctionDeclaration(node);
   }
 
   @override
