@@ -141,24 +141,51 @@ These issues generate warnings but don't block deployment:
 - Methods named `eval` or `execute`
 - **Warning:** `Dynamic code execution detected: ...`
 
+## Deployment Restrictions
+
+Before code analysis, the deployment validator checks:
+
+### Size Limits
+- **Maximum:** 5 MB
+- **Warning threshold:** 4 MB
+- Includes all files in the function directory
+
+### Forbidden Directories
+- `.git` - Version control
+- `.github` - GitHub workflows
+- `.vscode`, `.idea` - IDE configs
+- `node_modules` - Node dependencies
+- `.dart_tool` - Dart build artifacts
+- `build`, `.gradle`, `.cocoapods` - Build directories
+
+### Forbidden Files
+- `.env`, `.env.local` - Environment files
+- `secrets.json`, `credentials.json` - Credential files
+- `*.pem`, `*.key`, `*.p12`, `*.pfx` - Private keys
+
+### Required Files
+- `pubspec.yaml` - Dart package manifest
+- `main.dart` or `bin/main.dart` - Function entry point
+
 ## Validation Flow
 
 ```
-1. Find main.dart (or bin/main.dart)
+1. Validate deployment restrictions
+   ├─ Check function size (< 50 MB)
+   ├─ Check for forbidden directories
+   ├─ Check for forbidden files
+   ├─ Verify required files exist
+   └─ Check for credentials/secrets
    ↓
-2. Parse and analyze AST
+2. Analyze function code
+   ├─ Find main.dart
+   ├─ Parse and analyze AST
+   ├─ Count CloudDartFunction classes
+   ├─ Check for main() function
+   ├─ Verify @cloudFunction annotation
+   └─ Scan for security risks
    ↓
-3. Count CloudDartFunction classes
-   ↓
-4. Check for main() function
-   ↓
-5. Verify @cloudFunction annotation
-   ↓
-6. Scan for security risks
-   ↓
-7. Generate report
-   ↓
-8. PASS: Upload to server
+3. PASS: Create archive and upload
    FAIL: Display errors and abort
 ```
 

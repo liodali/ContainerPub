@@ -43,8 +43,16 @@ dart_cloud deploy ./my-function
 
 The function directory must contain a `pubspec.yaml` file.
 
-**Function Validation:**
-Before deployment, the CLI performs strict validation:
+**Deployment Validation:**
+Before deployment, the CLI performs strict validation in two phases:
+
+**Phase 1 - Deployment Restrictions:**
+- **Size limit** - Function must be < 5 MB
+- **Forbidden directories** - No `.git`, `node_modules`, `.dart_tool`, `build`, etc.
+- **Forbidden files** - No `.env`, `secrets.json`, `*.pem`, `*.key`, etc.
+- **Required files** - Must have `pubspec.yaml` and `main.dart` (or `bin/main.dart`)
+
+**Phase 2 - Code Analysis:**
 - **Exactly one CloudDartFunction class** - Must have one class extending `CloudDartFunction`
 - **@cloudFunction annotation required** - The class must be annotated with `@cloudFunction`
 - **No main() function** - The `main.dart` file must not contain a `main()` function
@@ -218,15 +226,21 @@ dart_cloud login
 ```
 
 ### Deployment Failures
-- Ensure your function directory contains a valid `pubspec.yaml`
-- Check that you're authenticated
-- Verify the server is running
-- **Validation errors**: Fix issues reported by the CLI analyzer
-  - Ensure exactly **one** class extends `CloudDartFunction`
-  - Add `@cloudFunction` annotation to your CloudDartFunction class
-  - Remove any `main()` function from your code
-  - Remove dangerous operations (Process.run, Shell, etc.)
-  - Avoid restricted imports (dart:mirrors, dart:ffi)
+
+**Deployment Restrictions:**
+- Function size exceeds 5 MB → Remove unnecessary files (`.git`, `node_modules`, `build/`, etc.)
+- Forbidden directories found → Remove `.git`, `.dart_tool`, `build`, `node_modules`
+- Forbidden files found → Remove `.env`, `secrets.json`, `*.pem`, `*.key` files
+- Missing `pubspec.yaml` → Ensure it exists in function root
+- Missing `main.dart` → Create `main.dart` or `bin/main.dart`
+
+**Code Analysis Errors:**
+- No CloudDartFunction class found → Add a class extending `CloudDartFunction`
+- Multiple CloudDartFunction classes → Keep only one class
+- Missing `@cloudFunction` annotation → Add `@cloudFunction` above your class
+- `main()` function is not allowed → Remove the `main()` function
+- Dangerous operations detected → Remove Process.run, Shell, FFI, mirrors imports
+- Restricted imports found → Avoid dart:mirrors, dart:ffi
 
 ### Connection Issues
 Make sure the backend server is running and accessible at the configured URL (default: http://localhost:8080).

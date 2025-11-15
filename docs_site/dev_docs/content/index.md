@@ -9,6 +9,14 @@ Welcome to the **ContainerPub** development and architecture documentation. This
 
 ## 📚 Documentation Categories
 
+### Dart Cloud Functions
+Learn how to develop and deploy Dart serverless functions.
+
+- **[dart_cloud_function Package](./docs/dart-cloud-function.md)** - Function package API and usage
+- **[dart_cloud_cli](./docs/dart-cloud-cli.md)** - CLI for deploying functions
+- **[Analyzer Rules](../../dart_cloud_cli/docs/ANALYZER_RULES.md)** - Validation and security rules
+- **[Deployment Config](../../dart_cloud_cli/docs/DEPLOYMENT_CONFIG.md)** - Configuration and restrictions
+
 ### Development
 Learn how to develop, build, and deploy Dart functions with ContainerPub.
 
