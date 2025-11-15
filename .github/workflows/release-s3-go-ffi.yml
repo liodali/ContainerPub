@@ -20,7 +20,7 @@ jobs:
           go-version: "1.25.4"
 
       - name: Build dylib
-        working-directory: s3_client_dart/go_ffi
+        working-directory: tools/dart_packages/s3_client_dart/go_ffi
         run: |
           chmod +x deploy.sh
           ./deploy.sh dylib
@@ -29,7 +29,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: s3_client_dart-macos
-          path: s3_client_dart/go_ffi/darwin/s3_client_dart.dylib
+          path: tools/dart_packages/s3_client_dart/go_ffi/darwin/s3_client_dart.dylib
           retention-days: 1
 
   build-linux:
@@ -45,7 +45,7 @@ jobs:
           go-version: "1.25.4"
 
       - name: Build so
-        working-directory: s3_client_dart/go_ffi
+        working-directory: tools/dart_packages/s3_client_dart/go_ffi
         run: |
           chmod +x deploy.sh
           ./deploy.sh so
@@ -54,7 +54,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: s3_client_dart-linux
-          path: s3_client_dart/go_ffi/linux/s3_client_dart.so
+          path: tools/dart_packages/s3_client_dart/go_ffi/linux/s3_client_dart.so
           retention-days: 1
 
   build-windows:
@@ -70,7 +70,7 @@ jobs:
           go-version: "1.25.4"
 
       - name: Build dll
-        working-directory: s3_client_dart/go_ffi
+        working-directory: tools/dart_packages/s3_client_dart/go_ffi
         shell: bash
         run: |
           mkdir -p windows
@@ -80,7 +80,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: s3_client_dart-windows
-          path: s3_client_dart/go_ffi/windows/s3_client_dart.dll
+          path: tools/dart_packages/s3_client_dart/go_ffi/windows/s3_client_dart.dll
           retention-days: 1
 
   create-release:
