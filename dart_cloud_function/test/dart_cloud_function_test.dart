@@ -3,7 +3,10 @@ import 'package:test/test.dart';
 
 class TestFn extends CloudDartFunction {
   @override
-  Future<CloudResponse> handle(CloudRequest request) async {
+  Future<CloudResponse> handle({
+    required CloudRequest request,
+    Map<String, String>? env,
+  }) async {
     return CloudResponse.text('ok');
   }
 }
@@ -12,7 +15,13 @@ void main() {
   test('handle returns CloudResponse', () async {
     final fn = TestFn();
     final res = await fn.handle(
-      CloudRequest(method: 'GET', path: '/', headers: {}, query: {}),
+      request: CloudRequest(
+        method: 'GET',
+        path: '/',
+        headers: {},
+        query: {},
+      ),
+      env: {},
     );
     expect(res.statusCode, 200);
   });

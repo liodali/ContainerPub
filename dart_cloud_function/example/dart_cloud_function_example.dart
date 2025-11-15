@@ -2,7 +2,10 @@ import 'package:dart_cloud_function/dart_cloud_function.dart';
 
 class EchoFunction extends CloudDartFunction {
   @override
-  Future<CloudResponse> handle(CloudRequest request) async {
+  Future<CloudResponse> handle({
+    required CloudRequest request,
+    Map<String, String>? env,
+  }) async {
     return CloudResponse.json({
       'method': request.method,
       'path': request.path,
@@ -13,5 +16,13 @@ class EchoFunction extends CloudDartFunction {
 }
 
 Future<void> main() async {
-  await EchoFunction().serve(port: 8080);
+  await EchoFunction().handle(
+    request: CloudRequest(
+      method: 'GET',
+      path: '/',
+      headers: {},
+      query: {},
+    ),
+    env: {},
+  );
 }
