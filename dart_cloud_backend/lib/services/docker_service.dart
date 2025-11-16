@@ -127,12 +127,16 @@ class DockerService {
     final containerName = 'dart-function-${DateTime.now().millisecondsSinceEpoch}';
 
     try {
+      // Create temporary directory for request.json
+      final tempDir = Directory.systemTemp.createTempSync('dart_cloud_request_');
+      final requestFile = File(path.join(tempDir.path, 'request.json'));
+
+      // Write request data to request.json
+      // This file will be mounted into the container for the function to read
+      await requestFile.writeAsString(jsonEncode(input));
+
       // Prepare environment variables
       final environment = {
-        'FUNCTION_INPUT': jsonEncode(input),
-        'HTTP_BODY': jsonEncode(input['body'] ?? {}),
-        'HTTP_QUERY': jsonEncode(input['query'] ?? {}),
-        'HTTP_METHOD': input['method'] ?? 'POST',
         'DART_CLOUD_RESTRICTED': 'true',
         'FUNCTION_TIMEOUT_MS': timeoutMs.toString(),
         'FUNCTION_MAX_MEMORY_MB': Config.functionMaxMemoryMb.toString(),
@@ -156,6 +160,8 @@ class DockerService {
         '--memory', '${Config.functionMaxMemoryMb}m', // Memory limit (default: 128MB)
         '--cpus', '0.5', // CPU limit (0.5 cores)
         '--network', 'none', // Network isolation (no external access)
+        // Mount request.json into container at /app/request.json
+        '-v', '${requestFile.path}:/app/request.json:ro',
       ];
 
       // Add environment variables to pass input data to container
@@ -190,6 +196,13 @@ class DockerService {
           return -1;
         },
       );
+
+      // Clean up temporary directory
+      try {
+        await tempDir.delete(recursive: true);
+      } catch (e) {
+        print('Failed to cleanup temp directory: $e');
+      }
 
       if (exitCode == -1) {
         return {

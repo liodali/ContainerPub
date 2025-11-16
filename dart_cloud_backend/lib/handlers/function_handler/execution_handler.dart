@@ -80,6 +80,7 @@ class ExecutionHandler {
 
       // Parse JSON body after size validation
       final body = jsonDecode(bodyString) as Map<String, dynamic>;
+      body['raw'] = bodyString;
 
       // === FUNCTION OWNERSHIP VERIFICATION ===
       // Verify that function exists and belongs to requesting user

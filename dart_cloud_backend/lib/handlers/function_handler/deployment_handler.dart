@@ -9,6 +9,7 @@ import 'package:s3_client_dart/s3_client_dart.dart';
 import 'package:dart_cloud_backend/config/config.dart';
 import 'package:dart_cloud_backend/database/database.dart';
 import 'package:dart_cloud_backend/services/docker_service.dart';
+import 'package:dart_cloud_backend/services/function_main_injection.dart';
 import 'utils.dart';
 
 /// Handles function deployment operations including:
@@ -213,6 +214,31 @@ class DeploymentHandler {
 
       // Clean up temporary uploaded file
       await archiveFile.delete();
+
+      // === MAIN.DART INJECTION ===
+      // Inject main.dart that reads environment and request.json,
+      // then invokes the @cloudFunction annotated class
+      await FunctionUtils.logFunction(
+        functionId,
+        'info',
+        'Injecting main.dart...',
+      );
+      final injectionSuccess = await FunctionMainInjection.injectMain(
+        functionDir.path,
+      );
+
+      if (!injectionSuccess) {
+        throw Exception(
+          'Failed to inject main.dart. Ensure function has exactly one class '
+          'extending CloudDartFunction with @cloudFunction annotation.',
+        );
+      }
+
+      await FunctionUtils.logFunction(
+        functionId,
+        'info',
+        'main.dart injected successfully',
+      );
 
       // === DOCKER IMAGE BUILD ===
       // Build Docker image with versioned tag

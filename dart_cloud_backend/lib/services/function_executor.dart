@@ -65,6 +65,7 @@ class FunctionExecutor {
         'query': input['query'] ?? {},
         'headers': input['headers'] ?? {},
         'method': input['method'] ?? 'POST',
+        'raw': input['raw'] ?? null,
       };
 
       // Get active deployment image tag from database
