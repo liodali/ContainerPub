@@ -41,7 +41,15 @@ cd my-function
 dart create -t console-simple .
 ```
 
-### 3. Add dart_cloud_function Dependency
+### 3. Initialize Function Config
+
+```dart
+dart_cloud init
+```
+
+This creates a `.dart_tool/function_config.json` file that stores your function metadata and ID for caching.
+
+### 4. Add dart_cloud_function Dependency
 
 Edit `pubspec.yaml`:
 
@@ -50,7 +58,7 @@ dependencies:
   dart_cloud_function: ^1.0.0
 ```
 
-### 4. Write Your Function
+### 5. Write Your Function
 
 Create `main.dart`:
 
@@ -72,13 +80,37 @@ class MyFunction extends CloudDartFunction {
 }
 ```
 
-### 5. Deploy
+### 6. Deploy
 
 ```dart
 dart_cloud deploy ./my-function
 ```
 
 ## Commands
+
+### init
+Initialize function configuration in the current directory.
+
+```dart
+dart_cloud init
+```
+
+Creates a `.dart_tool/function_config.json` file that stores:
+- `function_name` - The project name from `pubspec.yaml`
+- `function_id` - Cached after deployment (auto-populated)
+- `created_at` - Timestamp of initialization
+
+This file is used as a cache for function metadata, allowing you to:
+- Update functions without specifying the ID
+- Invoke functions locally using the cached ID
+- Track function metadata in your project
+
+**Output:**
+```
+✓ Successfully initialized function config
+✓ Config file created at: .dart_tool/function_config.json
+✓ Function name: my_function
+```
 
 ### login
 Authenticate with the Dart Cloud platform.
@@ -94,6 +126,8 @@ Deploy a Dart function from a directory.
 dart_cloud deploy <path-to-function>
 ```
 
+After successful deployment, the function ID is automatically cached in `.dart_tool/function_config.json` for future reference.
+
 **Validation Phases:**
 
 **Phase 1 - Deployment Restrictions:**
@@ -107,6 +141,10 @@ dart_cloud deploy <path-to-function>
 - `@cloudFunction` annotation present
 - No `main()` function
 - Security checks (no process execution, FFI, mirrors)
+
+**Post-Deployment:**
+- Function ID is stored in `.dart_tool/function_config.json`
+- Can be used for subsequent updates or local invocations
 
 ### list
 List all deployed functions.
@@ -180,6 +218,8 @@ The CLI performs comprehensive validation before deployment:
 
 ## Configuration
 
+### Global CLI Configuration
+
 The CLI configuration is stored at `~/.dart_cloud/config.json`:
 
 ```dart
@@ -190,6 +230,24 @@ The CLI configuration is stored at `~/.dart_cloud/config.json`:
 ```
 
 You can manually edit this file to change the server URL.
+
+### Function Configuration
+
+Each function directory contains a `.dart_tool/function_config.json` file:
+
+```json
+{
+  "function_name": "my_function",
+  "function_id": "abc123xyz789",
+  "created_at": "2025-11-16T23:34:00.000Z"
+}
+```
+
+This file is:
+- **Created** by `dart_cloud init`
+- **Updated** automatically after `dart_cloud deploy`
+- **Used** for caching function metadata locally
+- **Optional** but recommended for better developer experience
 
 ## Examples
 
