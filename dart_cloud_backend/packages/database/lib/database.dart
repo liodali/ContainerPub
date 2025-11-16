@@ -1,11 +1,30 @@
-/// Support for doing something awesome.
+/// Database package with entity-based query management and raw SQL support
 ///
-/// More dartdocs go here.
+/// This package provides:
+/// - Entity-based database management with DatabaseManagerQuery
+/// - Query builder for constructing SQL queries
+/// - Entity models for all database tables
+/// - Raw SQL query methods for complex operations
+/// - Legacy QueryHelpers for backward compatibility
 library;
 
 import 'package:postgres/postgres.dart';
 
+// Legacy query helpers (for backward compatibility)
 export 'src/query_helpers.dart';
+
+// Entity system
+export 'src/entity.dart';
+export 'src/query_builder.dart';
+export 'src/database_manager_query.dart';
+export 'src/managers.dart';
+
+// Entity models
+export 'src/entities/user_entity.dart';
+export 'src/entities/function_entity.dart';
+export 'src/entities/function_deployment_entity.dart';
+export 'src/entities/function_log_entity.dart';
+export 'src/entities/function_invocation_entity.dart';
 
 class Database {
   static late Connection _connection;
@@ -232,5 +251,81 @@ class Database {
 
   static Future<void> close() async {
     await _connection.close();
+  }
+
+  // ============================================================================
+  // Raw Query Methods
+  // ============================================================================
+
+  /// Execute a raw SQL query and return the result
+  static Future<Result> rawQuery(
+    String sql, {
+    Map<String, dynamic>? parameters,
+  }) async {
+    return await _connection.execute(
+      Sql.named(sql),
+      parameters: parameters ?? {},
+    );
+  }
+
+  /// Execute a raw SQL query and return a single row as a map
+  static Future<Map<String, dynamic>?> rawQuerySingle(
+    String sql, {
+    Map<String, dynamic>? parameters,
+  }) async {
+    final result = await rawQuery(sql, parameters: parameters);
+    if (result.isEmpty) return null;
+
+    final row = result.first;
+    final map = <String, dynamic>{};
+    for (var i = 0; i < row.length; i++) {
+      final columnName = row.schema.columns[i].columnName ?? 'column_$i';
+      map[columnName] = row[i];
+    }
+    return map;
+  }
+
+  /// Execute a raw SQL query and return all rows as maps
+  static Future<List<Map<String, dynamic>>> rawQueryAll(
+    String sql, {
+    Map<String, dynamic>? parameters,
+  }) async {
+    final result = await rawQuery(sql, parameters: parameters);
+
+    return result.map((row) {
+      final map = <String, dynamic>{};
+      for (var i = 0; i < row.length; i++) {
+        final columnName = row.schema.columns[i].columnName ?? 'column_$i';
+        map[columnName] = row[i];
+      }
+      return map;
+    }).toList();
+  }
+
+  /// Execute a raw SQL statement (INSERT, UPDATE, DELETE) and return affected rows
+  static Future<int> rawExecute(
+    String sql, {
+    Map<String, dynamic>? parameters,
+  }) async {
+    final result = await rawQuery(sql, parameters: parameters);
+    return result.affectedRows;
+  }
+
+  /// Begin a transaction
+  static Future<T> transaction<T>(
+    Future<T> Function(Connection connection) callback,
+  ) async {
+    return await _connection.runTx((ctx) async {
+      return await callback(ctx as Connection);
+    });
+  }
+
+  /// Execute multiple queries in a transaction
+  static Future<void> batchExecute(List<String> queries) async {
+    await transaction((ctx) async {
+      for (final query in queries) {
+        await ctx.execute(query);
+      }
+    });
   }
 }

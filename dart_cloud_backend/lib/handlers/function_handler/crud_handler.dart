@@ -2,7 +2,6 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:dart_cloud_backend/services/docker_service.dart';
 import 'package:dart_cloud_backend/services/s3_service.dart' show S3Service;
-import 'package:s3_client_dart/s3_client_dart.dart' show S3Client;
 import 'package:shelf/shelf.dart';
 import 'package:path/path.dart' as path;
 import 'package:dart_cloud_backend/config/config.dart';
