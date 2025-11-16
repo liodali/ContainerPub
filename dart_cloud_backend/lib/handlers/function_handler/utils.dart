@@ -1,4 +1,4 @@
-import 'package:dart_cloud_backend/database/database.dart';
+import 'package:database/database.dart';
 
 /// Utility functions shared across function handlers
 /// Provides common operations like logging and validation

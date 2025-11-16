@@ -3,7 +3,7 @@ import 'dart:io';
 import 'package:shelf/shelf.dart';
 import 'package:path/path.dart' as path;
 import 'package:dart_cloud_backend/config/config.dart';
-import 'package:dart_cloud_backend/database/database.dart';
+import 'package:database/database.dart';
 
 /// Handles CRUD (Create, Read, Update, Delete) operations for functions
 ///
@@ -140,7 +140,7 @@ class CrudHandler {
 
       // Verify function ownership before deletion
       final result = await Database.connection.execute(
-        'SELECT id FROM functions WHERE id = \$1 AND user_id = \$2',
+        'SELECT id,s3_key,tag FROM functions WHERE uuid = \$1 AND user_id = \$2',
         parameters: [id, userId],
       );
 

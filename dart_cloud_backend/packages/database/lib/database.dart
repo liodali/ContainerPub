@@ -1,17 +1,25 @@
+/// Support for doing something awesome.
+///
+/// More dartdocs go here.
+library;
+
 import 'package:postgres/postgres.dart';
-import 'package:dart_cloud_backend/config/config.dart';
+
+export 'src/query_helpers.dart';
 
 class Database {
   static late Connection _connection;
 
   static Connection get connection => _connection;
 
-  static Future<void> initialize() async {
+  static Future<void> initialize(String databaseUrl) async {
     try {
       // Parse database URL
-      final uri = Uri.parse(Config.databaseUrl);
+      final uri = Uri.parse(databaseUrl);
       final user = uri.userInfo.split(':').first;
-      final password = uri.userInfo.contains(':') ? uri.userInfo.split(':')[1] : '';
+      final password = uri.userInfo.contains(':')
+          ? uri.userInfo.split(':')[1]
+          : '';
       if (user.isEmpty || password.isEmpty) {
         throw Exception('Invalid database URL');
       }
@@ -19,7 +27,9 @@ class Database {
         Endpoint(
           host: uri.host,
           port: uri.port,
-          database: uri.pathSegments.isNotEmpty ? uri.pathSegments[0] : 'dart_cloud',
+          database: uri.pathSegments.isNotEmpty
+              ? uri.pathSegments[0]
+              : 'dart_cloud',
           username: user,
           password: password,
         ),
@@ -69,6 +79,7 @@ class Database {
         user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
         name VARCHAR(255) NOT NULL,
         status VARCHAR(50) DEFAULT 'active',
+        active_deployment_id INTEGER,
         analysis_result JSONB,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -84,6 +95,56 @@ class Database {
     // Create index on user_id for fast user queries
     await _connection.execute('''
       CREATE INDEX IF NOT EXISTS idx_functions_user_id ON functions(user_id)
+    ''');
+
+    // Migration: Add active_deployment_id column if it doesn't exist
+    await _connection.execute('''
+      DO \$\$ 
+      BEGIN
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns 
+                       WHERE table_name='functions' AND column_name='active_deployment_id') THEN
+          ALTER TABLE functions ADD COLUMN active_deployment_id INTEGER;
+        END IF;
+      END \$\$
+    ''');
+
+    // Create index on active_deployment_id for fast lookups
+    await _connection.execute('''
+      CREATE INDEX IF NOT EXISTS idx_functions_active_deployment ON functions(active_deployment_id)
+    ''');
+
+    // Function deployments table for versioning and deployment history
+    await _connection.execute('''
+      CREATE TABLE IF NOT EXISTS function_deployments (
+        id SERIAL PRIMARY KEY,
+        uuid UUID UNIQUE NOT NULL DEFAULT uuid_generate_v4(),
+        function_id INTEGER NOT NULL REFERENCES functions(id) ON DELETE CASCADE,
+        version INTEGER NOT NULL,
+        image_tag VARCHAR(255) NOT NULL,
+        s3_key VARCHAR(500) NOT NULL,
+        status VARCHAR(50) DEFAULT 'building',
+        is_active BOOLEAN DEFAULT false,
+        build_logs TEXT,
+        deployed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(function_id, version)
+      )
+    ''');
+
+    // Create indexes for function_deployments
+    await _connection.execute('''
+      CREATE INDEX IF NOT EXISTS idx_function_deployments_uuid ON function_deployments(uuid)
+    ''');
+
+    await _connection.execute('''
+      CREATE INDEX IF NOT EXISTS idx_function_deployments_function_id ON function_deployments(function_id)
+    ''');
+
+    await _connection.execute('''
+      CREATE INDEX IF NOT EXISTS idx_function_deployments_is_active ON function_deployments(function_id, is_active)
+    ''');
+
+    await _connection.execute('''
+      CREATE INDEX IF NOT EXISTS idx_function_deployments_version ON function_deployments(function_id, version DESC)
     ''');
 
     // Function logs table with serial ID (internal) and UUID (public)

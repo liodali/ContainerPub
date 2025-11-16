@@ -1,5 +1,5 @@
+import 'package:database/database.dart' show Database;
 import 'package:postgres/postgres.dart';
-import 'package:dart_cloud_backend/database/database.dart';
 
 /// Helper class for database queries using UUIDs
 ///

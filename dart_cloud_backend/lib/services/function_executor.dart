@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:path/path.dart' as path;
 import 'package:dart_cloud_backend/config/config.dart';
 import 'package:dart_cloud_backend/services/docker_service.dart';
-import 'package:dart_cloud_backend/database/database.dart';
+import 'package:database/database.dart';
 
 class FunctionExecutor {
   final String functionId;

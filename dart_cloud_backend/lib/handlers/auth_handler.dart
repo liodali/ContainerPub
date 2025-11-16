@@ -3,7 +3,7 @@ import 'package:shelf/shelf.dart';
 import 'package:bcrypt/bcrypt.dart';
 import 'package:dart_jsonwebtoken/dart_jsonwebtoken.dart';
 import 'package:dart_cloud_backend/config/config.dart';
-import 'package:dart_cloud_backend/database/database.dart';
+import 'package:database/database.dart';
 
 class AuthHandler {
   static Future<Response> register(Request request) async {

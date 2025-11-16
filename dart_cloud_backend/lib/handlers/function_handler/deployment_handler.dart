@@ -7,7 +7,7 @@ import 'package:uuid/uuid.dart';
 import 'package:archive/archive_io.dart';
 import 'package:s3_client_dart/s3_client_dart.dart';
 import 'package:dart_cloud_backend/config/config.dart';
-import 'package:dart_cloud_backend/database/database.dart';
+import 'package:database/database.dart';
 import 'package:dart_cloud_backend/services/docker_service.dart';
 import 'package:dart_cloud_backend/services/function_main_injection.dart';
 import 'utils.dart';
@@ -126,7 +126,7 @@ class DeploymentHandler {
 
         // Create function record in database with 'building' status
         await Database.connection.execute(
-          'INSERT INTO functions (id, user_id, name, status) VALUES (\$1, \$2, \$3, \$4)',
+          'INSERT INTO functions (uuid, user_id, name, status) VALUES (\$1, \$2, \$3, \$4)',
           parameters: [functionId, userId, functionName, 'building'],
         );
 

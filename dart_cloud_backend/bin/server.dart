@@ -2,7 +2,7 @@ import 'dart:io';
 import 'package:shelf/shelf.dart';
 import 'package:shelf/shelf_io.dart' as shelf_io;
 import 'package:dart_cloud_backend/router.dart';
-import 'package:dart_cloud_backend/database/database.dart';
+import 'package:database/database.dart';
 import 'package:dart_cloud_backend/config/config.dart';
 
 void main() async {
@@ -10,7 +10,7 @@ void main() async {
   await Config.load();
 
   // Initialize database
-  await Database.initialize();
+  await Database.initialize(Config.databaseUrl);
 
   // Create router
   final handler = Pipeline()

@@ -18,6 +18,8 @@ dependencies:
   dart_jsonwebtoken: ^2.12.1
   dotenv: ^4.2.0
   analyzer: ^9.0.0
+  database: 
+    path: packages/database
   s3_client_dart:
     git:
       url: https://github.com/liodali/ContainerPub.git

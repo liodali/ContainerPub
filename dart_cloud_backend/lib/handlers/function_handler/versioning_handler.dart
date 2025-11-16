@@ -1,6 +1,6 @@
 import 'dart:convert';
 import 'package:shelf/shelf.dart';
-import 'package:dart_cloud_backend/database/database.dart';
+import 'package:database/database.dart';
 import 'utils.dart';
 
 /// Handles function versioning and deployment history operations
