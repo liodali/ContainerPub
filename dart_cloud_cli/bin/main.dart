@@ -7,6 +7,7 @@ import 'package:dart_cloud_cli/commands/delete_command.dart';
 import 'package:dart_cloud_cli/commands/login_command.dart';
 import 'package:dart_cloud_cli/commands/logout_command.dart';
 import 'package:dart_cloud_cli/commands/invoke_command.dart';
+import 'package:dart_cloud_cli/commands/init_command.dart';
 import 'package:dart_cloud_cli/services/cache.dart' show AuthCache;
 
 void main(List<String> arguments) async {
@@ -26,6 +27,9 @@ void main(List<String> arguments) async {
 
   try {
     switch (command) {
+      case 'init':
+        await InitCommand().execute(commandArgs);
+        break;
       case 'login':
         await LoginCommand().execute(commandArgs);
         break;
@@ -75,6 +79,7 @@ Dart Cloud CLI - Deploy and manage Dart serverless functions
 Usage: dart_cloud <command> [arguments]
 
 Available commands:
+  init               Initialize function config in .dart_tool directory
   login              Authenticate with the Dart Cloud platform
   logout             Clear authentication token and logout
   deploy <path>      Deploy a Dart function from the specified path
@@ -86,6 +91,7 @@ Available commands:
   version            Show version information
 
 Examples:
+  dart_cloud init
   dart_cloud login
   dart_cloud logout
   dart_cloud deploy ./my_function

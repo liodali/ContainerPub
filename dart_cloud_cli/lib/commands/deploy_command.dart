@@ -6,6 +6,7 @@ import 'package:dart_cloud_cli/api/api_client.dart';
 import 'package:dart_cloud_cli/config/config.dart';
 import 'package:dart_cloud_cli/services/function_analyzer.dart';
 import 'package:dart_cloud_cli/services/deployment_validator.dart';
+import 'package:dart_cloud_cli/common/function_config.dart';
 
 class DeployCommand extends BaseCommand {
   Future<void> execute(List<String> args) async {
@@ -118,12 +119,22 @@ class DeployCommand extends BaseCommand {
         functionName,
       );
 
+      final functionId = response['id'] as String;
+
       print('✓ Function deployed successfully!');
-      print('  Function ID: ${response['id']}');
+      print('  Function ID: $functionId');
       print('  Name: ${response['name']}');
       print(
-        '  Endpoint: ${Config.serverUrl}/api/functions/${response['id']}/invoke',
+        '  Endpoint: ${Config.serverUrl}/api/functions/$functionId/invoke',
       );
+
+      // Save function ID to config
+      final existingConfig = await FunctionConfig.load(functionDir.path);
+      final updatedConfig =
+          (existingConfig ?? FunctionConfig(functionName: functionName))
+              .copyWith(functionId: functionId);
+      await updatedConfig.save(functionDir.path);
+      print('✓ Function ID cached in .dart_tool/function_config.json');
 
       // Cleanup
       tempDir.deleteSync(recursive: true);
