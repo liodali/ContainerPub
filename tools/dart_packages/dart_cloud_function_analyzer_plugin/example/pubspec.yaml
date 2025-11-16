@@ -1,6 +1,6 @@
-name: dart_cloud_function_analyzer_plugin
+name: dart_cloud_function_analyzer_plugin_example
 description: A starting point for Dart libraries or applications.
-version: 0.1.0
+version: 1.0.0
 # repository: https://github.com/my_org/my_repo
 
 environment:
@@ -8,9 +8,8 @@ environment:
 
 # Add regular dependencies here.
 dependencies:
-  analysis_server_plugin: ^0.3.4
-  analyzer: ^9.0.0
-  # path: ^1.9.0
+  dart_cloud_function:
+     path: ../../dart_cloud_function
 
 dev_dependencies:
   lints: ^6.0.0

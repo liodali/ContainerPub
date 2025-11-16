@@ -1,0 +1,11 @@
+
+include: package:lints/recommended.yaml
+
+plugins:
+  dart_cloud_function_analyzer_plugin:
+     path: ../
+     diagnostics:
+          missing_cloud_function_annotation: true
+          multiple_cloud_function_annotation: true
+          no_main_function: true
+       
