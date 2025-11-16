@@ -1,5 +1,8 @@
 import 'dart:convert';
 import 'dart:io';
+import 'package:dart_cloud_backend/services/docker_service.dart';
+import 'package:dart_cloud_backend/services/s3_service.dart' show S3Service;
+import 'package:s3_client_dart/s3_client_dart.dart' show S3Client;
 import 'package:shelf/shelf.dart';
 import 'package:path/path.dart' as path;
 import 'package:dart_cloud_backend/config/config.dart';
@@ -133,15 +136,15 @@ class CrudHandler {
   /// - 200: Function deleted successfully
   /// - 404: Function not found or access denied
   /// - 500: Deletion failed
-  static Future<Response> delete(Request request, String id) async {
+  static Future<Response> delete(Request request, String uuid) async {
     try {
       // Extract user ID from authenticated request
       final userId = request.context['userId'] as String;
 
       // Verify function ownership before deletion
       final result = await Database.connection.execute(
-        'SELECT id,s3_key,tag FROM functions WHERE uuid = \$1 AND user_id = \$2',
-        parameters: [id, userId],
+        'SELECT id FROM functions WHERE uuid = \$1 AND user_id = \$2',
+        parameters: [uuid, userId],
       );
 
       // Check if function exists and user has access
@@ -151,6 +154,12 @@ class CrudHandler {
           headers: {'Content-Type': 'application/json'},
         );
       }
+      final id = result.first[0] as String;
+      // Store deployment metadata in database
+      final deploymentResult = await Database.connection.execute(
+        'SELECT image_tag, s3_key from function_deployments where function_id = \$1',
+        parameters: [id],
+      );
 
       // Delete function directory from filesystem
       // This removes all extracted function code for all versions
@@ -158,6 +167,16 @@ class CrudHandler {
       if (await functionDir.exists()) {
         await functionDir.delete(recursive: true);
       }
+
+      await Future.forEach(deploymentResult, (deployment) async {
+        final s3Key = deployment[1] as String;
+        final imageTag = deployment[0] as String;
+        // Delete S3 archive
+        await S3Service.s3Client.deleteObject(s3Key);
+
+        // Delete Docker image
+        await DockerService.removeImage(imageTag);
+      });
 
       // Delete function from database
       // Foreign key constraints will cascade delete to:

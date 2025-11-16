@@ -108,13 +108,15 @@ class DeployCommand extends BaseCommand {
 
       final archiveFile = File(archivePath);
       print(
-        'Archive created: ${(archiveFile.lengthSync() / 1024).toStringAsFixed(2)} KB',
+        'Archive created: ${(archiveFile.lengthSync() / (1024 * 1024)).toStringAsFixed(2)} MB',
       );
 
       // Deploy
       print('Deploying function...');
-      final response =
-          await ApiClient.deployFunction(archiveFile, functionName);
+      final response = await ApiClient.deployFunction(
+        archiveFile,
+        functionName,
+      );
 
       print('✓ Function deployed successfully!');
       print('  Function ID: ${response['id']}');

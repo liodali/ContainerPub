@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'package:dart_cloud_backend/services/s3_service.dart' show S3Service;
 import 'package:shelf/shelf.dart';
 import 'package:shelf_multipart/shelf_multipart.dart';
 import 'package:path/path.dart' as path;
@@ -20,24 +21,7 @@ import 'utils.dart';
 /// - Managing deployment history
 class DeploymentHandler {
   static const _uuid = Uuid();
-  static S3Client? _s3Client;
-
-  /// Initialize S3 client with configuration from environment
-  /// This should be called once at application startup
-  static void initializeS3() {
-    _s3Client = S3Client();
-    _s3Client!.initialize(
-      configuration: S3Configuration(
-        endpoint: Config.s3Endpoint,
-        bucketName: Config.s3BucketName,
-        accessKeyId: Config.s3AccessKeyId,
-        secretAccessKey: Config.s3SecretAccessKey,
-        sessionToken: Config.s3SessionToken ?? '',
-        region: Config.s3Region,
-        accountId: Config.s3AccountId ?? '',
-      ),
-    );
-  }
+  static late S3Client _s3Client = S3Service.s3Client;
 
   /// Deploy a new function or update an existing one
   ///
@@ -111,10 +95,11 @@ class DeploymentHandler {
 
       // Check if function with this name already exists for this user
       final existingResult = await Database.connection.execute(
-        'SELECT id FROM functions WHERE user_id = \$1 AND name = \$2',
+        'SELECT id,uuid FROM functions WHERE user_id = \$1 AND name = \$2',
         parameters: [userId, functionName],
       );
 
+      String functionUUID;
       String functionId;
       int version = 1;
       bool isNewFunction = existingResult.isEmpty;
@@ -122,17 +107,18 @@ class DeploymentHandler {
       if (isNewFunction) {
         // === NEW FUNCTION WORKFLOW ===
         // Generate unique ID for new function
-        functionId = _uuid.v4();
+        functionUUID = _uuid.v4();
 
         // Create function record in database with 'building' status
-        await Database.connection.execute(
+        final result = await Database.connection.execute(
           'INSERT INTO functions (uuid, user_id, name, status) VALUES (\$1, \$2, \$3, \$4)',
-          parameters: [functionId, userId, functionName, 'building'],
+          parameters: [functionUUID, userId, functionName, 'building'],
         );
+        functionId = result.first[0] as String;
 
         // Log function creation
         await FunctionUtils.logFunction(
-          functionId,
+          functionUUID,
           'info',
           'Creating new function: $functionName',
         );
@@ -140,6 +126,7 @@ class DeploymentHandler {
         // === UPDATE EXISTING FUNCTION WORKFLOW ===
         // Get existing function ID
         functionId = existingResult.first[0] as String;
+        functionUUID = existingResult.first[1] as String;
 
         // Get the latest version number for this function
         final versionResult = await Database.connection.execute(
@@ -180,13 +167,8 @@ class DeploymentHandler {
       // S3 key format: functions/{function-id}/v{version}/function.tar.gz
       final s3Key = 'functions/$functionId/v$version/function.tar.gz';
 
-      // Initialize S3 client if not already done
-      if (_s3Client == null) {
-        initializeS3();
-      }
-
       // Upload file to S3
-      final uploadResult = await _s3Client!.upload(archiveFile.path, s3Key);
+      final uploadResult = await _s3Client.upload(archiveFile.path, s3Key);
       if (uploadResult.isEmpty) {
         throw Exception('Failed to upload archive to S3');
       }

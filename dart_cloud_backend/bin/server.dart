@@ -1,4 +1,6 @@
 import 'dart:io';
+import 'package:dart_cloud_backend/services/s3_service.dart' show S3Service;
+import 'package:s3_client_dart/s3_client_dart.dart' show S3Configuration;
 import 'package:shelf/shelf.dart';
 import 'package:shelf/shelf_io.dart' as shelf_io;
 import 'package:dart_cloud_backend/router.dart';
@@ -11,6 +13,19 @@ void main() async {
 
   // Initialize database
   await Database.initialize(Config.databaseUrl);
+
+  // Initialize S3
+  S3Service.initializeS3(
+    S3Configuration(
+      endpoint: Config.s3Endpoint,
+      bucketName: Config.s3BucketName,
+      accessKeyId: Config.s3AccessKeyId,
+      secretAccessKey: Config.s3SecretAccessKey,
+      sessionToken: Config.s3SessionToken ?? '',
+      region: Config.s3Region,
+      accountId: Config.s3AccountId ?? '',
+    ),
+  );
 
   // Create router
   final handler = Pipeline()
