@@ -26,7 +26,8 @@ class Config with AuthCache {
     final home =
         Platform.environment['HOME'] ?? Platform.environment['USERPROFILE'];
     if (home == null) {
-      throw Exception('Could not determine home directory');
+      print('Could not determine home directory');
+      exit(1);
     }
     final configDir = Directory(path.join(home, '.dart_cloud'));
     if (!configDir.existsSync()) {
