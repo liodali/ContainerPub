@@ -155,7 +155,21 @@ class QueryBuilder {
 
     // WHERE clause
     if (_where.isNotEmpty) {
-      buffer.write(' WHERE ${_where.join(' AND ')}');
+      final whereClause = _where
+          .asMap()
+          .map(
+            (index, whereClauseElement) => MapEntry(
+              index,
+              index == 0
+                  ? whereClauseElement
+                  : whereClauseElement.startsWith('OR')
+                  ? whereClauseElement
+                  : 'AND $whereClauseElement',
+            ),
+          )
+          .values
+          .join(' ');
+      buffer.write(' WHERE $whereClause');
     }
 
     // GROUP BY clause
