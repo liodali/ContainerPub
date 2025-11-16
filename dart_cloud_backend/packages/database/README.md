@@ -353,3 +353,31 @@ final functions = await DatabaseManagers.functions.findAll(
 ```
 
 Both APIs work, but the new entity-based approach provides better type safety and more features.
+
+## Testing
+
+The package includes comprehensive unit tests (120+ test cases) that verify SQL query generation without requiring a database connection.
+
+### Run Tests
+```bash
+# Run all tests
+dart test
+
+# Run with coverage
+./test_runner.sh coverage
+
+# Run specific test suite
+dart test test/query_builder_test.dart
+dart test test/entity_test.dart
+dart test test/database_manager_query_test.dart
+```
+
+See [TESTING.md](TESTING.md) for detailed testing documentation.
+
+### Test Coverage
+- ✅ Query Builder: 50+ tests for SQL generation
+- ✅ Entities: 30+ tests for data mapping
+- ✅ DatabaseManagerQuery: 40+ tests for query patterns
+- ✅ SQL injection prevention
+- ✅ Parameter binding
+- ✅ Edge cases and error handling

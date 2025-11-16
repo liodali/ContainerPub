@@ -287,24 +287,6 @@ void main() {
     });
   });
 
-  // group('DatabaseManagerQuery - Upsert Queries', () {
-  //   test('should generate correct UPSERT query structure', () {
-  //     // Note: Upsert uses raw SQL, so we test the expected structure
-  //     final expectedPattern = RegExp(
-  //       r'INSERT INTO \w+ \(.+\) VALUES \(.+\) ON CONFLICT \(.+\) DO UPDATE SET .+ RETURNING \*',
-  //     );
-
-  //     final mockSql = '''
-  //       INSERT INTO functions (user_id, name, status)
-  //       VALUES (@param_0, @param_1, @param_2)
-  //       ON CONFLICT (user_id, name)
-  //       DO UPDATE SET status = EXCLUDED.status
-  //       RETURNING *
-  //     ''';
-
-  //     expect(expectedPattern.hasMatch(mockSql), true);
-  //   });
-  // });
 
   group('DatabaseManagerQuery - Pagination', () {
     test('should generate correct pagination query for page 1', () {
