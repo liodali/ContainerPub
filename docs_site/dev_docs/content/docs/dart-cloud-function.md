@@ -16,7 +16,7 @@ Minimal foundation for serverless HTTP functions in Dart.
 
 Add to your `pubspec.yaml`:
 
-```yaml
+```dart
 dependencies:
   dart_cloud_function: ^1.0.0
 ```
@@ -260,7 +260,7 @@ my-function/
 
 Deploy your function using `dart_cloud_cli`:
 
-```bash
+```dart
 dart_cloud deploy ./my-function
 ```
 

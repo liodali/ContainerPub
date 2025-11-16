@@ -1,6 +1,6 @@
 #!/bin/bash
 
-skip="${1:-no-skip}"
+skip="${1:"--no-skip"}"
 
 if [ "$skip" != "--skip" ]; then
 rm -rf cloudflare_deploy_site/public
@@ -9,6 +9,10 @@ rm -rf build/jaspr
 mkdir -p cloudflare_deploy_site/public/build
 
 jaspr build --sitemap-exclude -O 3 --verbose 
+if [ $? -ne 0 ]; then
+  echo "Error: jaspr build failed"
+  exit 1
+fi
 
 cp -r build/jaspr cloudflare_deploy_site/public/build
 fi

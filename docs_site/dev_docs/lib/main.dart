@@ -58,6 +58,7 @@ void main() {
           header: Header(
             title: 'ContainerPub',
             logo: '/images/logo.svg',
+            
             items: [
               // Enables switching between light and dark mode.
               ThemeToggle(),
@@ -80,6 +81,8 @@ void main() {
                 links: [
                   SidebarLink(text: "Development", href: '/docs/development'),
                   SidebarLink(text: "Architecture", href: '/docs/architecture'),
+                  SidebarLink(text: "cli", href: '/docs/dart-cloud-cli'),
+                  SidebarLink(text: "function", href: '/docs/dart-cloud-function'),
                   SidebarLink(text: "Podman Migration", href: '/docs/podman-migration'),
                   SidebarLink(text: "API Reference", href: '/docs/api-reference'),
                 ],

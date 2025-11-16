@@ -15,7 +15,7 @@ Command-line interface for deploying and managing Dart serverless functions.
 
 ### From Source
 
-```bash
+```dart
 cd dart_cloud_cli
 dart pub get
 dart pub global activate --source path .
@@ -27,7 +27,7 @@ Now you can use `dart_cloud` from anywhere.
 
 ### 1. Login
 
-```bash
+```dart
 dart_cloud login
 ```
 
@@ -35,7 +35,7 @@ You'll be prompted for your email and password.
 
 ### 2. Create a Function
 
-```bash
+```dart
 mkdir my-function
 cd my-function
 dart create -t console-simple .
@@ -45,7 +45,7 @@ dart create -t console-simple .
 
 Edit `pubspec.yaml`:
 
-```yaml
+```dart
 dependencies:
   dart_cloud_function: ^1.0.0
 ```
@@ -74,7 +74,7 @@ class MyFunction extends CloudDartFunction {
 
 ### 5. Deploy
 
-```bash
+```dart
 dart_cloud deploy ./my-function
 ```
 
@@ -83,14 +83,14 @@ dart_cloud deploy ./my-function
 ### login
 Authenticate with the Dart Cloud platform.
 
-```bash
+```dart
 dart_cloud login
 ```
 
 ### deploy
 Deploy a Dart function from a directory.
 
-```bash
+```dart
 dart_cloud deploy <path-to-function>
 ```
 
@@ -111,42 +111,42 @@ dart_cloud deploy <path-to-function>
 ### list
 List all deployed functions.
 
-```bash
+```dart
 dart_cloud list
 ```
 
 ### logs
 View logs for a specific function.
 
-```bash
+```dart
 dart_cloud logs <function-id>
 ```
 
 ### invoke
 Invoke a deployed function with optional data.
 
-```bash
+```dart
 dart_cloud invoke <function-id> [--data '{"key": "value"}']
 ```
 
 ### delete
 Delete a deployed function.
 
-```bash
+```dart
 dart_cloud delete <function-id>
 ```
 
 ### help
 Show help information.
 
-```bash
+```dart
 dart_cloud help
 ```
 
 ### version
 Show CLI version.
 
-```bash
+```dart
 dart_cloud version
 ```
 
@@ -182,7 +182,7 @@ The CLI performs comprehensive validation before deployment:
 
 The CLI configuration is stored at `~/.dart_cloud/config.json`:
 
-```json
+```dart
 {
   "authToken": "your-jwt-token",
   "serverUrl": "http://localhost:8080"
@@ -248,13 +248,13 @@ class ProcessorFunction extends CloudDartFunction {
 ## Troubleshooting
 
 ### Authentication Issues
-```bash
+```dart
 dart_cloud login
 ```
 
 ### Deployment Size Exceeded
 Remove unnecessary files:
-```bash
+```dart
 rm -rf .git .dart_tool build node_modules
 ```
 
