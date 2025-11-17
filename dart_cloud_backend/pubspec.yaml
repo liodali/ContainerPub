@@ -4,7 +4,7 @@ version: 1.0.0
 publish_to: none
 
 environment:
-  sdk: ^3.9.2
+  sdk: ^3.10.0
 
 dependencies:
   shelf: ^1.4.2
@@ -21,10 +21,11 @@ dependencies:
   database: 
     path: packages/database
   s3_client_dart:
-    git:
-      url: https://github.com/liodali/ContainerPub.git
-      path: s3_client_dart
-      ref: 7ee81dbee45a5737cf3d5786c122f3c0ace2677a
+    path: ../tools/dart_packages/s3_client_dart
+    # git:
+    #   url: https://github.com/liodali/ContainerPub.git
+    #   path: s3_client_dart
+    #   ref: 7ee81dbee45a5737cf3d5786c122f3c0ace2677a
 
 dev_dependencies:
   lints: ^6.0.0

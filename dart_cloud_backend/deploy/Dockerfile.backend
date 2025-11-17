@@ -1,5 +1,5 @@
 # Multi-stage build for Dart Cloud Backend
-FROM dart:3.9.2 AS build
+FROM dart:latest AS build
 
 # Add this label
 LABEL stage=builder-intermediate 
