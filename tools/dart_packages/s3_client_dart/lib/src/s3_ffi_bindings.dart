@@ -34,8 +34,8 @@ class S3FFIBindings {
   S3FFIBindings({
     String? libraryPath,
     bool autoDownload = true,
-  })  : _customLibraryPath = libraryPath,
-        _autoDownload = autoDownload {
+  }) : _customLibraryPath = libraryPath,
+       _autoDownload = autoDownload {
     _dylib = _loadLibrary();
     _initBucket = _dylib
         .lookup<
@@ -83,8 +83,9 @@ class S3FFIBindings {
     // If custom path is provided, use it directly
     final customPath = _customLibraryPath;
     if (customPath != null && customPath.isNotEmpty) {
-      if (File(customPath).existsSync()) {
-        return DynamicLibrary.open(customPath);
+      final fileS3Lib = File(customPath);
+      if (fileS3Lib.existsSync()) {
+        return DynamicLibrary.open(fileS3Lib.path);
       } else if (!_autoDownload) {
         throw Exception('Library not found at: $customPath');
       }
@@ -138,11 +139,13 @@ class S3FFIBindings {
     String? downloadedPath;
     Exception? error;
 
-    LibraryDownloader.downloadLibrary().then((path) {
-      downloadedPath = path;
-    }).catchError((e) {
-      error = e as Exception;
-    });
+    LibraryDownloader.downloadLibrary()
+        .then((path) {
+          downloadedPath = path;
+        })
+        .catchError((e) {
+          error = e as Exception;
+        });
 
     // Wait for download to complete (simple polling)
     final startTime = DateTime.now();
