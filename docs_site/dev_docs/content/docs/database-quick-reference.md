@@ -16,11 +16,22 @@ import 'package:database/database.dart';
 ## Managers
 
 ```dart
+// User & Organization
 DatabaseManagers.users
+DatabaseManagers.userInformation
+DatabaseManagers.organizations
+DatabaseManagers.organizationMembers
+
+// Functions
 DatabaseManagers.functions
 DatabaseManagers.functionDeployments
 DatabaseManagers.functionLogs
 DatabaseManagers.functionInvocations
+
+// Relationship Managers (via DatabaseManagers.instance)
+DatabaseManagers.instance.getUserWithOrganization(userId: '...')
+DatabaseManagers.instance.getOrganizationWithMembers(organizationId: '...')
+DatabaseManagers.instance.addUserToOrganization(organizationId: '...', userId: '...')
 ```
 
 ## Common Operations
@@ -247,15 +258,15 @@ await Database.transaction((connection) async {
     Sql.named('INSERT INTO functions (user_id, name) VALUES (@user_id, @name) RETURNING id'),
     parameters: {'user_id': userId, 'name': 'my-function'},
   );
-  
+
   final functionId = functionResult.first[0] as int;
-  
+
   // Create deployment
   await connection.execute(
     Sql.named('INSERT INTO function_deployments (function_id, version) VALUES (@function_id, @version)'),
     parameters: {'function_id': functionId, 'version': 1},
   );
-  
+
   // All or nothing - automatic rollback on error
 });
 ```
@@ -291,7 +302,7 @@ final function = await DatabaseManagers.functions.upsert(
 ```dart
 Future<PaginatedResult> getPaginated(int page, int pageSize) async {
   final offset = (page - 1) * pageSize;
-  
+
   final total = await DatabaseManagers.functions.count();
   final items = await DatabaseManagers.functions.findAll(
     orderBy: 'created_at',
@@ -299,7 +310,7 @@ Future<PaginatedResult> getPaginated(int page, int pageSize) async {
     limit: pageSize,
     offset: offset,
   );
-  
+
   return PaginatedResult(
     items: items,
     total: total,
@@ -355,7 +366,7 @@ final deployment = await DatabaseManagers.functionDeployments.findOne(
 ```dart
 final stats = await Database.rawQuerySingle(
   '''
-  SELECT 
+  SELECT
     COUNT(*) as total,
     COUNT(CASE WHEN status = 'success' THEN 1 END) as successful,
     AVG(duration_ms) as avg_duration
@@ -513,6 +524,7 @@ print('Found ${results.length} results');
 ## Common Errors
 
 ### "Table name is required"
+
 ```dart
 // ❌ Missing table
 final builder = QueryBuilder();
@@ -523,6 +535,7 @@ final builder = QueryBuilder().table('users');
 ```
 
 ### "Parameter not found"
+
 ```dart
 // Make sure parameter names match
 final sql = 'SELECT * FROM users WHERE id = @user_id';
@@ -530,10 +543,83 @@ final params = {'user_id': 123};  // Must match @user_id
 ```
 
 ### "Column not found"
+
 ```dart
 // Check column names (snake_case in DB)
 .where('user_id', userId)  // ✅ Correct
 .where('userId', userId)   // ❌ Wrong
+```
+
+## DTOs (Data Transfer Objects)
+
+### Overview
+
+DTOs separate internal database operations from external API responses.
+
+### User DTOs
+
+```dart
+// Basic user info
+final dto = UserDto.fromEntity(user);
+return Response.ok(jsonEncode(dto.toJson()));
+
+// User profile
+final dto = UserProfileDto.fromEntities(
+  user: user,
+  information: userInfo,
+);
+
+// User with organization
+final dto = UserWithOrganizationDto.fromEntities(
+  user: user,
+  information: userInfo,
+  organization: org,
+);
+```
+
+### Organization DTOs
+
+```dart
+// Basic organization
+final dto = OrganizationDto.fromEntity(org);
+
+// Organization with members (privacy-aware)
+final dto = OrganizationWithMembersDto.fromEntities(
+  organization: org,
+  members: members,
+  requesterId: userId,  // Controls UUID visibility
+);
+```
+
+### Privacy Controls
+
+```dart
+// Owner sees member UUIDs
+OrganizationWithMembersDto.fromEntities(
+  organization: org,
+  members: members,
+  requesterId: org.ownerId,  // isOwner = true
+);
+// Result: members[].uuid = "550e8400-..."
+
+// Non-owner doesn't see member UUIDs
+OrganizationWithMembersDto.fromEntities(
+  organization: org,
+  members: members,
+  requesterId: otherUserId,  // isOwner = false
+);
+// Result: members[].uuid = null (omitted from JSON)
+```
+
+### Best Practices
+
+```dart
+// ❌ Never expose entities directly
+return Response.ok(jsonEncode(entity.toMap()));
+
+// ✅ Always use DTOs for API responses
+final dto = OrganizationDto.fromEntity(entity);
+return Response.ok(jsonEncode(dto.toJson()));
 ```
 
 ## Resources
@@ -547,6 +633,7 @@ final params = {'user_id': 123};  // Must match @user_id
 ---
 
 **Quick Links**:
+
 - [Database System Overview](database-system.md)
 - [Implementation Tracking](database-implementation-tracking.md)
 - [API Reference](api-reference.md)

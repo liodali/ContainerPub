@@ -5,25 +5,29 @@ description: Internal tracking document for database system development and prog
 
 # Database Implementation Tracking
 
-**Status**: ✅ **COMPLETED** (v1.0)  
-**Last Updated**: November 16, 2025  
+**Status**: ✅ **COMPLETED** (v2.0)  
+**Last Updated**: November 20, 2025  
 **Package**: `dart_cloud_backend/packages/database/`
 
 ## Implementation Timeline
 
 ### Phase 1: Core Infrastructure ✅ COMPLETED
+
 **Date**: November 16, 2025
 
 #### 1.1 Base Entity System
+
 - [x] Create `Entity` base class
 - [x] Define entity annotations (@PrimaryKey, @ForeignKey, etc.)
 - [x] Implement relationship annotations (@HasMany, @BelongsTo, @ManyToMany)
 - [x] Add table name abstraction
 
 **Files Created**:
+
 - `lib/src/entity.dart`
 
 #### 1.2 Query Builder
+
 - [x] Implement QueryBuilder class
 - [x] SELECT query generation
 - [x] INSERT query generation
@@ -36,15 +40,18 @@ description: Internal tracking document for database system development and prog
 - [x] Parameter binding and SQL injection prevention
 
 **Files Created**:
+
 - `lib/src/query_builder.dart`
 
 **Features**:
+
 - ✅ Fluent API with method chaining
 - ✅ Parameterized queries
 - ✅ Support for complex queries
 - ✅ Type-safe parameter handling
 
 #### 1.3 DatabaseManagerQuery
+
 - [x] Generic CRUD manager
 - [x] findById / findByUuid methods
 - [x] findAll with filtering
@@ -57,14 +64,17 @@ description: Internal tracking document for database system development and prog
 - [x] Raw SQL execution
 
 **Files Created**:
+
 - `lib/src/database_manager_query.dart`
 
 **Methods Implemented**: 20+ public methods
 
 ### Phase 2: Entity Models ✅ COMPLETED
+
 **Date**: November 16, 2025
 
 #### 2.1 User Entity
+
 - [x] UserEntity class
 - [x] toMap() conversion
 - [x] fromMap() factory
@@ -72,47 +82,58 @@ description: Internal tracking document for database system development and prog
 - [x] Field validation
 
 **Files Created**:
+
 - `lib/src/entities/user_entity.dart`
 
 #### 2.2 Function Entity
+
 - [x] FunctionEntity class
 - [x] JSONB field support (analysis_result)
 - [x] Foreign key to users
 - [x] Status field handling
 
 **Files Created**:
+
 - `lib/src/entities/function_entity.dart`
 
 #### 2.3 Function Deployment Entity
+
 - [x] FunctionDeploymentEntity class
 - [x] Version tracking
 - [x] Boolean field (is_active)
 - [x] Build logs support
 
 **Files Created**:
+
 - `lib/src/entities/function_deployment_entity.dart`
 
 #### 2.4 Function Log Entity
+
 - [x] FunctionLogEntity class
 - [x] Log level enum support
 - [x] Timestamp handling
 
 **Files Created**:
+
 - `lib/src/entities/function_log_entity.dart`
 
 #### 2.5 Function Invocation Entity
+
 - [x] FunctionInvocationEntity class
 - [x] Duration tracking
 - [x] Error field handling
 - [x] Status tracking
 
 **Files Created**:
+
 - `lib/src/entities/function_invocation_entity.dart`
 
 ### Phase 3: Manager Configuration ✅ COMPLETED
+
 **Date**: November 16, 2025
 
 #### 3.1 Pre-configured Managers
+
 - [x] DatabaseManagers class
 - [x] users manager
 - [x] functions manager
@@ -121,12 +142,15 @@ description: Internal tracking document for database system development and prog
 - [x] functionInvocations manager
 
 **Files Created**:
+
 - `lib/src/managers.dart`
 
 ### Phase 4: Database Class Enhancement ✅ COMPLETED
+
 **Date**: November 16, 2025
 
 #### 4.1 Raw Query Methods
+
 - [x] rawQuery() - Execute raw SQL
 - [x] rawQuerySingle() - Get single row
 - [x] rawQueryAll() - Get all rows as maps
@@ -135,17 +159,21 @@ description: Internal tracking document for database system development and prog
 - [x] batchExecute() - Batch operations
 
 **Files Modified**:
+
 - `lib/database.dart`
 
 #### 4.2 Backward Compatibility
+
 - [x] Keep existing QueryHelpers
 - [x] Maintain table creation logic
 - [x] Preserve connection management
 
 ### Phase 5: Testing ✅ COMPLETED
+
 **Date**: November 16, 2025
 
 #### 5.1 Query Builder Tests
+
 - [x] 50+ test cases
 - [x] SELECT query tests
 - [x] INSERT query tests
@@ -158,11 +186,13 @@ description: Internal tracking document for database system development and prog
 - [x] Error handling tests
 
 **Files Created**:
+
 - `test/query_builder_test.dart`
 
 **Test Coverage**: 100% of QueryBuilder public methods
 
 #### 5.2 Entity Tests
+
 - [x] 30+ test cases
 - [x] UserEntity tests
 - [x] FunctionEntity tests
@@ -175,11 +205,13 @@ description: Internal tracking document for database system development and prog
 - [x] Edge case tests
 
 **Files Created**:
+
 - `test/entity_test.dart`
 
 **Test Coverage**: 100% of entity methods
 
 #### 5.3 DatabaseManagerQuery Tests
+
 - [x] 40+ test cases
 - [x] Query generation tests
 - [x] Relationship query tests
@@ -190,32 +222,39 @@ description: Internal tracking document for database system development and prog
 - [x] Integration tests
 
 **Files Created**:
+
 - `test/database_manager_query_test.dart`
 
 **Test Coverage**: 95%+ of manager methods
 
 #### 5.4 Test Infrastructure
+
 - [x] Test runner script
 - [x] Coverage reporting
 - [x] Test documentation
 
 **Files Created**:
+
 - `test_runner.sh`
 - `test/README.md`
 
-### Phase 6: Documentation ✅ COMPLETED
+### Phase 6: Documentation
+
 **Date**: November 16, 2025
 
 #### 6.1 Package Documentation
+
 - [x] Comprehensive README
 - [x] Usage examples
 - [x] API reference
 - [x] Best practices guide
 
 **Files Created/Updated**:
+
 - `README.md` (updated)
 
 #### 6.2 Examples Documentation
+
 - [x] Basic CRUD examples
 - [x] Complex query examples
 - [x] Relationship query examples
@@ -224,9 +263,11 @@ description: Internal tracking document for database system development and prog
 - [x] Analytics examples
 
 **Files Created**:
+
 - `EXAMPLES.md`
 
 #### 6.3 Migration Guide
+
 - [x] QueryHelpers to entity-based migration
 - [x] Step-by-step instructions
 - [x] Before/after comparisons
@@ -234,29 +275,141 @@ description: Internal tracking document for database system development and prog
 - [x] Gradual migration strategy
 
 **Files Created**:
+
 - `MIGRATION_GUIDE.md`
 
 #### 6.4 Testing Documentation
+
 - [x] Test suite overview
 - [x] Running tests guide
 - [x] Test coverage details
 - [x] Adding new tests guide
 
 **Files Created**:
+
 - `TESTING.md`
 
 #### 6.5 Internal Documentation
+
 - [x] Database system overview
 - [x] Implementation tracking
 - [x] Architecture documentation
 
 **Files Created**:
+
 - `docs_site/dev_docs/content/docs/database-system.md`
 - `docs_site/dev_docs/content/docs/database-implementation-tracking.md` (this file)
+
+### Phase 7: Organization System Refactoring ✅ COMPLETED
+
+**Date**: November 19-20, 2025
+
+#### 7.1 Database Schema Changes
+
+- [x] Remove organization_teams table
+- [x] Remove organization_team_members table
+- [x] Update organizations table (owner_id, unique name)
+- [x] Create organization_members junction table
+- [x] Update SQL migration files
+
+**Files Modified**:
+
+- `lib/database.dart`
+- `deploy/003_add_user_relationships.sql`
+
+#### 7.2 Entity Updates
+
+- [x] Update Organization entity (userId → ownerId)
+- [x] Create OrganizationMember entity
+- [x] Remove OrganizationTeam entity
+- [x] Remove OrganizationTeamMember entity
+- [x] Add timestamps to Organization
+
+**Files Created/Modified**:
+
+- `lib/src/entities/organization.dart` (modified)
+- `lib/src/entities/organization_member.dart` (created)
+- `lib/src/entities/organization_team.dart` (deleted)
+- `lib/src/entities/organization_team_member.dart` (deleted)
+
+#### 7.3 Relationship Manager Updates
+
+- [x] Refactor OrganizationRelationships mixin
+- [x] Remove team-related methods
+- [x] Add organization member methods
+- [x] Update UserRelationships for junction table
+- [x] Remove toJson from internal classes
+
+**Files Modified**:
+
+- `lib/src/managers/organization_relationships.dart`
+- `lib/src/managers/user_relationships.dart`
+
+**New Methods**:
+
+- `getOrganizationWithMembers()`
+- `addUserToOrganization()`
+- `removeUserFromOrganization()`
+- `getUserOrganization()`
+- `isUserInOrganization()`
+- `getOrganizationMemberCount()`
+
+### Phase 8: DTO Architecture ✅ COMPLETED
+
+**Date**: November 20, 2025
+
+#### 8.1 User DTOs
+
+- [x] UserDto - Basic user information
+- [x] UserInformationDto - User profile details
+- [x] UserProfileDto - Complete user profile
+
+**Files Created**:
+
+- `lib/src/dto/user_dto.dart`
+
+#### 8.2 Organization DTOs
+
+- [x] OrganizationDto - Basic organization info
+- [x] OrganizationMemberDto - Member with profile
+- [x] OrganizationWithMembersDto - Organization with members
+- [x] UserWithOrganizationDto - User with organization
+- [x] Privacy-aware UUID exposure (owner-only)
+
+**Files Created**:
+
+- `lib/src/dto/organization_dto.dart`
+
+**Privacy Features**:
+
+- Member UUIDs only visible to organization owners
+- Conditional field inclusion based on requesterId
+- Clean JSON output (null fields omitted)
+
+#### 8.3 Auth Handler Integration
+
+- [x] Update getOrganizationbyUser to use DTOs
+- [x] Update patchOrganizationbyUser to use DTOs
+- [x] Update createOrganization to use DTOs
+- [x] Update upgrade to use DTOs
+- [x] Add organization name uniqueness checks
+- [x] Add user-organization membership validation
+
+**Files Modified**:
+
+- `lib/handlers/auth_handler.dart`
+
+**Business Rules Enforced**:
+
+- Organization names must be unique
+- User can only belong to one organization
+- Owner automatically added as member
+- Privacy-aware member listing
 
 ## Code Statistics
 
 ### Lines of Code
+
 - **Entity System**: ~200 lines
 - **Query Builder**: ~250 lines
 - **DatabaseManagerQuery**: ~400 lines
@@ -269,12 +422,14 @@ description: Internal tracking document for database system development and prog
 **Total**: ~5,770 lines
 
 ### Test Coverage
+
 - **Query Builder**: 50+ tests, 100% coverage
 - **Entities**: 30+ tests, 100% coverage
 - **DatabaseManagerQuery**: 40+ tests, 95%+ coverage
 - **Overall**: 120+ tests, 98% coverage
 
 ### Files Created/Modified
+
 - **New Files**: 17
 - **Modified Files**: 2
 - **Test Files**: 4
@@ -283,6 +438,7 @@ description: Internal tracking document for database system development and prog
 ## Features Implemented
 
 ### Core Features ✅
+
 - [x] Entity-based models
 - [x] Query builder with fluent API
 - [x] CRUD operations
@@ -295,12 +451,14 @@ description: Internal tracking document for database system development and prog
 - [x] Aggregation queries
 
 ### Security Features ✅
+
 - [x] SQL injection prevention
 - [x] Parameterized queries
 - [x] UUID public identifiers
 - [x] Input validation
 
 ### Performance Features ✅
+
 - [x] Query optimization
 - [x] Index utilization
 - [x] Batch operations
@@ -308,6 +466,7 @@ description: Internal tracking document for database system development and prog
 - [x] Efficient joins
 
 ### Developer Experience ✅
+
 - [x] Type safety
 - [x] IDE auto-completion
 - [x] Comprehensive documentation
@@ -319,6 +478,7 @@ description: Internal tracking document for database system development and prog
 ## Integration Status
 
 ### Backend Integration
+
 - [x] Package created in `dart_cloud_backend/packages/database/`
 - [x] Exported from main database.dart
 - [x] Available to backend services
@@ -327,6 +487,7 @@ description: Internal tracking document for database system development and prog
 - [ ] **TODO**: Add integration tests with real database
 
 ### Current Usage
+
 - ✅ Available for use in all backend code
 - ✅ Backward compatible with existing QueryHelpers
 - ⏳ Gradual migration in progress
@@ -334,11 +495,13 @@ description: Internal tracking document for database system development and prog
 ## Known Issues
 
 ### None Currently
+
 All implemented features are working as expected and fully tested.
 
 ## Future Enhancements
 
 ### Phase 7: Advanced Features (Planned)
+
 - [ ] Query result caching
 - [ ] Read replicas support
 - [ ] Soft deletes
@@ -350,6 +513,7 @@ All implemented features are working as expected and fully tested.
 - [ ] Query performance monitoring
 
 ### Phase 8: Developer Tools (Planned)
+
 - [ ] CLI tool for entity generation
 - [ ] Schema migration tool
 - [ ] Query analyzer
@@ -357,6 +521,7 @@ All implemented features are working as expected and fully tested.
 - [ ] Database seeding utilities
 
 ### Phase 9: Documentation (Planned)
+
 - [ ] Video tutorials
 - [ ] Interactive examples
 - [ ] Performance benchmarks
@@ -365,6 +530,7 @@ All implemented features are working as expected and fully tested.
 ## Migration Progress
 
 ### Backend Handlers
+
 Status: ⏳ **In Progress**
 
 - [ ] `function_handler.dart` - Use DatabaseManagers
@@ -374,6 +540,7 @@ Status: ⏳ **In Progress**
 - [ ] `logs_handler.dart` - Use batch operations
 
 ### API Endpoints
+
 Status: 📋 **Planned**
 
 - [ ] `/api/functions` - Use DatabaseManagers.functions
@@ -385,17 +552,20 @@ Status: 📋 **Planned**
 ## Performance Metrics
 
 ### Query Generation
+
 - **Average time**: <1ms
 - **Complex queries**: <2ms
 - **Batch operations**: <5ms for 100 records
 
 ### Test Execution
+
 - **All tests**: 1-2 seconds
 - **Query builder tests**: <500ms
 - **Entity tests**: <300ms
 - **Manager tests**: <700ms
 
 ### Memory Usage
+
 - **Query builder**: ~1KB per query
 - **Entity instances**: ~500 bytes per entity
 - **Manager instances**: Singleton, ~2KB total
@@ -403,6 +573,7 @@ Status: 📋 **Planned**
 ## Lessons Learned
 
 ### What Went Well ✅
+
 1. **Test-First Approach**: Writing tests alongside implementation caught bugs early
 2. **Fluent API**: Method chaining makes queries readable and intuitive
 3. **Parameterized Queries**: Automatic SQL injection prevention
@@ -410,12 +581,14 @@ Status: 📋 **Planned**
 5. **Backward Compatibility**: Smooth migration path for existing code
 
 ### Challenges Overcome 🎯
+
 1. **OR WHERE Clauses**: Fixed to properly handle OR conditions in WHERE
 2. **Parameter Ordering**: Ensured consistent parameter naming
 3. **Null Handling**: Proper handling of optional fields in entities
 4. **Type Safety**: Balanced type safety with flexibility
 
 ### Best Practices Established 📚
+
 1. Always use parameterized queries
 2. Test SQL generation without database
 3. Document with examples
@@ -427,18 +600,21 @@ Status: 📋 **Planned**
 ## Team Notes
 
 ### For Backend Developers
+
 - Start using `DatabaseManagers` for new features
 - Migrate existing code gradually
 - Refer to `EXAMPLES.md` for patterns
 - Run tests before committing: `dart test`
 
 ### For API Developers
+
 - Use entity models in API responses
 - Leverage query builder for complex filtering
 - Use pagination for list endpoints
 - Add proper error handling
 
 ### For DevOps
+
 - Tests run in CI/CD without database
 - Coverage reports in `coverage/` directory
 - No additional infrastructure needed for tests
@@ -446,16 +622,19 @@ Status: 📋 **Planned**
 ## Maintenance Checklist
 
 ### Weekly
+
 - [ ] Review test coverage
 - [ ] Check for deprecation warnings
 - [ ] Update documentation if needed
 
 ### Monthly
+
 - [ ] Review performance metrics
 - [ ] Update dependencies
 - [ ] Check for security updates
 
 ### Quarterly
+
 - [ ] Evaluate new features
 - [ ] Review migration progress
 - [ ] Update roadmap
@@ -469,17 +648,48 @@ Status: 📋 **Planned**
 
 ## Changelog
 
+### v2.0.0 (November 20, 2025)
+
+- **Organization System Refactoring**
+  - Removed teams concept
+  - One organization with multiple users
+  - User can only belong to one organization
+  - Organization names must be unique
+- **DTO Architecture**
+  - Created user DTOs (UserDto, UserInformationDto, UserProfileDto)
+  - Created organization DTOs (OrganizationDto, OrganizationMemberDto, OrganizationWithMembersDto, UserWithOrganizationDto)
+  - Privacy-aware member UUID exposure (owner-only)
+  - Separation of internal (id) vs external (uuid) identifiers
+- **Database Schema Updates**
+  - Updated organizations table (owner_id, unique name constraint)
+  - Created organization_members junction table
+  - Removed organization_teams and organization_team_members tables
+- **Entity Updates**
+  - Organization entity: userId → ownerId
+  - Created OrganizationMember entity
+  - Removed OrganizationTeam and OrganizationTeamMember entities
+- **Relationship Manager Updates**
+  - Refactored OrganizationRelationships mixin
+  - Updated UserRelationships for new junction table
+  - Removed team-related methods
+- **Auth Handler Updates**
+  - All handlers now use DTOs for responses
+  - Organization name uniqueness validation
+  - User-organization membership validation
+  - Privacy-aware member listing
+
 ### v1.0.0 (November 16, 2025)
-- ✅ Initial release
-- ✅ Entity system
-- ✅ Query builder
-- ✅ DatabaseManagerQuery
-- ✅ 5 entity models
-- ✅ 120+ tests
-- ✅ Comprehensive documentation
+
+- Initial release
+- Entity system
+- Query builder
+- DatabaseManagerQuery
+- 5 entity models
+- 120+ tests
+- Comprehensive documentation
 
 ---
 
-**Status Summary**: 🎉 **All Phase 1-6 objectives completed successfully!**
+**Status Summary**: **v2.0 completed with DTO architecture and organization refactoring!**
 
-Next steps: Begin Phase 7 (Advanced Features) and migrate existing backend handlers.
+Next steps: Continue Phase 7 (Advanced Features) and complete backend handler migration.

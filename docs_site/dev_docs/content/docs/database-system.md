@@ -12,6 +12,7 @@ The ContainerPub backend uses a comprehensive entity-based database management s
 **Location**: `dart_cloud_backend/packages/database/`
 
 **Key Features**:
+
 - 🎯 Entity-based models for type safety
 - 🔨 Fluent query builder for complex SQL
 - 🔗 Relationship support (hasMany, belongsTo, manyToMany)
@@ -32,14 +33,24 @@ database/
 │       ├── entity.dart            # Base entity class & annotations
 │       ├── query_builder.dart     # SQL query builder
 │       ├── database_manager_query.dart  # CRUD manager
+│       ├── relationship_manager.dart    # Relationship queries
 │       ├── managers.dart          # Pre-configured managers
 │       ├── query_helpers.dart     # Legacy helpers (backward compat)
-│       └── entities/
-│           ├── user_entity.dart
-│           ├── function_entity.dart
-│           ├── function_deployment_entity.dart
-│           ├── function_log_entity.dart
-│           └── function_invocation_entity.dart
+│       ├── entities/              # Database entities (internal use)
+│       │   ├── user_entity.dart
+│       │   ├── user_information.dart
+│       │   ├── organization.dart
+│       │   ├── organization_member.dart
+│       │   ├── function_entity.dart
+│       │   ├── function_deployment_entity.dart
+│       │   ├── function_log_entity.dart
+│       │   └── function_invocation_entity.dart
+│       ├── dto/                   # Data Transfer Objects (API responses)
+│       │   ├── user_dto.dart
+│       │   └── organization_dto.dart
+│       └── managers/              # Relationship managers
+│           ├── user_relationships.dart
+│           └── organization_relationships.dart
 └── test/
     ├── query_builder_test.dart    # 50+ tests
     ├── entity_test.dart           # 30+ tests
@@ -51,84 +62,195 @@ database/
 ### Tables
 
 #### 1. `users`
+
 Stores user accounts and authentication data.
 
-| Column | Type | Description |
-|--------|------|-------------|
-| id | SERIAL | Internal primary key |
-| uuid | UUID | Public identifier |
-| email | VARCHAR(255) | User email (unique) |
-| password_hash | VARCHAR(255) | Hashed password |
-| created_at | TIMESTAMP | Account creation time |
-| updated_at | TIMESTAMP | Last update time |
+| Column        | Type         | Description           |
+| ------------- | ------------ | --------------------- |
+| id            | SERIAL       | Internal primary key  |
+| uuid          | UUID         | Public identifier     |
+| email         | VARCHAR(255) | User email (unique)   |
+| password_hash | VARCHAR(255) | Hashed password       |
+| created_at    | TIMESTAMP    | Account creation time |
+| updated_at    | TIMESTAMP    | Last update time      |
 
 **Indexes**: `uuid`, `email`
 
 #### 2. `functions`
+
 Stores cloud function definitions.
 
-| Column | Type | Description |
-|--------|------|-------------|
-| id | SERIAL | Internal primary key |
-| uuid | UUID | Public identifier |
-| user_id | INTEGER | Foreign key to users |
-| name | VARCHAR(255) | Function name |
-| status | VARCHAR(50) | Function status |
-| active_deployment_id | INTEGER | Current active deployment |
-| analysis_result | JSONB | Static analysis results |
-| created_at | TIMESTAMP | Creation time |
-| updated_at | TIMESTAMP | Last update time |
+| Column               | Type         | Description               |
+| -------------------- | ------------ | ------------------------- |
+| id                   | SERIAL       | Internal primary key      |
+| uuid                 | UUID         | Public identifier         |
+| user_id              | INTEGER      | Foreign key to users      |
+| name                 | VARCHAR(255) | Function name             |
+| status               | VARCHAR(50)  | Function status           |
+| active_deployment_id | INTEGER      | Current active deployment |
+| analysis_result      | JSONB        | Static analysis results   |
+| created_at           | TIMESTAMP    | Creation time             |
+| updated_at           | TIMESTAMP    | Last update time          |
 
 **Indexes**: `uuid`, `user_id`, `active_deployment_id`  
 **Constraints**: UNIQUE(user_id, name)
 
 #### 3. `function_deployments`
+
 Tracks function deployment versions and history.
 
-| Column | Type | Description |
-|--------|------|-------------|
-| id | SERIAL | Internal primary key |
-| uuid | UUID | Public identifier |
-| function_id | INTEGER | Foreign key to functions |
-| version | INTEGER | Deployment version number |
-| image_tag | VARCHAR(255) | Container image tag |
-| s3_key | VARCHAR(500) | S3 storage key |
-| status | VARCHAR(50) | Deployment status |
-| is_active | BOOLEAN | Currently active flag |
-| build_logs | TEXT | Build process logs |
-| deployed_at | TIMESTAMP | Deployment time |
+| Column      | Type         | Description               |
+| ----------- | ------------ | ------------------------- |
+| id          | SERIAL       | Internal primary key      |
+| uuid        | UUID         | Public identifier         |
+| function_id | INTEGER      | Foreign key to functions  |
+| version     | INTEGER      | Deployment version number |
+| image_tag   | VARCHAR(255) | Container image tag       |
+| s3_key      | VARCHAR(500) | S3 storage key            |
+| status      | VARCHAR(50)  | Deployment status         |
+| is_active   | BOOLEAN      | Currently active flag     |
+| build_logs  | TEXT         | Build process logs        |
+| deployed_at | TIMESTAMP    | Deployment time           |
 
 **Indexes**: `uuid`, `function_id`, `is_active`, `version`  
 **Constraints**: UNIQUE(function_id, version)
 
 #### 4. `function_logs`
+
 Stores function execution logs.
 
-| Column | Type | Description |
-|--------|------|-------------|
-| id | SERIAL | Internal primary key |
-| uuid | UUID | Public identifier |
-| function_id | INTEGER | Foreign key to functions |
-| level | VARCHAR(20) | Log level (info, warn, error) |
-| message | TEXT | Log message |
-| timestamp | TIMESTAMP | Log timestamp |
+| Column      | Type        | Description                   |
+| ----------- | ----------- | ----------------------------- |
+| id          | SERIAL      | Internal primary key          |
+| uuid        | UUID        | Public identifier             |
+| function_id | INTEGER     | Foreign key to functions      |
+| level       | VARCHAR(20) | Log level (info, warn, error) |
+| message     | TEXT        | Log message                   |
+| timestamp   | TIMESTAMP   | Log timestamp                 |
 
 **Indexes**: `function_id`, `timestamp`
 
 #### 5. `function_invocations`
+
 Tracks function invocation metrics.
 
-| Column | Type | Description |
-|--------|------|-------------|
-| id | SERIAL | Internal primary key |
-| uuid | UUID | Public identifier |
-| function_id | INTEGER | Foreign key to functions |
-| status | VARCHAR(50) | Invocation status |
-| duration_ms | INTEGER | Execution duration |
-| error | TEXT | Error message (if failed) |
-| timestamp | TIMESTAMP | Invocation time |
+| Column      | Type        | Description               |
+| ----------- | ----------- | ------------------------- |
+| id          | SERIAL      | Internal primary key      |
+| uuid        | UUID        | Public identifier         |
+| function_id | INTEGER     | Foreign key to functions  |
+| status      | VARCHAR(50) | Invocation status         |
+| duration_ms | INTEGER     | Execution duration        |
+| error       | TEXT        | Error message (if failed) |
+| timestamp   | TIMESTAMP   | Invocation time           |
 
 **Indexes**: `function_id`, `timestamp`
+
+#### 6. `user_information`
+
+Stores extended user profile information.
+
+| Column       | Type         | Description                                     |
+| ------------ | ------------ | ----------------------------------------------- |
+| id           | SERIAL       | Internal primary key                            |
+| uuid         | UUID         | Public identifier                               |
+| user_id      | UUID         | Foreign key to users(uuid)                      |
+| first_name   | VARCHAR(100) | User's first name                               |
+| last_name    | VARCHAR(100) | User's last name                                |
+| phone_number | VARCHAR(20)  | Contact phone                                   |
+| country      | VARCHAR(100) | Country                                         |
+| city         | VARCHAR(100) | City                                            |
+| address      | TEXT         | Street address                                  |
+| zip_code     | VARCHAR(20)  | Postal code                                     |
+| avatar       | TEXT         | Avatar URL                                      |
+| role         | VARCHAR(50)  | User role (developer, team, sub_team_developer) |
+| created_at   | TIMESTAMP    | Creation time                                   |
+| updated_at   | TIMESTAMP    | Last update time                                |
+
+**Indexes**: `user_id`, `role`  
+**Constraints**: UNIQUE(user_id)
+
+#### 7. `organizations`
+
+Stores organization information.
+
+| Column     | Type         | Description                                     |
+| ---------- | ------------ | ----------------------------------------------- |
+| id         | SERIAL       | Internal primary key                            |
+| uuid       | UUID         | Public identifier                               |
+| name       | VARCHAR(255) | Organization name (unique)                      |
+| owner_id   | UUID         | Foreign key to users(uuid) - organization owner |
+| created_at | TIMESTAMP    | Creation time                                   |
+| updated_at | TIMESTAMP    | Last update time                                |
+
+**Indexes**: `owner_id`, `name`  
+**Constraints**: UNIQUE(name)
+
+#### 8. `organization_members`
+
+Junction table linking users to organizations (one user = one organization).
+
+| Column          | Type      | Description                        |
+| --------------- | --------- | ---------------------------------- |
+| id              | SERIAL    | Internal primary key               |
+| organization_id | UUID      | Foreign key to organizations(uuid) |
+| user_id         | UUID      | Foreign key to users(uuid)         |
+| joined_at       | TIMESTAMP | Membership start time              |
+
+**Indexes**: `organization_id`, `user_id`  
+**Constraints**: UNIQUE(user_id) - ensures one user belongs to only one organization
+
+## DTO Architecture
+
+### Overview
+
+The system uses Data Transfer Objects (DTOs) to separate internal database operations from external API responses:
+
+- **Internal Layer**: Uses `id` (integer) for database operations and foreign keys
+- **External Layer**: Uses `uuid` (string) for all frontend communication
+- **Privacy Controls**: Conditional field exposure based on user roles
+
+### User DTOs
+
+**Location**: `lib/src/dto/user_dto.dart`
+
+- `UserDto` - Basic user information (uuid, email)
+- `UserInformationDto` - User profile details
+- `UserProfileDto` - Complete user profile (user + information)
+
+### Organization DTOs
+
+**Location**: `lib/src/dto/organization_dto.dart`
+
+- `OrganizationDto` - Basic organization info
+- `OrganizationMemberDto` - Member with user profile
+- `OrganizationWithMembersDto` - Organization with all members
+- `UserWithOrganizationDto` - User with their organization
+
+### Privacy Features
+
+**Member UUID Exposure**: The `OrganizationMemberDto` conditionally includes member UUIDs:
+
+- **Owner view**: All member UUIDs visible (for management)
+- **Non-owner view**: Member UUIDs hidden (privacy protection)
+
+```dart
+// Owner request
+final dto = OrganizationWithMembersDto.fromEntities(
+  organization: org,
+  members: members,
+  requesterId: ownerId, // Matches organization.ownerId
+);
+// Result: members[].uuid = "550e8400-..."
+
+// Non-owner request
+final dto = OrganizationWithMembersDto.fromEntities(
+  organization: org,
+  members: members,
+  requesterId: nonOwnerId, // Different from organization.ownerId
+);
+// Result: members[].uuid = null (omitted from JSON)
+```
 
 ## Usage Patterns
 
@@ -240,13 +362,13 @@ await Database.transaction((connection) async {
     Sql.named('INSERT INTO functions ...'),
     parameters: {...},
   );
-  
+
   // Create initial deployment
   await connection.execute(
     Sql.named('INSERT INTO function_deployments ...'),
     parameters: {...},
   );
-  
+
   // All or nothing - automatic rollback on error
 });
 ```
@@ -312,6 +434,7 @@ DatabaseManagers.functionInvocations // FunctionInvocationEntity
 ```
 
 Each manager provides:
+
 - `findById(id)` / `findByUuid(uuid)`
 - `findAll({where, orderBy, limit, offset})`
 - `findOne({where})`
@@ -332,6 +455,7 @@ Each manager provides:
 ### Indexes
 
 All tables have optimized indexes:
+
 - **UUID indexes** for fast public ID lookups
 - **Foreign key indexes** for efficient joins
 - **Timestamp indexes** for time-based queries
@@ -394,11 +518,13 @@ All queries use **parameterized statements**:
 **Location**: `dart_cloud_backend/packages/database/test/`
 
 **Coverage**: 120+ test cases
+
 - Query Builder: 50+ tests
 - Entities: 30+ tests
 - DatabaseManagerQuery: 40+ tests
 
 **Run tests**:
+
 ```dart
 cd dart_cloud_backend/packages/database
 dart test
@@ -413,6 +539,7 @@ dart test test/query_builder_test.dart
 ### Test Philosophy
 
 Tests verify **SQL generation** without database connection:
+
 - ✅ Fast (1-2 seconds)
 - ✅ No setup required
 - ✅ Deterministic
@@ -431,6 +558,7 @@ final user = await DatabaseManagers.users.findByUuid(uuid);
 ```
 
 **Migration benefits**:
+
 - Type safety
 - Better IDE support
 - More features
@@ -446,14 +574,14 @@ See `MIGRATION_GUIDE.md` for detailed migration steps.
 Future<FunctionWithRelations?> getFunctionDetails(String uuid) async {
   final function = await DatabaseManagers.functions.findByUuid(uuid);
   if (function == null) return null;
-  
+
   final user = await DatabaseManagers.users.findById(function.userId!);
   final deployments = await DatabaseManagers.functionDeployments.findAll(
     where: {'function_id': function.id},
     orderBy: 'version',
     orderDirection: 'DESC',
   );
-  
+
   return FunctionWithRelations(
     function: function,
     user: user!,
@@ -471,7 +599,7 @@ Future<PaginatedResult<FunctionEntity>> getFunctionsPaginated({
   Map<String, dynamic>? filters,
 }) async {
   final offset = (page - 1) * pageSize;
-  
+
   final total = await DatabaseManagers.functions.count(where: filters);
   final items = await DatabaseManagers.functions.findAll(
     where: filters,
@@ -480,7 +608,7 @@ Future<PaginatedResult<FunctionEntity>> getFunctionsPaginated({
     limit: pageSize,
     offset: offset,
   );
-  
+
   return PaginatedResult(
     items: items,
     total: total,
@@ -497,7 +625,7 @@ Future<PaginatedResult<FunctionEntity>> getFunctionsPaginated({
 Future<FunctionStats> getFunctionStats(int functionId) async {
   final result = await Database.rawQuerySingle(
     '''
-    SELECT 
+    SELECT
       COUNT(*) as total_invocations,
       COUNT(CASE WHEN status = 'success' THEN 1 END) as successful,
       AVG(duration_ms) as avg_duration,
@@ -511,7 +639,7 @@ Future<FunctionStats> getFunctionStats(int functionId) async {
       'since': DateTime.now().subtract(Duration(days: 30)),
     },
   );
-  
+
   return FunctionStats.fromMap(result!);
 }
 ```
@@ -521,6 +649,7 @@ Future<FunctionStats> getFunctionStats(int functionId) async {
 ### Common Issues
 
 **Issue**: Query returns empty results
+
 ```dart
 // Check: Are you using the right ID type?
 // ❌ Wrong: Using UUID where internal ID expected
@@ -532,18 +661,20 @@ final user = await DatabaseManagers.users.findByUuid(userUuid);
 ```
 
 **Issue**: Slow queries
+
 ```dart
 // Add indexes, use LIMIT, select specific columns
 // Check EXPLAIN output for query plan
 ```
 
 **Issue**: Transaction rollback
+
 ```dart
 // Ensure all operations use the connection parameter
 await Database.transaction((connection) async {
   // ✅ Use connection
   await connection.execute(...);
-  
+
   // ❌ Don't use Database.connection directly
   // await Database.connection.execute(...);
 });
@@ -552,6 +683,7 @@ await Database.transaction((connection) async {
 ## Future Enhancements
 
 Planned improvements:
+
 - [ ] Query result caching
 - [ ] Read replicas support
 - [ ] Migration system
@@ -582,6 +714,7 @@ When modifying the database system:
 ## Summary
 
 The database system provides:
+
 - ✅ Type-safe entity models
 - ✅ Powerful query builder
 - ✅ Relationship management
