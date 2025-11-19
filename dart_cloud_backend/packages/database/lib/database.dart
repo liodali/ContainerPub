@@ -27,8 +27,7 @@ export 'src/entities/function_log_entity.dart';
 export 'src/entities/function_invocation_entity.dart';
 export 'src/entities/user_information.dart';
 export 'src/entities/organization.dart';
-export 'src/entities/organization_team.dart';
-export 'src/entities/organization_team_member.dart';
+export 'src/entities/organization_member.dart';
 
 // Relationship managers
 export 'src/relationship_manager.dart';
@@ -282,65 +281,43 @@ class Database {
       CREATE INDEX IF NOT EXISTS idx_user_information_role ON user_information(role)
     ''');
 
-    // Organizations table
+    // Organizations table - one organization can have multiple users
     await _connection.execute('''
       CREATE TABLE IF NOT EXISTS organizations (
         id SERIAL PRIMARY KEY,
         uuid UUID DEFAULT gen_random_uuid() UNIQUE NOT NULL,
-        name VARCHAR(255) NOT NULL,
-        user_id UUID NOT NULL REFERENCES users(uuid) ON DELETE CASCADE,
-        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-        UNIQUE(user_id)
-      )
-    ''');
-
-    await _connection.execute('''
-      CREATE INDEX IF NOT EXISTS idx_organizations_user_id ON organizations(user_id)
-    ''');
-
-    await _connection.execute('''
-      CREATE INDEX IF NOT EXISTS idx_organizations_name ON organizations(name)
-    ''');
-
-    // Organization teams table
-    await _connection.execute('''
-      CREATE TABLE IF NOT EXISTS organization_teams (
-        id SERIAL PRIMARY KEY,
-        uuid UUID DEFAULT gen_random_uuid() UNIQUE NOT NULL,
-        name VARCHAR(255) NOT NULL,
-        description TEXT,
-        organization_id UUID NOT NULL REFERENCES organizations(uuid) ON DELETE CASCADE,
+        name VARCHAR(255) UNIQUE NOT NULL,
+        owner_id UUID NOT NULL REFERENCES users(uuid) ON DELETE CASCADE,
         created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
       )
     ''');
 
     await _connection.execute('''
-      CREATE INDEX IF NOT EXISTS idx_organization_teams_org_id ON organization_teams(organization_id)
+      CREATE INDEX IF NOT EXISTS idx_organizations_owner_id ON organizations(owner_id)
     ''');
 
     await _connection.execute('''
-      CREATE INDEX IF NOT EXISTS idx_organization_teams_name ON organization_teams(name)
+      CREATE INDEX IF NOT EXISTS idx_organizations_name ON organizations(name)
     ''');
 
-    // Organization team members table
+    // Organization members table - junction table for users belonging to organizations
     await _connection.execute('''
-      CREATE TABLE IF NOT EXISTS organization_team_members (
+      CREATE TABLE IF NOT EXISTS organization_members (
         id SERIAL PRIMARY KEY,
-        team_id UUID NOT NULL REFERENCES organization_teams(uuid) ON DELETE CASCADE,
+        organization_id UUID NOT NULL REFERENCES organizations(uuid) ON DELETE CASCADE,
         user_id UUID NOT NULL REFERENCES users(uuid) ON DELETE CASCADE,
         joined_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-        UNIQUE(team_id, user_id)
+        UNIQUE(user_id)
       )
     ''');
 
     await _connection.execute('''
-      CREATE INDEX IF NOT EXISTS idx_org_team_members_team_id ON organization_team_members(team_id)
+      CREATE INDEX IF NOT EXISTS idx_org_members_org_id ON organization_members(organization_id)
     ''');
 
     await _connection.execute('''
-      CREATE INDEX IF NOT EXISTS idx_org_team_members_user_id ON organization_team_members(user_id)
+      CREATE INDEX IF NOT EXISTS idx_org_members_user_id ON organization_members(user_id)
     ''');
 
     // Triggers for new tables
@@ -362,17 +339,6 @@ class Database {
     await _connection.execute('''
       CREATE TRIGGER update_organizations_updated_at
         BEFORE UPDATE ON organizations
-        FOR EACH ROW
-        EXECUTE FUNCTION update_updated_at_column()
-    ''');
-
-    await _connection.execute('''
-      DROP TRIGGER IF EXISTS update_organization_teams_updated_at ON organization_teams
-    ''');
-
-    await _connection.execute('''
-      CREATE TRIGGER update_organization_teams_updated_at
-        BEFORE UPDATE ON organization_teams
         FOR EACH ROW
         EXECUTE FUNCTION update_updated_at_column()
     ''');

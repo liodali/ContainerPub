@@ -59,8 +59,13 @@ mixin UserRelationships on RelationshipManager {
       baseTable: 'users',
       joins: [
         JoinConfig(
+          table: 'organization_members',
+          on: 'users.uuid = organization_members.user_id',
+          type: JoinType.inner,
+        ),
+        JoinConfig(
           table: 'organizations',
-          on: 'users.uuid = organizations.user_id',
+          on: 'organization_members.organization_id = organizations.uuid',
           type: JoinType.inner,
         ),
       ],
@@ -202,8 +207,7 @@ class UserWithOrganization {
 
   Map<String, dynamic> toJson() {
     return {
-      'user': user.toMap(),
-      'organization': organization.toMap(),
+      'organization': organization.uuid,
     };
   }
 }

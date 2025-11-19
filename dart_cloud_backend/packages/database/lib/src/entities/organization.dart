@@ -4,31 +4,58 @@ class Organization extends Entity {
   final int? id;
   final String? uuid;
   final String name;
-  final String userId;
+  final String ownerId;
+  final DateTime? createdAt;
+  final DateTime? updatedAt;
 
   Organization({
     this.id,
     this.uuid,
     required this.name,
-    required this.userId,
+    required this.ownerId,
+    this.createdAt,
+    this.updatedAt,
   });
 
   Organization.fromMap(Map<String, dynamic> map)
     : id = map['id'],
       uuid = map['uuid'],
       name = map['name'],
-      userId = map['user_id'];
+      ownerId = map['owner_id'],
+      createdAt = map['created_at'] != null
+          ? DateTime.parse(map['created_at'].toString())
+          : null,
+      updatedAt = map['updated_at'] != null
+          ? DateTime.parse(map['updated_at'].toString())
+          : null;
 
   @override
-  String get tableName => 'user_organizations';
+  String get tableName => 'organizations';
 
   @override
   Map<String, dynamic> toMap() {
     return {
-      if (id != null) 'id': id,
       if (uuid != null) 'uuid': uuid,
       'name': name,
-      'user_id': userId,
+      'owner_id': ownerId,
     };
+  }
+
+  Organization copyWith({
+    int? id,
+    String? uuid,
+    String? name,
+    String? ownerId,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+  }) {
+    return Organization(
+      id: id ?? this.id,
+      uuid: uuid ?? this.uuid,
+      name: name ?? this.name,
+      ownerId: ownerId ?? this.ownerId,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+    );
   }
 }

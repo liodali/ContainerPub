@@ -1,7 +1,6 @@
 import 'package:database/src/entities/organization.dart';
 import 'package:database/src/entities/user_information.dart';
-import 'package:database/src/entities/organization_team.dart';
-import 'package:database/src/entities/organization_team_member.dart';
+import 'package:database/src/entities/organization_member.dart';
 
 import 'database_manager_query.dart';
 import 'relationship_manager.dart';
@@ -34,18 +33,11 @@ class DatabaseManagers
     fromMap: Organization.fromMap,
   );
 
-  /// Organization team manager
-  static final organizationTeams = DatabaseManagerQuery<OrganizationTeam>(
-    tableName: 'organization_teams',
-    fromMap: OrganizationTeam.fromMap,
+  /// Organization member manager
+  static final organizationMembers = DatabaseManagerQuery<OrganizationMember>(
+    tableName: 'organization_members',
+    fromMap: OrganizationMember.fromMap,
   );
-
-  /// Organization team member manager
-  static final organizationTeamMembers =
-      DatabaseManagerQuery<OrganizationTeamMember>(
-        tableName: 'organization_team_members',
-        fromMap: OrganizationTeamMember.fromMap,
-      );
 
   /// Function manager
   static final functions = DatabaseManagerQuery<FunctionEntity>(
