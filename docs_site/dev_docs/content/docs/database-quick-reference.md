@@ -481,7 +481,7 @@ return {'id': function.id};  // Allows enumeration
 
 ## Testing
 
-```bash
+```dart
 # Run all tests
 dart test
 

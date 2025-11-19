@@ -235,7 +235,7 @@ You can manually edit this file to change the server URL.
 
 Each function directory contains a `.dart_tool/function_config.json` file:
 
-```json
+```dart
 {
   "function_name": "my_function",
   "function_id": "abc123xyz789",
