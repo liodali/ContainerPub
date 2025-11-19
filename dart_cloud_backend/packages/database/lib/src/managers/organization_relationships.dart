@@ -117,7 +117,7 @@ mixin OrganizationRelationships on RelationshipManager {
   }
 }
 
-/// Organization with its members
+/// Organization with its members (internal use only - use OrganizationWithMembersDto for API responses)
 class OrganizationWithMembers {
   final Organization organization;
   final List<OrganizationMemberWithInfo> members;
@@ -126,17 +126,9 @@ class OrganizationWithMembers {
     required this.organization,
     required this.members,
   });
-
-  Map<String, dynamic> toJson() {
-    return {
-      'organization': organization.toMap(),
-      'members': members.map((m) => m.toJson()).toList(),
-      'member_count': members.length,
-    };
-  }
 }
 
-/// Organization member with user information
+/// Organization member with user information (internal use only - use OrganizationMemberDto for API responses)
 class OrganizationMemberWithInfo {
   final UserEntity user;
   final UserInformation? information;
@@ -147,12 +139,4 @@ class OrganizationMemberWithInfo {
     this.information,
     this.joinedAt,
   });
-
-  Map<String, dynamic> toJson() {
-    return {
-      'id': user.uuid,
-      'information': information!.toMap(),
-      'joined_at': joinedAt!.toIso8601String(),
-    };
-  }
 }

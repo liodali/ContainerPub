@@ -34,6 +34,10 @@ export 'src/relationship_manager.dart';
 export 'src/managers/user_relationships.dart';
 export 'src/managers/organization_relationships.dart';
 
+// DTOs (Data Transfer Objects)
+export 'src/dto/user_dto.dart';
+export 'src/dto/organization_dto.dart';
+
 class Database {
   static late Connection _connection;
 

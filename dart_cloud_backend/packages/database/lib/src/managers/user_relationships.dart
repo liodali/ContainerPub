@@ -163,7 +163,7 @@ mixin UserRelationships on RelationshipManager {
   }
 }
 
-/// User with information (one-to-one relationship)
+/// User with information (internal use only - use UserProfileDto for API responses)
 class UserWithInformation {
   final UserEntity user;
   final UserInformation information;
@@ -179,16 +179,9 @@ class UserWithInformation {
       information: UserInformation.fromMap(map),
     );
   }
-
-  Map<String, dynamic> toJson() {
-    return {
-      'user': user.toMap(),
-      'information': information.toMap(),
-    };
-  }
 }
 
-/// User with organization (one-to-one relationship)
+/// User with organization (internal use only - use UserWithOrganizationDto for API responses)
 class UserWithOrganization {
   final UserEntity user;
   final Organization organization;
@@ -203,11 +196,5 @@ class UserWithOrganization {
       user: UserEntity.fromMap(map),
       organization: Organization.fromMap(map),
     );
-  }
-
-  Map<String, dynamic> toJson() {
-    return {
-      'organization': organization.uuid,
-    };
   }
 }

@@ -178,8 +178,22 @@ class AuthHandler {
         organizationId: org.uuid!,
       );
 
+      if (orgWithMembers == null) {
+        return Response.ok(
+          jsonEncode(OrganizationDto.fromEntity(org).toJson()),
+          headers: {'Content-Type': 'application/json'},
+        );
+      }
+
+      // Convert to DTO (pass userId to check ownership)
+      final dto = OrganizationWithMembersDto.fromEntities(
+        organization: orgWithMembers.organization,
+        members: orgWithMembers.members,
+        requesterId: userId,
+      );
+
       return Response.ok(
-        jsonEncode(orgWithMembers?.toJson() ?? {'organization': org.toMap()}),
+        jsonEncode(dto.toJson()),
         headers: {'Content-Type': 'application/json'},
       );
     } catch (e) {
@@ -237,10 +251,20 @@ class AuthHandler {
       // Fetch updated organization
       final updatedOrg = await DatabaseManagers.organizations.findByUuid(org.uuid!);
 
+      if (updatedOrg == null) {
+        return Response.internalServerError(
+          body: jsonEncode({'error': 'Failed to fetch updated organization'}),
+          headers: {'Content-Type': 'application/json'},
+        );
+      }
+
+      // Convert to DTO
+      final dto = OrganizationDto.fromEntity(updatedOrg);
+
       return Response.ok(
         jsonEncode({
           'message': 'Organization updated successfully',
-          'organization': updatedOrg?.toMap(),
+          'organization': dto.toJson(),
         }),
         headers: {'Content-Type': 'application/json'},
       );
@@ -313,10 +337,13 @@ class AuthHandler {
         userId: userId,
       );
 
+      // Convert to DTO
+      final dto = OrganizationDto.fromEntity(org);
+
       return Response.ok(
         jsonEncode({
           'message': 'Organization created successfully',
-          'organization': org.toMap(),
+          'organization': dto.toJson(),
         }),
         headers: {'Content-Type': 'application/json'},
       );
@@ -374,10 +401,20 @@ class AuthHandler {
         where: {'user_id': userId},
       );
 
+      if (userInfo == null) {
+        return Response.internalServerError(
+          body: jsonEncode({'error': 'Failed to fetch updated user information'}),
+          headers: {'Content-Type': 'application/json'},
+        );
+      }
+
+      // Convert to DTO
+      final dto = UserInformationDto.fromEntity(userInfo);
+
       return Response.ok(
         jsonEncode({
           'message': 'User role upgraded successfully',
-          'userInformation': userInfo?.toMap(),
+          'user_information': dto.toJson(),
         }),
         headers: {'Content-Type': 'application/json'},
       );
