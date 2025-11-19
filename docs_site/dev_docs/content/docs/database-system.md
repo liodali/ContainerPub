@@ -399,7 +399,7 @@ All queries use **parameterized statements**:
 - DatabaseManagerQuery: 40+ tests
 
 **Run tests**:
-```bash
+```dart
 cd dart_cloud_backend/packages/database
 dart test
 

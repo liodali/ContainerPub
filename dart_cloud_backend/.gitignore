@@ -10,8 +10,11 @@ deploy/ssl/
 *.key
 *.csr
 
-# Backups
-deploy/backups/
+# Backups (keep scripts, ignore actual backup files)
+deploy/backups/*.sql
+deploy/backups/*.tar.gz
+deploy/backups/*.dump
+deploy/backups/data/
 backup*.sql
 dump*.sql
 *.tar.gz

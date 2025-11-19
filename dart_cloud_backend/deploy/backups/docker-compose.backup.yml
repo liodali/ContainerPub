@@ -1,0 +1,167 @@
+version: '3.8'
+
+# Backup Service Configuration for Dart Cloud Backend
+# This file extends the main docker-compose.yml with automated backup services
+#
+# Usage:
+#   docker-compose -f docker-compose.yml -f backups/docker-compose.backup.yml up -d
+
+services:
+  # Automated Backup Service
+  backup-service:
+    image: alpine:latest
+    container_name: dart_cloud_backup_service
+    restart: unless-stopped
+    environment:
+      # Backup Schedule (cron format)
+      BACKUP_SCHEDULE: ${BACKUP_SCHEDULE:-0 2 * * *}
+      
+      # Retention Configuration
+      BACKUP_RETENTION_DAYS: ${BACKUP_RETENTION_DAYS:-7}
+      VOLUME_RETENTION_DAYS: ${VOLUME_RETENTION_DAYS:-7}
+      
+      # Database Configuration
+      POSTGRES_USER: ${POSTGRES_USER:-dart_cloud}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+      POSTGRES_DB: ${POSTGRES_DB:-dart_cloud}
+      FUNCTION_DB: ${FUNCTION_DB:-functions_db}
+      POSTGRES_HOST: ${POSTGRES_HOST:-postgres}
+      POSTGRES_CONTAINER: dart_cloud_postgres
+      
+      # Volume Configuration
+      POSTGRES_VOLUME: ${COMPOSE_PROJECT_NAME:-dart_cloud_backend}_postgres_data
+      FUNCTIONS_VOLUME: ${COMPOSE_PROJECT_NAME:-dart_cloud_backend}_functions_data
+      
+      # Replication Configuration
+      REPLICATION_ENABLED: ${REPLICATION_ENABLED:-false}
+      REPLICATION_TYPE: ${REPLICATION_TYPE:-local}
+      REPLICATION_TARGET: ${REPLICATION_TARGET:-}
+      REPLICATION_INTERVAL: ${REPLICATION_INTERVAL:-3600}
+    volumes:
+      # Mount backup scripts
+      - ./backups:/backups:ro
+      
+      # Mount backup data directory
+      - backup_data:/backups/data
+      
+      # Mount Docker socket for volume operations
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      
+      # Mount environment file
+      - ./.env:/backups/.env:ro
+    networks:
+      - dart_cloud_network
+    depends_on:
+      - postgres
+    command: >
+      sh -c "
+        apk add --no-cache docker-cli bash dcron tzdata &&
+        
+        # Set timezone
+        cp /usr/share/zoneinfo/$${TZ:-UTC} /etc/localtime &&
+        echo $${TZ:-UTC} > /etc/timezone &&
+        
+        # Create backup script
+        cat > /backup-cron.sh << 'EOF'
+      #!/bin/bash
+      set -e
+      
+      echo \"[$(date)] Starting scheduled backup...\"
+      
+      # Run complete backup
+      cd /backups
+      bash backup-all.sh
+      
+      # Run replication if enabled
+      if [ \"$$REPLICATION_ENABLED\" = \"true\" ] && [ -n \"$$REPLICATION_TARGET\" ]; then
+        echo \"[$(date)] Starting replication...\"
+        bash replicate-volumes.sh -t \"$$REPLICATION_TYPE\" -d \"$$REPLICATION_TARGET\"
+      fi
+      
+      echo \"[$(date)] Backup completed successfully\"
+      EOF
+        
+        chmod +x /backup-cron.sh &&
+        
+        # Setup cron job
+        echo \"$$BACKUP_SCHEDULE /backup-cron.sh >> /var/log/backup.log 2>&1\" > /etc/crontabs/root &&
+        
+        # Create log file
+        touch /var/log/backup.log &&
+        
+        echo \"Backup service started. Schedule: $$BACKUP_SCHEDULE\" &&
+        echo \"Logs will be written to /var/log/backup.log\" &&
+        
+        # Start cron and tail logs
+        crond -f -l 2
+      "
+    healthcheck:
+      test: ["CMD", "pgrep", "crond"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    labels:
+      - "com.dart_cloud.service=backup"
+      - "com.dart_cloud.description=Automated backup service"
+
+  # Optional: Backup monitoring service
+  backup-monitor:
+    image: alpine:latest
+    container_name: dart_cloud_backup_monitor
+    restart: unless-stopped
+    profiles:
+      - monitoring
+    volumes:
+      - backup_data:/backups/data:ro
+      - ./backups:/scripts:ro
+    networks:
+      - dart_cloud_network
+    command: >
+      sh -c "
+        apk add --no-cache bash &&
+        
+        echo \"Backup Monitor Started\" &&
+        echo \"Monitoring backup directory: /backups/data\" &&
+        
+        while true; do
+          echo \"\" &&
+          echo \"=== Backup Status Report ===\" &&
+          echo \"Time: $$(date)\" &&
+          echo \"\" &&
+          
+          echo \"Database Backups:\" &&
+          ls -lh /backups/data/*.tar.gz 2>/dev/null | tail -n 5 || echo \"No backups found\" &&
+          echo \"\" &&
+          
+          echo \"Volume Backups:\" &&
+          ls -lh /backups/data/volumes/*.tar.gz 2>/dev/null | tail -n 5 || echo \"No volume backups found\" &&
+          echo \"\" &&
+          
+          echo \"Disk Usage:\" &&
+          du -sh /backups/data/ 2>/dev/null || echo \"Cannot calculate\" &&
+          echo \"\" &&
+          
+          echo \"Latest Backup:\" &&
+          ls -lt /backups/data/*.tar.gz 2>/dev/null | head -n 1 || echo \"No backups found\" &&
+          echo \"\" &&
+          
+          sleep 3600
+        done
+      "
+    labels:
+      - "com.dart_cloud.service=backup-monitor"
+      - "com.dart_cloud.description=Backup monitoring and reporting"
+
+volumes:
+  backup_data:
+    driver: local
+    labels:
+      - "com.dart_cloud.volume=backup-data"
+      - "com.dart_cloud.description=Backup storage volume"
+
+# Use existing network from main docker-compose.yml
+networks:
+  dart_cloud_network:
+    external: true
+    name: dart_cloud_backend_dart_cloud_network
