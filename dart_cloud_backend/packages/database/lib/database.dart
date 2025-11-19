@@ -25,6 +25,15 @@ export 'src/entities/function_entity.dart';
 export 'src/entities/function_deployment_entity.dart';
 export 'src/entities/function_log_entity.dart';
 export 'src/entities/function_invocation_entity.dart';
+export 'src/entities/user_information.dart';
+export 'src/entities/organization.dart';
+export 'src/entities/organization_team.dart';
+export 'src/entities/organization_team_member.dart';
+
+// Relationship managers
+export 'src/relationship_manager.dart';
+export 'src/managers/user_relationships.dart';
+export 'src/managers/organization_relationships.dart';
 
 class Database {
   static late Connection _connection;
@@ -244,9 +253,134 @@ class Database {
         EXECUTE FUNCTION update_updated_at_column()
     ''');
 
+    // User information table
+    await _connection.execute('''
+      CREATE TABLE IF NOT EXISTS user_information (
+        id SERIAL PRIMARY KEY,
+        uuid UUID DEFAULT gen_random_uuid() UNIQUE NOT NULL,
+        user_id UUID NOT NULL REFERENCES users(uuid) ON DELETE CASCADE,
+        first_name VARCHAR(100) NOT NULL,
+        last_name VARCHAR(100) NOT NULL,
+        phone_number VARCHAR(20),
+        country VARCHAR(100),
+        city VARCHAR(100),
+        address TEXT,
+        zip_code VARCHAR(20),
+        avatar TEXT,
+        role VARCHAR(50) NOT NULL CHECK (role IN ('developer', 'team', 'sub_team_developer')),
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(user_id)
+      )
+    ''');
+
+    await _connection.execute('''
+      CREATE INDEX IF NOT EXISTS idx_user_information_user_id ON user_information(user_id)
+    ''');
+
+    await _connection.execute('''
+      CREATE INDEX IF NOT EXISTS idx_user_information_role ON user_information(role)
+    ''');
+
+    // Organizations table
+    await _connection.execute('''
+      CREATE TABLE IF NOT EXISTS organizations (
+        id SERIAL PRIMARY KEY,
+        uuid UUID DEFAULT gen_random_uuid() UNIQUE NOT NULL,
+        name VARCHAR(255) NOT NULL,
+        user_id UUID NOT NULL REFERENCES users(uuid) ON DELETE CASCADE,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(user_id)
+      )
+    ''');
+
+    await _connection.execute('''
+      CREATE INDEX IF NOT EXISTS idx_organizations_user_id ON organizations(user_id)
+    ''');
+
+    await _connection.execute('''
+      CREATE INDEX IF NOT EXISTS idx_organizations_name ON organizations(name)
+    ''');
+
+    // Organization teams table
+    await _connection.execute('''
+      CREATE TABLE IF NOT EXISTS organization_teams (
+        id SERIAL PRIMARY KEY,
+        uuid UUID DEFAULT gen_random_uuid() UNIQUE NOT NULL,
+        name VARCHAR(255) NOT NULL,
+        description TEXT,
+        organization_id UUID NOT NULL REFERENCES organizations(uuid) ON DELETE CASCADE,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      )
+    ''');
+
+    await _connection.execute('''
+      CREATE INDEX IF NOT EXISTS idx_organization_teams_org_id ON organization_teams(organization_id)
+    ''');
+
+    await _connection.execute('''
+      CREATE INDEX IF NOT EXISTS idx_organization_teams_name ON organization_teams(name)
+    ''');
+
+    // Organization team members table
+    await _connection.execute('''
+      CREATE TABLE IF NOT EXISTS organization_team_members (
+        id SERIAL PRIMARY KEY,
+        team_id UUID NOT NULL REFERENCES organization_teams(uuid) ON DELETE CASCADE,
+        user_id UUID NOT NULL REFERENCES users(uuid) ON DELETE CASCADE,
+        joined_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(team_id, user_id)
+      )
+    ''');
+
+    await _connection.execute('''
+      CREATE INDEX IF NOT EXISTS idx_org_team_members_team_id ON organization_team_members(team_id)
+    ''');
+
+    await _connection.execute('''
+      CREATE INDEX IF NOT EXISTS idx_org_team_members_user_id ON organization_team_members(user_id)
+    ''');
+
+    // Triggers for new tables
+    await _connection.execute('''
+      DROP TRIGGER IF EXISTS update_user_information_updated_at ON user_information
+    ''');
+
+    await _connection.execute('''
+      CREATE TRIGGER update_user_information_updated_at
+        BEFORE UPDATE ON user_information
+        FOR EACH ROW
+        EXECUTE FUNCTION update_updated_at_column()
+    ''');
+
+    await _connection.execute('''
+      DROP TRIGGER IF EXISTS update_organizations_updated_at ON organizations
+    ''');
+
+    await _connection.execute('''
+      CREATE TRIGGER update_organizations_updated_at
+        BEFORE UPDATE ON organizations
+        FOR EACH ROW
+        EXECUTE FUNCTION update_updated_at_column()
+    ''');
+
+    await _connection.execute('''
+      DROP TRIGGER IF EXISTS update_organization_teams_updated_at ON organization_teams
+    ''');
+
+    await _connection.execute('''
+      CREATE TRIGGER update_organization_teams_updated_at
+        BEFORE UPDATE ON organization_teams
+        FOR EACH ROW
+        EXECUTE FUNCTION update_updated_at_column()
+    ''');
+
     print('✓ Database tables created/verified');
     print('✓ Indexes created for performance');
     print('✓ Triggers created for automatic timestamps');
+    print('✓ User relationship tables created');
   }
 
   static Future<void> close() async {

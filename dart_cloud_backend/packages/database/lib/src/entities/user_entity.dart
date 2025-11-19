@@ -1,3 +1,6 @@
+import 'package:database/src/entities/organization.dart';
+import 'package:database/src/entities/user_information.dart';
+
 import '../entity.dart';
 
 /// User entity representing the users table
@@ -8,7 +11,6 @@ class UserEntity extends Entity {
   final String? passwordHash;
   final DateTime? createdAt;
   final DateTime? updatedAt;
-
   UserEntity({
     this.id,
     this.uuid,
@@ -59,6 +61,25 @@ class UserEntity extends Entity {
       passwordHash: passwordHash ?? this.passwordHash,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
+    );
+  }
+}
+
+class UserWithInformationAndOrganization {
+  final UserEntity user;
+  final UserInformation userInformation;
+  final Organization organization;
+  UserWithInformationAndOrganization({
+    required this.user,
+    required this.userInformation,
+    required this.organization,
+  });
+
+  factory UserWithInformationAndOrganization.fromMap(Map<String, dynamic> map) {
+    return UserWithInformationAndOrganization(
+      user: UserEntity.fromMap(map),
+      userInformation: UserInformation.fromMap(map),
+      organization: Organization.fromMap(map),
     );
   }
 }

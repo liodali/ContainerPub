@@ -78,16 +78,19 @@ class DatabaseManagerQuery<T extends Entity> {
   }
 
   /// Insert a new record
-  Future<T> insert(Map<String, dynamic> data) async {
-    final builder = query();
-    final sql = builder.buildInsert(data);
+  Future<T?> insert(Map<String, dynamic> data) async {
+    try {
+      final builder = query();
+      final sql = builder.buildInsert(data);
 
-    final result = await Database.connection.execute(
-      builder.toSql(sql),
-      parameters: builder.parameters,
-    );
-
-    return fromMap(_rowToMap(result.first));
+      final result = await Database.connection.execute(
+        builder.toSql(sql),
+        parameters: builder.parameters,
+      );
+      return fromMap(_rowToMap(result.first));
+    } catch (e) {
+      return null;
+    }
   }
 
   /// Update records matching the query
