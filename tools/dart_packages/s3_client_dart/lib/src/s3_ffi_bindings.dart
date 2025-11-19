@@ -84,7 +84,7 @@ class S3FFIBindings {
     final customPath = _customLibraryPath;
     if (customPath != null && customPath.isNotEmpty) {
       final fileS3Lib = File(customPath);
-      if (fileS3Lib.existsSync()) {
+      if (fileS3Lib.existsSync()) {///TODO: note we should do build amd64,arm64
         return DynamicLibrary.open(fileS3Lib.path);
       } else if (!_autoDownload) {
         throw Exception('Library not found at: $customPath');

@@ -27,6 +27,9 @@ class Config {
   static late String? s3SessionToken;
   static late String? s3AccountId;
 
+  // S3 Client Configuration
+  static late String s3ClientLibraryPath;
+
   // Docker Configuration
   static late String dockerBaseImage;
   static late String dockerRegistry;
@@ -91,6 +94,9 @@ class Config {
           Platform.environment['FUNCTION_DB_TIMEOUT_MS'] ??
           '5000',
     );
+
+    // S3 Client Configuration
+    s3ClientLibraryPath = env['S3_CLIENT_LIBRARY_PATH'] ?? './s3_client_dart.so';
 
     // S3 Configuration
     s3Endpoint =

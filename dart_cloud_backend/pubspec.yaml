@@ -15,7 +15,7 @@ dependencies:
   archive: ^4.0.7
   postgres: ^3.5.9
   bcrypt: ^1.1.3
-  dart_jsonwebtoken: ^2.12.1
+  dart_jsonwebtoken: ^3.3.1
   dotenv: ^4.2.0
   analyzer: ^9.0.0
   database: 
@@ -24,8 +24,8 @@ dependencies:
     path: ../tools/dart_packages/s3_client_dart
     # git:
     #   url: https://github.com/liodali/ContainerPub.git
-    #   path: s3_client_dart
-    #   ref: 7ee81dbee45a5737cf3d5786c122f3c0ace2677a
+    #   path: tools/dart_packages/s3_client_dart
+    #   ref: 1f39b55a582cd97a6890e53e8fe70738efd11876
 
 dev_dependencies:
   lints: ^6.0.0

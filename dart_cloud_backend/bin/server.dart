@@ -13,7 +13,8 @@ void main() async {
 
   // Initialize database
   await Database.initialize(Config.databaseUrl);
-
+  print('Database initialized');
+  print('S3 Client Library Path: ${Config.s3ClientLibraryPath}');
   // Initialize S3
   S3Service.initializeS3(
     S3Configuration(
@@ -24,6 +25,10 @@ void main() async {
       sessionToken: Config.s3SessionToken ?? '',
       region: Config.s3Region,
       accountId: Config.s3AccountId ?? '',
+    ),
+    (
+      libraryPath: Config.s3ClientLibraryPath, //'./s3_client_dart.so',
+      autoDownload: false,
     ),
   );
 
