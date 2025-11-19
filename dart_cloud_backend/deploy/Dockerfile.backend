@@ -3,15 +3,20 @@ FROM dart:latest AS build
 
 # Add this label
 LABEL stage=builder-intermediate 
+
 # Set working directory
 WORKDIR /app
 
 # Copy pubspec files
-COPY ./pubspec.* ./
+COPY ./dart_cloud_backend/pubspec.* /app/dart_cloud_backend/
+COPY ./dart_cloud_backend/s3_client_dart.so /app/dart_cloud_backend/
+
+COPY dart_cloud_backend /app/dart_cloud_backend
 
 # Copy source code
-COPY ./ ./
+COPY ./tools/dart_packages/s3_client_dart /app/tools/dart_packages/s3_client_dart
 
+WORKDIR /app/dart_cloud_backend
 # Get dependencies
 RUN dart pub get
 
@@ -32,8 +37,9 @@ RUN apt-get update && \
 WORKDIR /app
 
 # Copy compiled binary from build stage
-COPY --from=build /app/bin/server /app/server
-COPY --from=build /app/.env /app/.env
+COPY --from=build /app/dart_cloud_backend/bin/server /app/server
+COPY --from=build /app/dart_cloud_backend/.env /app/.env
+COPY --from=build /app/dart_cloud_backend/s3_client_dart.so /app/s3_client_dart.so
 
 # Create functions directory
 RUN mkdir -p /app/functions
@@ -46,4 +52,4 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
     CMD curl -f http://localhost:8080/api/health || exit 1
 
 # Run the server
-CMD ["/app/server"]
+CMD ["./server", "--dart-define=S3_CLIENT_LIBRARY_PATH=/app/s3_client_dart.so"]

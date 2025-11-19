@@ -73,8 +73,8 @@ cleanup_on_failure() {
     $CONTAINER_COMPOSE_RUNTIME down 2>/dev/null || true
     
     # Clean up temporary .env files
-    rm -rf .env 2>/dev/null || true
-    rm -rf ../.env 2>/dev/null || true
+    # rm -rf .env 2>/dev/null || true
+    # rm -rf ../.env 2>/dev/null || true
     
     print_success "Cleanup completed"
     exit 1
@@ -121,14 +121,14 @@ if [ "$POSTGRES_RUNNING" = true ] || [ "$BACKEND_RUNNING" = true ]; then
     case $REPLY in
         1)
             print_info "Rebuilding backend only..."
-            $CONTAINER_COMPOSE_RUNTIME stop backend-cloud 2>/dev/null || true
-            $CONTAINER_COMPOSE_RUNTIME rm -f backend-cloud 2>/dev/null || true
+            $CONTAINER_COMPOSE_RUNTIME stop dart_cloud_backend 2>/dev/null || true
+            $CONTAINER_COMPOSE_RUNTIME rm -f dart_cloud_backend 2>/dev/null || true
             $CONTAINER_RUNTIME rmi $($CONTAINER_RUNTIME images -f "label=stage=builder-intermediate" -q)
             ;;
         2)
             print_info "Rebuilding backend and removing its volume..."
-            $CONTAINER_COMPOSE_RUNTIME stop backend-cloud 2>/dev/null || true
-            $CONTAINER_COMPOSE_RUNTIME rm -f backend-cloud 2>/dev/null || true
+            $CONTAINER_COMPOSE_RUNTIME stop dart_cloud_backend 2>/dev/null || true
+            $CONTAINER_COMPOSE_RUNTIME rm -f dart_cloud_backend 2>/dev/null || true
             $CONTAINER_RUNTIME volume rm dart_cloud_backend_functions_data 2>/dev/null || true
             print_success "Backend volume removed"
             ;;
@@ -201,6 +201,16 @@ else
     print_success ".env file found"
 fi
 
+
+if [ ! -f ../s3_client_dart.so ]; then
+    print_info "Downloading s3_client_dart library..."
+    if ! dart run ../bin/download_library.dart; then
+        print_error "Failed to download s3_client_dart library"
+        cleanup_on_failure
+    fi
+fi
+
+
 # Start services
 print_header "Starting Services"
 
@@ -242,7 +252,7 @@ for i in {1..10}; do
         BACKEND_READY=true
         break
     fi
-    if [ $i -eq 60 ]; then
+    if [ $i -eq 10 ]; then
         print_error "Backend failed to start"
         echo ""
         print_info "Backend logs:"
@@ -255,6 +265,12 @@ done
 # Verify both services are ready
 if [ "$POSTGRES_READY" = false ] || [ "$BACKEND_READY" = false ]; then
     print_error "One or more services failed to start"
+    echo ""
+    echo "PostgreSQL logs:"
+    $CONTAINER_COMPOSE_RUNTIME logs postgres
+    echo ""
+    echo "Backend logs:"
+    $CONTAINER_COMPOSE_RUNTIME logs backend-cloud
     cleanup_on_failure
 fi
 

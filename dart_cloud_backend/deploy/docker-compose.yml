@@ -26,10 +26,11 @@ services:
 
   backend-cloud:
     build:
-      context: ..
-      dockerfile: deploy/Dockerfile.backend
-      # ssh:
-      #   - default
+      context: ../..
+      dockerfile: dart_cloud_backend/deploy/Dockerfile.backend
+      ssh:
+        - default
+    platform: linux/amd64
     container_name: dart_cloud_backend
     restart: unless-stopped
     command: ["sh", "-c", "sleep 5 && /app/server"]
