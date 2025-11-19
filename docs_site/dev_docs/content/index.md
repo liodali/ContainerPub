@@ -28,10 +28,20 @@ Learn how to develop, build, and deploy Dart functions with ContainerPub.
 ### Architecture
 Understand the system design and architecture of ContainerPub.
 
-- **System Overview** - High-level architecture overview
-- **Database Schema** - Database design and structure
+- **[System Overview](./docs/architecture.md)** - High-level architecture overview
+- **[Database System](./docs/database-system.md)** - Database design and structure
 - **Security Model** - Security architecture and best practices
 - **Deployment** - Deployment architecture and infrastructure
+
+### Operations
+Learn how to operate and maintain ContainerPub in production.
+
+- **[Backup Strategy](./docs/backup-strategy.md)** - Backup, replication, and disaster recovery
+- **[Backup Quick Reference](./docs/backup-quick-reference.md)** - Fast reference for backup commands
+- **[Backup Workflows](./docs/backup-workflows.md)** - Visual guides and workflow diagrams
+- **Monitoring** - System monitoring and alerting
+- **Scaling** - Horizontal and vertical scaling strategies
+- **Maintenance** - Routine maintenance procedures
 
 ## 🚀 Quick Links
 
@@ -55,6 +65,7 @@ This documentation covers:
 - **Development Workflows** - How to develop and test Dart functions
 - **Deployment Process** - Step-by-step deployment instructions
 - **System Architecture** - Technical details of ContainerPub
+- **Operations & Maintenance** - Backup, monitoring, and disaster recovery
 - **API Reference** - CLI commands and environment variables
 - **Best Practices** - Recommendations for production deployments
 
