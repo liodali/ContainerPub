@@ -15,6 +15,7 @@ Router createRouter() {
   // Auth routes
   router.post('/api/auth/login', AuthHandler.login);
   router.post('/api/auth/register', AuthHandler.register);
+  router.post('/api/auth/onboarding', AuthHandler.onboarding);
 
   // Function routes (protected)
   router.post(
