@@ -145,7 +145,6 @@ class AuthHandler {
           role: Role.fromString(role),
         ).toMap(),
       );
-      // Insert user
 
       return Response.ok(
         jsonEncode({'message': 'User onboarding successful'}),
@@ -154,6 +153,311 @@ class AuthHandler {
     } catch (e) {
       return Response.internalServerError(
         body: jsonEncode({'error': 'Onboarding failed: $e'}),
+        headers: {'Content-Type': 'application/json'},
+      );
+    }
+  }
+
+  /// GET /api/user/<id>/organization/ - Get organization by user ID
+  static Future<Response> getOrganizationbyUser(Request request, String userId) async {
+    try {
+      // Get user's organization
+      final org = await DatabaseManagers.instance.getUserOrganization(
+        userId: userId,
+      );
+
+      if (org == null) {
+        return Response.notFound(
+          jsonEncode({'error': 'Organization not found'}),
+          headers: {'Content-Type': 'application/json'},
+        );
+      }
+
+      // Get organization with members
+      final orgWithMembers = await DatabaseManagers.instance.getOrganizationWithMembers(
+        organizationId: org.uuid!,
+      );
+
+      return Response.ok(
+        jsonEncode(orgWithMembers?.toJson() ?? {'organization': org.toMap()}),
+        headers: {'Content-Type': 'application/json'},
+      );
+    } catch (e) {
+      return Response.internalServerError(
+        body: jsonEncode({'error': 'Failed to retrieve organization: $e'}),
+        headers: {'Content-Type': 'application/json'},
+      );
+    }
+  }
+
+  /// PATCH /api/user/<id>/organization/ - Update organization by user ID
+  static Future<Response> patchOrganizationbyUser(Request request, String userId) async {
+    try {
+      final body = jsonDecode(await request.readAsString()) as Map<String, dynamic>;
+      final name = body['name'] as String?;
+
+      if (name == null || name.isEmpty) {
+        return Response.badRequest(
+          body: jsonEncode({'error': 'Organization name is required'}),
+          headers: {'Content-Type': 'application/json'},
+        );
+      }
+
+      // Find organization by owner ID
+      final org = await DatabaseManagers.organizations.findOne(
+        where: {'owner_id': userId},
+      );
+
+      if (org == null) {
+        return Response.notFound(
+          jsonEncode({'error': 'Organization not found'}),
+          headers: {'Content-Type': 'application/json'},
+        );
+      }
+
+      // Check if new name conflicts with existing organization (excluding current org)
+      final existingOrg = await DatabaseManagers.organizations.findOne(
+        where: {'name': name},
+      );
+
+      if (existingOrg != null && existingOrg.uuid != org.uuid) {
+        return Response(
+          409,
+          body: jsonEncode({'error': 'Organization with this name already exists'}),
+          headers: {'Content-Type': 'application/json'},
+        );
+      }
+
+      // Update organization
+      await DatabaseManagers.organizations.update(
+        {'name': name},
+        where: {'uuid': org.uuid},
+      );
+
+      // Fetch updated organization
+      final updatedOrg = await DatabaseManagers.organizations.findByUuid(org.uuid!);
+
+      return Response.ok(
+        jsonEncode({
+          'message': 'Organization updated successfully',
+          'organization': updatedOrg?.toMap(),
+        }),
+        headers: {'Content-Type': 'application/json'},
+      );
+    } catch (e) {
+      return Response.internalServerError(
+        body: jsonEncode({'error': 'Failed to update organization: $e'}),
+        headers: {'Content-Type': 'application/json'},
+      );
+    }
+  }
+
+  /// POST /api/user/organization - Create new organization
+  static Future<Response> createOrganization(Request request) async {
+    try {
+      final body = jsonDecode(await request.readAsString()) as Map<String, dynamic>;
+      final userId = body['userId'] as String?;
+      final name = body['name'] as String?;
+
+      if (userId == null || name == null || name.isEmpty) {
+        return Response.badRequest(
+          body: jsonEncode({'error': 'User ID and organization name are required'}),
+          headers: {'Content-Type': 'application/json'},
+        );
+      }
+
+      // Check if organization name already exists
+      final existingOrg = await DatabaseManagers.organizations.findOne(
+        where: {'name': name},
+      );
+
+      if (existingOrg != null) {
+        return Response(
+          409,
+          body: jsonEncode({'error': 'Organization with this name already exists'}),
+          headers: {'Content-Type': 'application/json'},
+        );
+      }
+
+      // Check if user is already in an organization
+      final isInOrg = await DatabaseManagers.instance.isUserInOrganization(
+        userId: userId,
+      );
+
+      if (isInOrg) {
+        return Response(
+          409,
+          body: jsonEncode({'error': 'User already belongs to an organization'}),
+          headers: {'Content-Type': 'application/json'},
+        );
+      }
+
+      // Create organization
+      final org = await DatabaseManagers.organizations.insert(
+        Organization(
+          name: name,
+          ownerId: userId,
+        ).toMap(),
+      );
+
+      if (org == null) {
+        return Response.internalServerError(
+          body: jsonEncode({'error': 'Failed to create organization'}),
+          headers: {'Content-Type': 'application/json'},
+        );
+      }
+
+      // Add owner as member
+      await DatabaseManagers.instance.addUserToOrganization(
+        organizationId: org.uuid!,
+        userId: userId,
+      );
+
+      return Response.ok(
+        jsonEncode({
+          'message': 'Organization created successfully',
+          'organization': org.toMap(),
+        }),
+        headers: {'Content-Type': 'application/json'},
+      );
+    } catch (e) {
+      return Response.internalServerError(
+        body: jsonEncode({'error': 'Failed to create organization: $e'}),
+        headers: {'Content-Type': 'application/json'},
+      );
+    }
+  }
+
+  /// POST /api/user/upgrade - Upgrade user role
+  static Future<Response> upgrade(Request request) async {
+    try {
+      final body = jsonDecode(await request.readAsString()) as Map<String, dynamic>;
+      final userId = body['userId'] as String?;
+      final newRole = body['role'] as String?;
+
+      if (userId == null || newRole == null) {
+        return Response.badRequest(
+          body: jsonEncode({'error': 'User ID and role are required'}),
+          headers: {'Content-Type': 'application/json'},
+        );
+      }
+
+      // Validate role
+      Role role;
+      try {
+        role = Role.fromString(newRole);
+      } catch (e) {
+        return Response.badRequest(
+          body: jsonEncode({
+            'error': 'Invalid role. Must be one of: developer, team, sub_team_developer',
+          }),
+          headers: {'Content-Type': 'application/json'},
+        );
+      }
+
+      // Update user information role
+      final results = await DatabaseManagers.userInformation.update(
+        {'role': role.value},
+        where: {'user_id': userId},
+      );
+      final updated = results.length;
+
+      if (updated == 0) {
+        return Response.notFound(
+          jsonEncode({'error': 'User information not found'}),
+          headers: {'Content-Type': 'application/json'},
+        );
+      }
+
+      // Fetch updated user information
+      final userInfo = await DatabaseManagers.userInformation.findOne(
+        where: {'user_id': userId},
+      );
+
+      return Response.ok(
+        jsonEncode({
+          'message': 'User role upgraded successfully',
+          'userInformation': userInfo?.toMap(),
+        }),
+        headers: {'Content-Type': 'application/json'},
+      );
+    } catch (e) {
+      return Response.internalServerError(
+        body: jsonEncode({'error': 'Failed to upgrade user: $e'}),
+        headers: {'Content-Type': 'application/json'},
+      );
+    }
+  }
+
+  /// POST /api/user/add-member - Add member to organization
+  static Future<Response> addMember(Request request) async {
+    try {
+      final body = jsonDecode(await request.readAsString()) as Map<String, dynamic>;
+      final organizationId = body['organizationId'] as String?;
+      final userId = body['userId'] as String?;
+
+      if (organizationId == null || userId == null) {
+        return Response.badRequest(
+          body: jsonEncode({'error': 'Organization ID and User ID are required'}),
+          headers: {'Content-Type': 'application/json'},
+        );
+      }
+
+      // Check if organization exists
+      final org = await DatabaseManagers.organizations.findByUuid(organizationId);
+      if (org == null) {
+        return Response.notFound(
+          jsonEncode({'error': 'Organization not found'}),
+          headers: {'Content-Type': 'application/json'},
+        );
+      }
+
+      // Check if user exists
+      final user = await DatabaseManagers.users.findByUuid(userId);
+      if (user == null) {
+        return Response.notFound(
+          jsonEncode({'error': 'User not found'}),
+          headers: {'Content-Type': 'application/json'},
+        );
+      }
+
+      // Check if user is already in an organization
+      final isAlreadyMember = await DatabaseManagers.instance.isUserInOrganization(
+        userId: userId,
+      );
+
+      if (isAlreadyMember) {
+        return Response(
+          409,
+          body: jsonEncode({'error': 'User already belongs to an organization'}),
+          headers: {'Content-Type': 'application/json'},
+        );
+      }
+
+      // Add user to organization
+      final success = await DatabaseManagers.instance.addUserToOrganization(
+        organizationId: organizationId,
+        userId: userId,
+      );
+
+      if (!success) {
+        return Response.internalServerError(
+          body: jsonEncode({'error': 'Failed to add user to organization'}),
+          headers: {'Content-Type': 'application/json'},
+        );
+      }
+
+      return Response.ok(
+        jsonEncode({
+          'message': 'User added to organization successfully',
+          'organizationId': organizationId,
+          'userId': userId,
+        }),
+        headers: {'Content-Type': 'application/json'},
+      );
+    } catch (e) {
+      return Response.internalServerError(
+        body: jsonEncode({'error': 'Failed to add member: $e'}),
         headers: {'Content-Type': 'application/json'},
       );
     }

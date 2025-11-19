@@ -150,9 +150,9 @@ class OrganizationMemberWithInfo {
 
   Map<String, dynamic> toJson() {
     return {
-      'user': user.toMap(),
-      if (information != null) 'information': information!.toMap(),
-      if (joinedAt != null) 'joined_at': joinedAt!.toIso8601String(),
+      'id': user.uuid,
+      'information': information!.toMap(),
+      'joined_at': joinedAt!.toIso8601String(),
     };
   }
 }

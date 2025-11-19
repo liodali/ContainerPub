@@ -7,6 +7,7 @@ import 'package:dart_cloud_backend/middleware/auth_middleware.dart';
 Router createRouter() {
   final router = Router();
 
+  router.userRoutes();
   // Health check
   router.get('/health', (Request request) {
     return Response.ok('OK');
@@ -15,7 +16,6 @@ Router createRouter() {
   // Auth routes
   router.post('/api/auth/login', AuthHandler.login);
   router.post('/api/auth/register', AuthHandler.register);
-  router.post('/api/auth/onboarding', AuthHandler.onboarding);
 
   // Function routes (protected)
   router.post(
@@ -81,4 +81,15 @@ Router createRouter() {
   });
 
   return router;
+}
+
+extension ExtUserRouter on Router {
+  void userRoutes() {
+    post('/api/user/onboarding', AuthHandler.onboarding);
+    get('/api/user/<id>/organization/', AuthHandler.getOrganizationbyUser);
+    patch('/api/user/<id>/organization/', AuthHandler.patchOrganizationbyUser);
+    post('/api/user/organization', AuthHandler.createOrganization);
+    post('/api/user/upgrade', AuthHandler.upgrade);
+    post('/api/user/add-member', AuthHandler.addMember);
+  }
 }

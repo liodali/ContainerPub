@@ -63,8 +63,7 @@ class UserInformation extends Entity {
   @override
   Map<String, dynamic> toMap() {
     return {
-      if (id != null) 'id': id,
-      if (uuid != null) 'uuid': uuid,
+      'uuid': uuid,
       'first_name': firstName,
       'last_name': lastName,
       'phone_number': phoneNumber ?? '',
@@ -74,7 +73,6 @@ class UserInformation extends Entity {
       'zip_code': zipCode ?? '',
       'avatar': avatar ?? '',
       'role': role.value,
-      'user_id': userId,
     };
   }
 }

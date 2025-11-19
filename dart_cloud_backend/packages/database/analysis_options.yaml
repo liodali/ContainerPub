@@ -30,3 +30,4 @@ include: package:lints/recommended.yaml
 # https://dart.dev/guides/language/analysis-options
 formatter:
   trailing_commas: preserve
+  line_length: 90
