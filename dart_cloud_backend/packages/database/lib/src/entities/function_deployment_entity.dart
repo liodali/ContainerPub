@@ -32,6 +32,21 @@ class FunctionDeploymentEntity extends Entity {
   @override
   Map<String, dynamic> toMap() {
     return {
+      if (uuid != null) 'uuid': uuid,
+      if (functionId != null) 'function_id': functionId,
+      'version': version,
+      'image_tag': imageTag,
+      's3_key': s3Key,
+      if (status != null) 'status': status,
+      if (isActive != null) 'is_active': isActive,
+      if (buildLogs != null) 'build_logs': buildLogs,
+      if (deployedAt != null) 'deployed_at': deployedAt,
+    };
+  }
+
+  @override
+  Map<String, dynamic> toDBMap() {
+    return {
       if (id != null) 'id': id,
       if (uuid != null) 'uuid': uuid,
       if (functionId != null) 'function_id': functionId,

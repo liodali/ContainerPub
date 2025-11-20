@@ -125,8 +125,7 @@ class AuthHandler {
           role == null) {
         return Response.badRequest(
           body: jsonEncode({
-            'error':
-                'User ID, name, last name, phone number, country, city, address, zip code, avatar, and role are required',
+            'error': 'Missing required fields',
           }),
           headers: {'Content-Type': 'application/json'},
         );
@@ -143,7 +142,7 @@ class AuthHandler {
           zipCode: zipCode,
           avatar: avatar,
           role: Role.fromString(role),
-        ).toMap(),
+        ).toDBMap(),
       );
 
       return Response.ok(
@@ -321,7 +320,7 @@ class AuthHandler {
         Organization(
           name: name,
           ownerId: userId,
-        ).toMap(),
+        ).toDBMap(),
       );
 
       if (org == null) {

@@ -379,7 +379,7 @@ void main() {
         passwordHash: 'hashed_password',
       );
 
-      final map = user.toMap();
+      final map = user.toDBMap();
       final builder = QueryBuilder().table('users');
       final sql = builder.buildInsert(map);
 
@@ -394,7 +394,7 @@ void main() {
         status: 'active',
       );
 
-      final map = function.toMap();
+      final map = function.toDBMap();
       final builder = QueryBuilder().table('functions').where('id', 123);
 
       final sql = builder.buildUpdate(map);

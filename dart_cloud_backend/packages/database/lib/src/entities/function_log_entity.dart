@@ -24,12 +24,23 @@ class FunctionLogEntity extends Entity {
   @override
   Map<String, dynamic> toMap() {
     return {
-      if (id != null) 'id': id,
       if (uuid != null) 'uuid': uuid,
       if (functionId != null) 'function_id': functionId,
       'level': level,
       'message': message,
       if (timestamp != null) 'timestamp': timestamp,
+    };
+  }
+
+  @override
+  Map<String, dynamic> toDBMap() {
+    return {
+      'id': id,
+      'uuid': uuid,
+      'function_id': functionId,
+      'level': level,
+      'message': message,
+      'timestamp': timestamp,
     };
   }
 

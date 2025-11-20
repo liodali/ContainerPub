@@ -30,6 +30,21 @@ class FunctionEntity extends Entity {
   @override
   Map<String, dynamic> toMap() {
     return {
+      if (uuid != null) 'uuid': uuid,
+      if (userId != null) 'user_id': userId,
+      'name': name,
+      if (status != null) 'status': status,
+      if (activeDeploymentId != null)
+        'active_deployment_id': activeDeploymentId,
+      if (analysisResult != null) 'analysis_result': analysisResult,
+      if (createdAt != null) 'created_at': createdAt,
+      if (updatedAt != null) 'updated_at': updatedAt,
+    };
+  }
+
+  @override
+  Map<String, dynamic> toDBMap() {
+    return {
       if (id != null) 'id': id,
       if (uuid != null) 'uuid': uuid,
       if (userId != null) 'user_id': userId,

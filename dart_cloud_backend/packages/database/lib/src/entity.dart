@@ -3,8 +3,11 @@ abstract class Entity {
   /// Get the table name for this entity
   String get tableName;
 
-  /// Convert entity to a map for database operations
+  /// Convert entity to a map for dto operations
   Map<String, dynamic> toMap();
+
+  /// Convert entity to a map for database operations
+  Map<String, dynamic> toDBMap();
 
   /// Create entity from database row
   static T fromMap<T extends Entity>(Map<String, dynamic> map) {

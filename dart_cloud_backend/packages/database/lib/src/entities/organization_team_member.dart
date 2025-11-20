@@ -28,10 +28,19 @@ class OrganizationTeamMember extends Entity {
   @override
   Map<String, dynamic> toMap() {
     return {
-      if (id != null) 'id': id,
       'team_id': teamId,
       'user_id': userId,
       if (joinedAt != null) 'joined_at': joinedAt!.toIso8601String(),
+    };
+  }
+
+  @override
+  Map<String, dynamic> toDBMap() {
+    return {
+      'id': id,
+      'team_id': teamId,
+      'user_id': userId,
+      'joined_at': joinedAt,
     };
   }
 }

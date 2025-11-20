@@ -26,6 +26,18 @@ class FunctionInvocationEntity extends Entity {
   @override
   Map<String, dynamic> toMap() {
     return {
+      if (uuid != null) 'uuid': uuid,
+      if (functionId != null) 'function_id': functionId,
+      'status': status,
+      if (durationMs != null) 'duration_ms': durationMs,
+      if (error != null) 'error': error,
+      if (timestamp != null) 'timestamp': timestamp,
+    };
+  }
+
+  @override
+  Map<String, dynamic> toDBMap() {
+    return {
       if (id != null) 'id': id,
       if (uuid != null) 'uuid': uuid,
       if (functionId != null) 'function_id': functionId,

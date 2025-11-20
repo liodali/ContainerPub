@@ -26,8 +26,20 @@ class UserEntity extends Entity {
   @override
   Map<String, dynamic> toMap() {
     return {
-      'uuid': uuid,
+      if (uuid != null) 'uuid': uuid,
       'email': email,
+    };
+  }
+
+  @override
+  Map<String, dynamic> toDBMap() {
+    return {
+      if (id != null) 'id': id,
+      if (uuid != null) 'uuid': uuid,
+      'email': email,
+      if (passwordHash != null) 'password_hash': passwordHash,
+      if (createdAt != null) 'created_at': createdAt,
+      if (updatedAt != null) 'updated_at': updatedAt,
     };
   }
 

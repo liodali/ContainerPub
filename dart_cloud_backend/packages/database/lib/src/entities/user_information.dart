@@ -75,4 +75,20 @@ class UserInformation extends Entity {
       'role': role.value,
     };
   }
+
+  @override
+  Map<String, dynamic> toDBMap() {
+    return {
+      'uuid': uuid,
+      'first_name': firstName,
+      'last_name': lastName,
+      'phone_number': phoneNumber ?? '',
+      'country': country ?? '',
+      'city': city ?? '',
+      'address': address ?? '',
+      'zip_code': zipCode ?? '',
+      'avatar': avatar ?? '',
+      'role': role.value,
+    };
+  }
 }

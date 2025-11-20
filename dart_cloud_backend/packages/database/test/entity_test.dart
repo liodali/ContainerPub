@@ -22,7 +22,7 @@ void main() {
         updatedAt: DateTime(2024, 1, 2),
       );
 
-      final map = user.toMap();
+      final map = user.toDBMap();
 
       expect(map['id'], equals(1));
       expect(map['uuid'], equals('user-uuid'));
@@ -34,7 +34,7 @@ void main() {
 
     test('should convert to map with only required fields', () {
       final user = UserEntity(email: 'test@example.com');
-      final map = user.toMap();
+      final map = user.toDBMap();
 
       expect(map['email'], equals('test@example.com'));
       expect(map.containsKey('id'), isFalse);
@@ -96,7 +96,7 @@ void main() {
         updatedAt: DateTime(2024, 1, 2),
       );
 
-      final map = function.toMap();
+      final map = function.toDBMap();
 
       expect(map['id'], equals(1));
       expect(map['uuid'], equals('func-uuid'));
@@ -172,7 +172,7 @@ void main() {
         deployedAt: DateTime(2024, 1, 1),
       );
 
-      final map = deployment.toMap();
+      final map = deployment.toDBMap();
 
       expect(map['id'], equals(1));
       expect(map['uuid'], equals('deploy-uuid'));
@@ -225,7 +225,7 @@ void main() {
         timestamp: DateTime(2024, 1, 1),
       );
 
-      final map = log.toMap();
+      final map = log.toDBMap();
 
       expect(map['id'], equals(1));
       expect(map['uuid'], equals('log-uuid'));
@@ -270,7 +270,7 @@ void main() {
         timestamp: DateTime(2024, 1, 1),
       );
 
-      final map = invocation.toMap();
+      final map = invocation.toDBMap();
 
       expect(map['id'], equals(1));
       expect(map['uuid'], equals('inv-uuid'));
@@ -287,7 +287,7 @@ void main() {
         error: 'Connection timeout',
       );
 
-      final map = invocation.toMap();
+      final map = invocation.toDBMap();
 
       expect(map['status'], equals('error'));
       expect(map['error'], equals('Connection timeout'));
@@ -313,9 +313,9 @@ void main() {
   });
 
   group('Entity - Edge cases', () {
-    test('should handle null values in toMap', () {
+    test('should handle null values in toDBMap', () {
       final user = UserEntity(email: 'test@example.com');
-      final map = user.toMap();
+      final map = user.toDBMap();
 
       expect(map.containsKey('id'), isFalse);
       expect(map.containsKey('uuid'), isFalse);

@@ -34,6 +34,16 @@ class OrganizationMember extends Entity {
     };
   }
 
+  @override
+  Map<String, dynamic> toDBMap() {
+    return {
+      'id': id,
+      'organization_id': organizationId,
+      'user_id': userId,
+      'joined_at': joinedAt,
+    };
+  }
+
   OrganizationMember copyWith({
     int? id,
     String? organizationId,

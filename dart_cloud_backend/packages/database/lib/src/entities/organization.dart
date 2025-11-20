@@ -41,6 +41,19 @@ class Organization extends Entity {
     };
   }
 
+  @override
+  Map<String, dynamic> toDBMap() {
+    return {
+      'id': id,
+      'uuid': uuid,
+      'name': name,
+      'owner_id': ownerId,
+      'created_at': createdAt,
+      'updated_at': updatedAt,
+    };
+  }
+
+
   Organization copyWith({
     int? id,
     String? uuid,
