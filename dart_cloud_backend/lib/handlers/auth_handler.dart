@@ -146,20 +146,23 @@ class AuthHandler {
         );
       }
 
+      // Get refresh token from body
+      final body = jsonDecode(await request.readAsString()) as Map<String, dynamic>;
+      final refreshToken = body['refreshToken'] as String?;
+
+      if (refreshToken == null || refreshToken.isEmpty) {
+        return Response.badRequest(
+          body: jsonEncode({'error': 'Refresh token is required for logout'}),
+          headers: {'Content-Type': 'application/json'},
+        );
+      }
+
       // Blacklist access token
       await TokenService.instance.blacklistToken(token);
 
-      // Also try to get and blacklist refresh token from body if provided
-      try {
-        final body = jsonDecode(await request.readAsString()) as Map<String, dynamic>;
-        final refreshToken = body['refreshToken'] as String?;
-        if (refreshToken != null) {
-          await TokenService.instance.blacklistToken(refreshToken);
-          await TokenService.instance.removeRefreshToken(refreshToken);
-        }
-      } catch (_) {
-        // If no body or invalid JSON, just continue
-      }
+      // Blacklist refresh token and remove it from storage
+      await TokenService.instance.blacklistToken(refreshToken);
+      await TokenService.instance.removeRefreshToken(refreshToken);
 
       return Response.ok(
         jsonEncode({'message': 'Logout successful'}),
