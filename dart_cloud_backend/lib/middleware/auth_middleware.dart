@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:dart_cloud_backend/services/token_service.dart';
 import 'package:shelf/shelf.dart';
 import 'package:dart_jsonwebtoken/dart_jsonwebtoken.dart';
 import 'package:dart_cloud_backend/config/config.dart';
@@ -20,7 +21,12 @@ Middleware get authMiddleware {
       try {
         final jwt = JWT.verify(token, SecretKey(Config.jwtSecret));
         final userId = jwt.payload['userId'] as String;
-
+        if (!TokenService.instance.isTokenValid(token)) {
+          return Response.forbidden(
+            jsonEncode({'error': 'Invalid or expired token'}),
+            headers: {'Content-Type': 'application/json'},
+          );
+        }
         // Add userId to request context
         return await handler(request.change(context: {'userId': userId}));
       } catch (e) {

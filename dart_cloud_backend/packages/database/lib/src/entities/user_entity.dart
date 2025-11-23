@@ -46,7 +46,7 @@ class UserEntity extends Entity {
   static UserEntity fromMap(Map<String, dynamic> map) {
     return UserEntity(
       id: map['id'] as int?,
-      uuid: map['uuid']?.toString(),
+      uuid: map['uuid'],
       email: map['email'] as String,
       passwordHash: map['password_hash'] as String?,
       createdAt: map['created_at'] as DateTime?,

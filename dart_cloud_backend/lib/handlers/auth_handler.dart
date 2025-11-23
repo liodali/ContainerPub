@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:dart_cloud_backend/services/token_service.dart';
 import 'package:shelf/shelf.dart';
 import 'package:bcrypt/bcrypt.dart';
 import 'package:dart_jsonwebtoken/dart_jsonwebtoken.dart';
@@ -23,12 +24,20 @@ class AuthHandler {
       final passwordHash = BCrypt.hashpw(password, BCrypt.gensalt());
 
       // Insert user
-      final result = await Database.connection.execute(
-        'INSERT INTO users (email, password_hash) VALUES (\$1, \$2) RETURNING id',
-        parameters: [email, passwordHash],
+      final userEntityAdded = await DatabaseManagers.users.insert(
+        UserEntity(
+          email: email,
+          passwordHash: passwordHash,
+        ).toDBMap(),
       );
 
-      final userId = result.first[0] as String;
+      final userId = userEntityAdded?.uuid;
+      if (userId == null) {
+        return Response.internalServerError(
+          body: jsonEncode({'error': 'Registration failed'}),
+          headers: {'Content-Type': 'application/json'},
+        );
+      }
 
       // Generate JWT
       final jwt = JWT({'userId': userId, 'email': email});
@@ -60,20 +69,18 @@ class AuthHandler {
       }
 
       // Find user
-      final result = await Database.connection.execute(
-        'SELECT id, password_hash FROM users WHERE email = \$1',
-        parameters: [email],
+      final userLogin = await DatabaseManagers.users.findOne(
+        where: {'email': email},
       );
-
-      if (result.isEmpty) {
+      if (userLogin == null) {
         return Response.forbidden(
           jsonEncode({'error': 'Invalid credentials'}),
           headers: {'Content-Type': 'application/json'},
         );
       }
 
-      final userId = result.first[0] as String;
-      final passwordHash = result.first[1] as String;
+      final userId = userLogin.uuid!;
+      final passwordHash = userLogin.passwordHash!;
 
       // Verify password
       if (!BCrypt.checkpw(password, passwordHash)) {
@@ -86,14 +93,41 @@ class AuthHandler {
       // Generate JWT
       final jwt = JWT({'userId': userId, 'email': email});
       final token = jwt.sign(SecretKey(Config.jwtSecret));
-
+      TokenService.instance.addAuthToken(
+        token: token,
+        userId: userId,
+      );
       return Response.ok(
-        jsonEncode({'token': token, 'userId': userId}),
+        jsonEncode({'token': token}),
+        headers: {'Content-Type': 'application/json'},
+      );
+    } catch (e,trace) {
+      print(e);
+      print(trace);
+      return Response.internalServerError(
+        body: jsonEncode({'error': 'Login failed'}),
+        headers: {'Content-Type': 'application/json'},
+      );
+    }
+  }
+
+  static Future<Response> logout(Request request) async {
+    try {
+      final token = request.headers['authorization']?.split('Bearer ').last;
+      if (token == null) {
+        return Response.unauthorized(
+          jsonEncode({'error': 'No token provided'}),
+          headers: {'Content-Type': 'application/json'},
+        );
+      }
+      TokenService.instance.blacklistToken(token);
+      return Response.ok(
+        jsonEncode({'message': 'Logout successful'}),
         headers: {'Content-Type': 'application/json'},
       );
     } catch (e) {
       return Response.internalServerError(
-        body: jsonEncode({'error': 'Login failed: $e'}),
+        body: jsonEncode({'error': 'Logout failed'}),
         headers: {'Content-Type': 'application/json'},
       );
     }

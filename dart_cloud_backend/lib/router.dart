@@ -13,9 +13,6 @@ Router createRouter() {
     return Response.ok('OK');
   });
 
-  // Auth routes
-  router.post('/api/auth/login', AuthHandler.login);
-  router.post('/api/auth/register', AuthHandler.register);
 
   // Function routes (protected)
   router.post(
@@ -82,7 +79,14 @@ Router createRouter() {
 
   return router;
 }
-
+extension ExtAuthRouter on Router {
+  void authRoutes() {
+    // Auth routes
+    post('/api/auth/login', AuthHandler.login);
+    post('/api/auth/register', AuthHandler.register);
+    post('/api/auth/logout', AuthHandler.logout);
+  }
+}
 extension ExtUserRouter on Router {
   void userRoutes() {
     post('/api/user/onboarding', AuthHandler.onboarding);

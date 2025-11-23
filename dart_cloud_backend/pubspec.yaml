@@ -18,6 +18,7 @@ dependencies:
   dart_jsonwebtoken: ^3.3.1
   dotenv: ^4.2.0
   analyzer: ^9.0.0
+  hive_ce: ^2.15.1
   database: 
     path: packages/database
   s3_client_dart:

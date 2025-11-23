@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:dart_cloud_backend/services/s3_service.dart' show S3Service;
+import 'package:dart_cloud_backend/services/token_service.dart';
 import 'package:s3_client_dart/s3_client_dart.dart' show S3Configuration;
 import 'package:shelf/shelf.dart';
 import 'package:shelf/shelf_io.dart' as shelf_io;
@@ -10,7 +11,7 @@ import 'package:dart_cloud_backend/config/config.dart';
 void main() async {
   // Load configuration
   await Config.load();
-
+  await TokenService.instance.initialize();
   // Initialize database
   await Database.initialize(Config.databaseUrl);
   print('Database initialized');
