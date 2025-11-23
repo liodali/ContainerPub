@@ -7,12 +7,12 @@ import 'package:dart_cloud_backend/middleware/auth_middleware.dart';
 Router createRouter() {
   final router = Router();
 
+  router.authRoutes();
   router.userRoutes();
   // Health check
   router.get('/health', (Request request) {
     return Response.ok('OK');
   });
-
 
   // Function routes (protected)
   router.post(
@@ -79,14 +79,17 @@ Router createRouter() {
 
   return router;
 }
+
 extension ExtAuthRouter on Router {
   void authRoutes() {
     // Auth routes
     post('/api/auth/login', AuthHandler.login);
     post('/api/auth/register', AuthHandler.register);
     post('/api/auth/logout', AuthHandler.logout);
+    post('/api/auth/refresh', AuthHandler.refreshToken);
   }
 }
+
 extension ExtUserRouter on Router {
   void userRoutes() {
     post('/api/user/onboarding', AuthHandler.onboarding);

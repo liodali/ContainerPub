@@ -39,12 +39,8 @@ class AuthHandler {
         );
       }
 
-      // Generate JWT
-      final jwt = JWT({'userId': userId, 'email': email});
-      final token = jwt.sign(SecretKey(Config.jwtSecret));
-
       return Response.ok(
-        jsonEncode({'token': token, 'userId': userId}),
+        jsonEncode({'message': 'Account created successfully'}),
         headers: {'Content-Type': 'application/json'},
       );
     } catch (e) {
@@ -90,18 +86,47 @@ class AuthHandler {
         );
       }
 
-      // Generate JWT
-      final jwt = JWT({'userId': userId, 'email': email});
-      final token = jwt.sign(SecretKey(Config.jwtSecret));
-      TokenService.instance.addAuthToken(
-        token: token,
+      // Generate access token (short-lived)
+      final accessJwt = JWT({
+        'userId': userId,
+        'email': email,
+        'type': 'access',
+      });
+      final accessToken = accessJwt.sign(
+        SecretKey(Config.jwtSecret),
+        expiresIn: Duration(hours: 1), // Access token expires in 1 hour
+      );
+
+      // Generate refresh token (long-lived)
+      final refreshJwt = JWT({
+        'userId': userId,
+        'email': email,
+        'type': 'refresh',
+      });
+      final refreshToken = refreshJwt.sign(
+        SecretKey(Config.jwtSecret),
+        expiresIn: Duration(days: 30), // Refresh token expires in 30 days
+      );
+
+      // Store both tokens and link them
+      await TokenService.instance.addAuthToken(
+        token: accessToken,
         userId: userId,
       );
+      await TokenService.instance.addRefreshToken(
+        refreshToken: refreshToken,
+        userId: userId,
+        accessToken: accessToken,
+      );
+
       return Response.ok(
-        jsonEncode({'token': token}),
+        jsonEncode({
+          'accessToken': accessToken,
+          'refreshToken': refreshToken,
+        }),
         headers: {'Content-Type': 'application/json'},
       );
-    } catch (e,trace) {
+    } catch (e, trace) {
       print(e);
       print(trace);
       return Response.internalServerError(
@@ -120,7 +145,22 @@ class AuthHandler {
           headers: {'Content-Type': 'application/json'},
         );
       }
-      TokenService.instance.blacklistToken(token);
+
+      // Blacklist access token
+      await TokenService.instance.blacklistToken(token);
+
+      // Also try to get and blacklist refresh token from body if provided
+      try {
+        final body = jsonDecode(await request.readAsString()) as Map<String, dynamic>;
+        final refreshToken = body['refreshToken'] as String?;
+        if (refreshToken != null) {
+          await TokenService.instance.blacklistToken(refreshToken);
+          await TokenService.instance.removeRefreshToken(refreshToken);
+        }
+      } catch (_) {
+        // If no body or invalid JSON, just continue
+      }
+
       return Response.ok(
         jsonEncode({'message': 'Logout successful'}),
         headers: {'Content-Type': 'application/json'},
@@ -128,6 +168,77 @@ class AuthHandler {
     } catch (e) {
       return Response.internalServerError(
         body: jsonEncode({'error': 'Logout failed'}),
+        headers: {'Content-Type': 'application/json'},
+      );
+    }
+  }
+
+  static Future<Response> refreshToken(Request request) async {
+    try {
+      final body = jsonDecode(await request.readAsString()) as Map<String, dynamic>;
+      final refreshToken = body['refreshToken'] as String?;
+
+      if (refreshToken == null) {
+        return Response.badRequest(
+          body: jsonEncode({'error': 'Refresh token is required'}),
+          headers: {'Content-Type': 'application/json'},
+        );
+      }
+
+      // Verify refresh token
+      final jwt = JWT.verify(refreshToken, SecretKey(Config.jwtSecret));
+      final userId = jwt.payload['userId'] as String;
+      final email = jwt.payload['email'] as String;
+      final tokenType = jwt.payload['type'] as String?;
+
+      // Ensure it's a refresh token
+      if (tokenType != 'refresh') {
+        return Response.forbidden(
+          jsonEncode({'error': 'Invalid token type'}),
+          headers: {'Content-Type': 'application/json'},
+        );
+      }
+
+      // Check if refresh token is valid in storage
+      if (!TokenService.instance.isRefreshTokenValid(refreshToken)) {
+        return Response.forbidden(
+          jsonEncode({'error': 'Invalid or expired refresh token'}),
+          headers: {'Content-Type': 'application/json'},
+        );
+      }
+
+      // Generate new access token
+      final newAccessJwt = JWT({
+        'userId': userId,
+        'email': email,
+        'type': 'access',
+      });
+      final newAccessToken = newAccessJwt.sign(
+        SecretKey(Config.jwtSecret),
+        expiresIn: Duration(hours: 1),
+      );
+
+      // Store new access token and update the link (blacklists old token)
+      await TokenService.instance.addAuthToken(
+        token: newAccessToken,
+        userId: userId,
+      );
+      await TokenService.instance.updateLinkedAccessToken(
+        refreshToken: refreshToken,
+        newAccessToken: newAccessToken,
+      );
+
+      return Response.ok(
+        jsonEncode({
+          'accessToken': newAccessToken,
+        }),
+        headers: {'Content-Type': 'application/json'},
+      );
+    } catch (e, trace) {
+      print(e);
+      print(trace);
+      return Response.internalServerError(
+        body: jsonEncode({'error': 'Token refresh failed'}),
         headers: {'Content-Type': 'application/json'},
       );
     }
