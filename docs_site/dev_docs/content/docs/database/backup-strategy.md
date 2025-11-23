@@ -681,10 +681,6 @@ VOLUME_RETENTION_DAYS=7 ./backup-volumes.sh
 ```
 
 ## 🔗 Additional Resources
-
-- [Backup Scripts Location](../../../dart_cloud_backend/deploy/backups/)
-- [Quick Start Guide](../../../dart_cloud_backend/deploy/backups/QUICKSTART.md)
-- [Architecture Documentation](../../../dart_cloud_backend/deploy/backups/BACKUP_ARCHITECTURE.md)
 - [PostgreSQL Backup Documentation](https://www.postgresql.org/docs/current/backup.html)
 - [Docker Volume Management](https://docs.docker.com/storage/volumes/)
 
@@ -695,7 +691,7 @@ For backup-related issues:
 1. Check the [Troubleshooting](#troubleshooting) section
 2. Review backup logs in `data/*.log`
 3. Check Docker logs: `docker-compose logs`
-4. Consult the [Architecture Documentation](./architecture.md)
+4. Consult the [Architecture Documentation](../architecture.md)
 
 ---
 

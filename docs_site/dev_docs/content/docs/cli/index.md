@@ -49,7 +49,7 @@ The `dart_cloud_cli` tool enables developers to:
 
 ## Installation
 
-```bash
+```dart
 cd dart_cloud_cli
 dart pub get
 dart pub global activate --source path .
@@ -57,7 +57,7 @@ dart pub global activate --source path .
 
 ## Quick Start
 
-```bash
+```dart
 # Login to platform
 dart_cloud login
 
@@ -153,7 +153,7 @@ dart_cloud logout
 
 Location: `~/.dart_cloud/config.json`
 
-```json
+```dart
 {
   "accessToken": "eyJhbGc...",
   "refreshToken": "eyJhbGc...",
@@ -165,7 +165,7 @@ Location: `~/.dart_cloud/config.json`
 
 Location: `.dart_tool/function_config.json`
 
-```json
+```dart
 {
   "function_name": "my_function",
   "function_id": "abc123xyz789",
@@ -177,7 +177,7 @@ Location: `.dart_tool/function_config.json`
 
 ### Deploy New Function
 
-```bash
+```dart
 mkdir my-function
 cd my-function
 dart create -t console-simple .
@@ -188,7 +188,7 @@ dart_cloud deploy .
 
 ### Update Existing Function
 
-```bash
+```dart
 cd my-function
 # Make changes to your function
 dart_cloud deploy .
@@ -196,13 +196,13 @@ dart_cloud deploy .
 
 ### Monitor Function
 
-```bash
+```dart
 dart_cloud logs <function-id> --follow
 ```
 
 ### Delete Function
 
-```bash
+```dart
 dart_cloud delete <function-id>
 ```
 

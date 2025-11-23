@@ -311,9 +311,9 @@ docker exec dart_cloud_postgres pg_isready -U dart_cloud
 ## 📚 Related Documentation
 
 - [Complete Backup Strategy](./backup-strategy.md) - Full documentation
-- [Architecture Overview](./architecture.md) - System architecture
+- [Architecture Overview](../architecture.md) - System architecture
 - [Database System](./database-system.md) - Database documentation
-- [Development Guide](./development.md) - Development workflows
+- [Development Guide](../development.md) - Development workflows
 
 ## 💡 Pro Tips
 

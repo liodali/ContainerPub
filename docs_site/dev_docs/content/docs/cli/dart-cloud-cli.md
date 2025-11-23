@@ -16,7 +16,7 @@ Command-line interface for deploying and managing Dart serverless functions.
 
 ### From Source
 
-```bash
+```dart
 cd dart_cloud_cli
 dart pub get
 dart pub global activate --source path .
@@ -28,7 +28,7 @@ Now you can use `dart_cloud` from anywhere.
 
 ### 1. Login
 
-```bash
+```dart
 dart_cloud login
 ```
 
@@ -41,7 +41,7 @@ Both tokens are securely stored in `~/.dart_cloud/config.json`.
 
 ### 2. Create a Function
 
-```bash
+```dart
 mkdir my-function
 cd my-function
 dart create -t console-simple .
@@ -49,7 +49,7 @@ dart create -t console-simple .
 
 ### 3. Initialize Function Config
 
-```bash
+```dart
 dart_cloud init
 ```
 
@@ -59,7 +59,7 @@ This creates a `.dart_tool/function_config.json` file that stores your function 
 
 Edit `pubspec.yaml`:
 
-```yaml
+```dart
 dependencies:
   dart_cloud_function: ^1.0.0
 ```
@@ -88,7 +88,7 @@ class MyFunction extends CloudDartFunction {
 
 ### 6. Deploy
 
-```bash
+```dart
 dart_cloud deploy ./my-function
 ```
 
@@ -98,7 +98,7 @@ dart_cloud deploy ./my-function
 
 Initialize function configuration in the current directory.
 
-```bash
+```dart
 dart_cloud init
 ```
 
@@ -126,7 +126,7 @@ This file is used as a cache for function metadata, allowing you to:
 
 Authenticate with the Dart Cloud platform.
 
-```bash
+```dart
 dart_cloud login
 ```
 
@@ -139,7 +139,7 @@ dart_cloud login
 
 **Token Storage:**
 
-```json
+```dart
 {
   "accessToken": "eyJhbGc...",
   "refreshToken": "eyJhbGc...",
@@ -151,7 +151,7 @@ dart_cloud login
 
 Logout from the platform and invalidate tokens.
 
-```bash
+```dart
 dart_cloud logout
 ```
 
@@ -166,7 +166,7 @@ dart_cloud logout
 
 Deploy a Dart function from a directory.
 
-```bash
+```dart
 dart_cloud deploy <path-to-function>
 ```
 
@@ -197,7 +197,7 @@ After successful deployment, the function ID is automatically cached in `.dart_t
 
 List all deployed functions.
 
-```bash
+```dart
 dart_cloud list
 ```
 
@@ -205,7 +205,7 @@ dart_cloud list
 
 View logs for a specific function.
 
-```bash
+```dart
 dart_cloud logs <function-id>
 ```
 
@@ -213,7 +213,7 @@ dart_cloud logs <function-id>
 
 Invoke a deployed function with optional data.
 
-```bash
+```dart
 dart_cloud invoke <function-id> [--data '{"key": "value"}']
 ```
 
@@ -221,7 +221,7 @@ dart_cloud invoke <function-id> [--data '{"key": "value"}']
 
 Delete a deployed function.
 
-```bash
+```dart
 dart_cloud delete <function-id>
 ```
 
@@ -229,7 +229,7 @@ dart_cloud delete <function-id>
 
 Show help information.
 
-```bash
+```dart
 dart_cloud help
 ```
 
@@ -237,7 +237,7 @@ dart_cloud help
 
 Show CLI version.
 
-```bash
+```dart
 dart_cloud version
 ```
 
@@ -314,7 +314,7 @@ The CLI performs comprehensive validation before deployment:
 
 The CLI configuration is stored at `~/.dart_cloud/config.json`:
 
-```json
+```dart
 {
   "accessToken": "your-access-token",
   "refreshToken": "your-refresh-token",
@@ -328,7 +328,7 @@ You can manually edit this file to change the server URL.
 
 Each function directory contains a `.dart_tool/function_config.json` file:
 
-```json
+```dart
 {
   "function_name": "my_function",
   "function_id": "abc123xyz789",
@@ -401,7 +401,7 @@ class ProcessorFunction extends CloudDartFunction {
 
 ### Authentication Issues
 
-```bash
+```dart
 dart_cloud login
 ```
 
@@ -409,7 +409,7 @@ dart_cloud login
 
 The CLI automatically refreshes expired access tokens. If refresh fails, login again:
 
-```bash
+```dart
 dart_cloud logout
 dart_cloud login
 ```
@@ -418,7 +418,7 @@ dart_cloud login
 
 Remove unnecessary files:
 
-```bash
+```dart
 rm -rf .git .dart_tool build node_modules
 ```
 

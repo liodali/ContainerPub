@@ -115,7 +115,7 @@ Logout and invalidate tokens.
 
 **Headers:**
 
-```
+```dart
 Authorization: Bearer <access-token>
 ```
 

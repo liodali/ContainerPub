@@ -48,7 +48,7 @@ Encrypted token storage and management:
 
 ## Architecture Diagram
 
-```
+```dart
 ┌─────────────────────────────────────────────┐
 │         Developer Machine                   │
 │  ┌──────────────────────────────────────┐  │
@@ -116,7 +116,7 @@ ContainerPub uses a dual-token authentication system:
 
 ### Authentication Flow
 
-```
+```dart
 ┌──────────┐                ┌──────────┐
 │  Client  │                │  Backend │
 └────┬─────┘                └────┬─────┘
@@ -150,7 +150,7 @@ ContainerPub uses a dual-token authentication system:
 
 ### Token Refresh Flow
 
-```
+```dart
 ┌──────────┐                ┌──────────┐
 │  Client  │                │  Backend │
 └────┬─────┘                └────┬─────┘
@@ -186,7 +186,7 @@ ContainerPub uses a dual-token authentication system:
 
 ### Logout Flow
 
-```
+```dart
 ┌──────────┐                ┌──────────┐
 │  Client  │                │  Backend │
 └────┬─────┘                └────┬─────┘
@@ -261,25 +261,25 @@ ContainerPub uses a dual-token authentication system:
 
 ### 1. Function Upload
 
-```
+```dart
 Developer → CLI → API Server → Storage
 ```
 
 ### 2. Image Building
 
-```
+```dart
 Storage → Extract → Build Image → Podman Registry
 ```
 
 ### 3. Function Execution
 
-```
+```dart
 API Request → Scheduler → Podman Container → Response
 ```
 
 ### 4. Monitoring
 
-```
+```dart
 Container → Metrics Collector → Database → Dashboard
 ```
 
@@ -353,7 +353,7 @@ Container → Metrics Collector → Database → Dashboard
 
 ### Users Table
 
-```sql
+```dart
 CREATE TABLE users (
   id UUID PRIMARY KEY,
   email VARCHAR(255) UNIQUE NOT NULL,
@@ -365,7 +365,7 @@ CREATE TABLE users (
 
 ### Functions Table
 
-```sql
+```dart
 CREATE TABLE functions (
   id UUID PRIMARY KEY,
   name VARCHAR(255),
@@ -379,7 +379,7 @@ CREATE TABLE functions (
 
 ### Executions Table
 
-```sql
+```dart
 CREATE TABLE executions (
   id UUID PRIMARY KEY,
   function_id UUID REFERENCES functions(id),

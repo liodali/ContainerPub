@@ -59,7 +59,7 @@ The `dart_cloud_backend` is the core platform that:
 
 ### System Components
 
-```
+```dart
 ┌─────────────────────────────────────────────┐
 │    ContainerPub Backend Server              │
 │  ┌──────────────────────────────────────┐  │
@@ -116,7 +116,7 @@ The `dart_cloud_backend` is the core platform that:
 
 ### Token Flow
 
-```
+```dart
 Login → Access Token (1h) + Refresh Token (30d)
   ↓
 API Requests → Validate Access Token
@@ -207,7 +207,7 @@ await TokenService.instance.updateLinkedAccessToken(
 
 ### Users Table
 
-```sql
+```dart
 CREATE TABLE users (
   id UUID PRIMARY KEY,
   email VARCHAR(255) UNIQUE NOT NULL,
@@ -219,7 +219,7 @@ CREATE TABLE users (
 
 ### Functions Table
 
-```sql
+```dart
 CREATE TABLE functions (
   id UUID PRIMARY KEY,
   name VARCHAR(255),
@@ -233,7 +233,7 @@ CREATE TABLE functions (
 
 ### Executions Table
 
-```sql
+```dart
 CREATE TABLE executions (
   id UUID PRIMARY KEY,
   function_id UUID REFERENCES functions(id),
@@ -340,7 +340,7 @@ CREATE TABLE executions (
 
 ### Running
 
-```bash
+```dart
 cd dart_cloud_backend
 dart pub get
 dart run bin/server.dart
@@ -350,7 +350,7 @@ dart run bin/server.dart
 
 ### Project Structure
 
-```
+```dart
 dart_cloud_backend/
 ├── bin/
 │   └── server.dart          # Entry point
