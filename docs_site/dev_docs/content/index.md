@@ -10,44 +10,48 @@ Welcome to the **ContainerPub** development and architecture documentation. This
 ## 📚 Documentation Categories
 
 ### Dart Cloud Functions
+
 Learn how to develop and deploy Dart serverless functions.
 
-- **[dart_cloud_function Package](./docs/dart-cloud-function.md)** - Function package API and usage
-- **[dart_cloud_cli](./docs/dart-cloud-cli.md)** - CLI for deploying functions
-- **[Analyzer Rules](../../dart_cloud_cli/docs/ANALYZER_RULES.md)** - Validation and security rules
-- **[Deployment Config](../../dart_cloud_cli/docs/DEPLOYMENT_CONFIG.md)** - Configuration and restrictions
+- **[CLI Overview](./docs/cli)** - CLI documentation overview
+- **[dart_cloud_cli](./docs/cli/dart-cloud-cli)** - CLI for deploying functions
+- **[dart_cloud_function Package](./docs/cli/dart-cloud-function)** - Function package API and usage
 
 ### Development
+
 Learn how to develop, build, and deploy Dart functions with ContainerPub.
 
-- **Getting Started** - Installation and quick start guide
-- **CLI Commands** - Complete CLI reference
-- **Build Process** - Understanding the build pipeline
-- **Contributing** - Contributing guidelines
+- **[Development Guide](./docs/development)** - Installation and quick start guide
+- **[CLI Commands](./docs/cli/dart-cloud-cli)** - Complete CLI reference
+- **[Function Package](./docs/cli/dart-cloud-function)** - Function development guide
 
 ### Architecture
+
 Understand the system design and architecture of ContainerPub.
 
-- **[System Overview](./docs/architecture.md)** - High-level architecture overview
-- **[Database System](./docs/database-system.md)** - Database design and structure
-- **Security Model** - Security architecture and best practices
-- **Deployment** - Deployment architecture and infrastructure
+- **[Backend Overview](./docs/backend)** - Backend documentation overview
+- **[System Architecture](./docs/backend/architecture)** - High-level architecture overview
+- **[API Reference](./docs/backend/api-reference)** - Complete API documentation
+- **[Database System](./docs/database/database-system)** - Database design and structure
 
-### Operations
-Learn how to operate and maintain ContainerPub in production.
+### Database & Operations
 
-- **[Backup Strategy](./docs/backup-strategy.md)** - Backup, replication, and disaster recovery
-- **[Backup Quick Reference](./docs/backup-quick-reference.md)** - Fast reference for backup commands
-- **[Backup Workflows](./docs/backup-workflows.md)** - Visual guides and workflow diagrams
-- **Monitoring** - System monitoring and alerting
-- **Scaling** - Horizontal and vertical scaling strategies
-- **Maintenance** - Routine maintenance procedures
+Learn about database management, backup, and disaster recovery.
+
+- **[Database Overview](./docs/database)** - Database & backup documentation overview
+- **[Database System](./docs/database/database-system)** - Database design and structure
+- **[Database Reference](./docs/database/database-quick-reference)** - Quick reference guide
+- **[Backup Strategy](./docs/database/backup-strategy)** - Backup, replication, and disaster recovery
+- **[Backup Workflows](./docs/database/backup-workflows)** - Visual guides and workflow diagrams
+- **[Backup Quick Reference](./docs/database/backup-quick-reference)** - Fast reference for backup commands
 
 ## 🚀 Quick Links
 
-- **[Development Guide]({{links.quickstart}})** - Get started with ContainerPub
-- **[Architecture Overview]({{links.docs}})** - Understand the system design
-- **[GitHub Repository]({{links.website}})** - Source code and issues
+- **[Development Guide](./docs/development)** - Get started with ContainerPub
+- **[CLI Documentation](./docs/cli)** - CLI tools and usage
+- **[Backend Architecture](./docs/backend/architecture)** - Understand the system design
+- **[Database & Backup](./docs/database)** - Database and backup documentation
+- **[GitHub Repository](https://github.com/liodali/ContainerPub)** - Source code and issues
 
 ## 🎯 Key Features
 
@@ -72,7 +76,7 @@ This documentation covers:
 ## 🔗 Getting Help
 
 - Check the relevant documentation section
-- Visit the [GitHub Repository]({{links.website}})
+- Visit the [GitHub Repository](https://github.com/liodali/ContainerPub)
 - Review code examples and guides
 
 ---
