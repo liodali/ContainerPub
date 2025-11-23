@@ -123,7 +123,9 @@ if [ "$POSTGRES_RUNNING" = true ] || [ "$BACKEND_RUNNING" = true ]; then
             print_info "Rebuilding backend only..."
             $CONTAINER_COMPOSE_RUNTIME stop dart_cloud_backend 2>/dev/null || true
             $CONTAINER_COMPOSE_RUNTIME rm -f dart_cloud_backend 2>/dev/null || true
-            $CONTAINER_RUNTIME rmi $($CONTAINER_RUNTIME images -f "label=stage=builder-intermediate" -q)
+            $CONTAINER_RUNTIME rmi $($CONTAINER_RUNTIME images -f "label=stage=builder-intermediate" -q) 2>/dev/null || true
+            print_info "Removing backend image..."
+            $CONTAINER_RUNTIME rmi dart_cloud_backend 2>/dev/null || true
             ;;
         2)
             print_info "Rebuilding backend and removing its volume..."
@@ -131,6 +133,8 @@ if [ "$POSTGRES_RUNNING" = true ] || [ "$BACKEND_RUNNING" = true ]; then
             $CONTAINER_COMPOSE_RUNTIME rm -f dart_cloud_backend 2>/dev/null || true
             $CONTAINER_RUNTIME volume rm dart_cloud_backend_functions_data 2>/dev/null || true
             print_success "Backend volume removed"
+            print_info "Removing backend image..."
+            $CONTAINER_RUNTIME rmi dart_cloud_backend 2>/dev/null || true
             ;;
         3)
             print_warning "This will remove all data!"
@@ -215,7 +219,7 @@ fi
 print_header "Starting Services"
 
 print_info "Building and starting containers..."
-if ! $CONTAINER_COMPOSE_RUNTIME -p dart_cloud up  -d --build; then
+if ! $CONTAINER_COMPOSE_RUNTIME -p dart_cloud up  -d --force-recreate --build ; then
     print_error "Failed to start services"
     cleanup_on_failure
 fi
