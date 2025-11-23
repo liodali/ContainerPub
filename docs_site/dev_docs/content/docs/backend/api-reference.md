@@ -1,0 +1,462 @@
+---
+title: API Reference
+description: Backend API endpoints and authentication
+---
+
+# API Reference
+
+Complete reference for ContainerPub backend API endpoints.
+
+## Authentication
+
+### POST /api/auth/register
+
+Register a new user account.
+
+**Request:**
+
+```dart
+{
+  "email": "user@example.com",
+  "password": "securepassword"
+}
+```
+
+**Response:**
+
+```dart
+{
+  "message": "Account created successfully"
+}
+```
+
+**Notes:**
+
+- Password must meet security requirements
+- Email must be unique
+- No tokens returned - user must login after registration
+
+### POST /api/auth/login
+
+Authenticate and receive access and refresh tokens.
+
+**Request:**
+
+```dart
+{
+  "email": "user@example.com",
+  "password": "password"
+}
+```
+
+**Response:**
+
+```dart
+{
+  "accessToken": "eyJhbGc...",
+  "refreshToken": "eyJhbGc..."
+}
+```
+
+**Token Details:**
+
+- **Access Token**: Short-lived (1 hour), used for API requests
+- **Refresh Token**: Long-lived (30 days), used to obtain new access tokens
+
+**Authentication Flow:**
+
+1. User provides email and password
+2. Backend validates credentials against database
+3. Generates access token (1 hour expiry) with user info
+4. Generates refresh token (30 days expiry) with user info
+5. Stores both tokens in encrypted Hive database
+6. Links refresh token to access token for tracking
+7. Returns both tokens to client
+
+### POST /api/auth/refresh
+
+Refresh an expired access token using a refresh token.
+
+**Request:**
+
+```dart
+{
+  "refreshToken": "eyJhbGc..."
+}
+```
+
+**Response:**
+
+```dart
+{
+  "accessToken": "eyJhbGc..."
+}
+```
+
+**Refresh Flow:**
+
+1. Client sends refresh token
+2. Backend verifies refresh token signature and expiry
+3. Checks if refresh token is valid in storage (not blacklisted)
+4. Generates new access token (1 hour expiry)
+5. Blacklists old access token
+6. Updates link between refresh token and new access token
+7. Returns new access token
+
+**Error Responses:**
+
+- `400` - Refresh token missing
+- `403` - Invalid token type or expired/blacklisted token
+- `500` - Token refresh failed
+
+### POST /api/auth/logout
+
+Logout and invalidate tokens.
+
+**Headers:**
+
+```
+Authorization: Bearer <access-token>
+```
+
+**Request:**
+
+```dart
+{
+  "refreshToken": "eyJhbGc..."
+}
+```
+
+**Response:**
+
+```dart
+{
+  "message": "Logout successful"
+}
+```
+
+**Logout Flow:**
+
+1. Client sends access token (in header) and refresh token (in body)
+2. Backend validates access token
+3. Blacklists access token
+4. Blacklists refresh token
+5. Removes refresh token from storage
+6. Removes token link
+7. User must login again to access platform
+
+**Notes:**
+
+- Both access and refresh tokens are required
+- Tokens are permanently invalidated
+- Cannot be undone
+
+## Token Security
+
+### Token Storage
+
+- **Backend**: Tokens stored in encrypted Hive database
+- **Encryption**: HiveAesCipher with generated secure key
+- **Key Storage**: Encryption key stored in `data/key.txt`
+- **Blacklist**: Separate box for invalidated tokens
+
+### Token Validation
+
+```dart
+// Check if access token is valid
+bool isValid = TokenService.instance.isTokenValid(token);
+
+// Check if refresh token is valid
+bool isRefreshValid = TokenService.instance.isRefreshTokenValid(refreshToken);
+```
+
+### Token Linking
+
+- Each refresh token is linked to its current access token
+- When access token is refreshed, old token is blacklisted
+- Link is updated to point to new access token
+- Prevents reuse of old access tokens
+
+## Functions API
+
+### POST /api/functions/deploy
+
+Deploy a new function or update existing one.
+
+**Headers:**
+
+```dart
+Authorization: Bearer <access-token>
+Content-Type: multipart/form-data
+```
+
+**Form Data:**
+
+- `name` - Function name
+- `archive` - Function archive (tar.gz)
+- `env` - Environment variables (JSON)
+
+**Response:**
+
+```dart
+{
+  "id": "function-id",
+  "name": "my-function",
+  "status": "deployed",
+  "url": "https://api.containerpub.dev/functions/function-id"
+}
+```
+
+### GET /api/functions
+
+List all deployed functions for authenticated user.
+
+**Headers:**
+
+```dart
+Authorization: Bearer <access-token>
+```
+
+**Query Parameters:**
+
+- `limit` - Number of results (default: 10)
+- `offset` - Pagination offset (default: 0)
+
+**Response:**
+
+```dart
+{
+  "functions": [
+    {
+      "id": "function-id",
+      "name": "my-function",
+      "status": "active",
+      "created_at": "2025-01-01T00:00:00Z"
+    }
+  ],
+  "total": 1
+}
+```
+
+### GET /api/functions/:id
+
+Get function details.
+
+**Headers:**
+
+```dart
+Authorization: Bearer <access-token>
+```
+
+**Response:**
+
+```dart
+{
+  "id": "function-id",
+  "name": "my-function",
+  "status": "active",
+  "memory": 512,
+  "timeout": 30,
+  "created_at": "2025-01-01T00:00:00Z",
+  "updated_at": "2025-01-01T00:00:00Z"
+}
+```
+
+### DELETE /api/functions/:id
+
+Delete a function.
+
+**Headers:**
+
+```dart
+Authorization: Bearer <access-token>
+```
+
+**Response:**
+
+```dart
+{
+  "message": "Function deleted successfully"
+}
+```
+
+## Function Execution
+
+### POST /api/functions/:id/invoke
+
+Invoke a deployed function.
+
+**Headers:**
+
+```dart
+Authorization: Bearer <access-token>
+Content-Type: application/json
+```
+
+**Request:**
+
+```dart
+{
+  "body": {
+    "key": "value"
+  }
+}
+```
+
+**Response:**
+
+```dart
+{
+  "execution_id": "exec-id",
+  "status": "success",
+  "result": {
+    "output": "result"
+  },
+  "duration_ms": 150
+}
+```
+
+### GET /api/functions/:id/executions
+
+Get execution history for a function.
+
+**Headers:**
+
+```dart
+Authorization: Bearer <access-token>
+```
+
+**Query Parameters:**
+
+- `limit` - Number of results (default: 10)
+- `offset` - Pagination offset (default: 0)
+
+**Response:**
+
+```dart
+{
+  "executions": [
+    {
+      "id": "exec-id",
+      "status": "success",
+      "started_at": "2025-01-01T00:00:00Z",
+      "completed_at": "2025-01-01T00:00:05Z",
+      "duration_ms": 150
+    }
+  ],
+  "total": 1
+}
+```
+
+## Logs API
+
+### GET /api/functions/:id/logs
+
+Get function execution logs.
+
+**Headers:**
+
+```dart
+Authorization: Bearer <access-token>
+```
+
+**Query Parameters:**
+
+- `limit` - Number of lines (default: 100)
+- `since` - Timestamp filter (ISO 8601)
+
+**Response:**
+
+```dart
+{
+  "logs": [
+    {
+      "timestamp": "2025-01-01T00:00:00Z",
+      "level": "info",
+      "message": "Function started"
+    }
+  ]
+}
+```
+
+## Error Responses
+
+### 400 Bad Request
+
+```dart
+{
+  "error": "Invalid request",
+  "details": "Missing required field: name"
+}
+```
+
+### 401 Unauthorized
+
+```dart
+{
+  "error": "Unauthorized",
+  "details": "Invalid or expired token"
+}
+```
+
+**Common Causes:**
+
+- Missing Authorization header
+- Invalid access token
+- Expired access token (use refresh token to get new one)
+
+### 403 Forbidden
+
+```dart
+{
+  "error": "Forbidden",
+  "details": "Access denied"
+}
+```
+
+### 404 Not Found
+
+```dart
+{
+  "error": "Not found",
+  "details": "Function not found"
+}
+```
+
+### 500 Internal Server Error
+
+```dart
+{
+  "error": "Internal server error",
+  "details": "An unexpected error occurred"
+}
+```
+
+## Rate Limiting
+
+- **Requests per minute**: 60
+- **Requests per hour**: 1000
+- **Concurrent executions**: 10 per function
+
+## Health Check
+
+### GET /health
+
+Check backend server health.
+
+**Response:**
+
+```dart
+{
+  "status": "ok",
+  "timestamp": "2025-01-01T00:00:00Z"
+}
+```
+
+**No authentication required.**
+
+## Next Steps
+
+- Read [Architecture Overview](./architecture.md)
+- Check [CLI Documentation](../cli/dart-cloud-cli.md)
+- Explore [Development Guide](../development.md)

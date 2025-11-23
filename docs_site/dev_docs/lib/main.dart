@@ -19,7 +19,7 @@ import 'package:jaspr_content/theme.dart';
 // This file is generated automatically by Jaspr, do not remove or edit.
 import 'jaspr_options.dart';
 
-void main() {
+void main() async {
   // Initializes the server environment with the generated default options.
   Jaspr.initializeApp(
     options: defaultJasprOptions,
@@ -58,7 +58,7 @@ void main() {
           header: Header(
             title: 'ContainerPub',
             logo: '/images/logo.svg',
-            
+
             items: [
               // Enables switching between light and dark mode.
               ThemeToggle(),
@@ -75,22 +75,49 @@ void main() {
                   SidebarLink(text: "About", href: '/about'),
                 ],
               ),
-              // Documentation sections
+              // General Documentation
               SidebarGroup(
-                title: 'Documentation',
+                title: 'General',
                 links: [
                   SidebarLink(text: "Development", href: '/docs/development'),
-                  SidebarLink(text: "Architecture", href: '/docs/architecture'),
-                  SidebarLink(text: "cli", href: '/docs/dart-cloud-cli'),
-                  SidebarLink(text: "function", href: '/docs/dart-cloud-function'),
-                  SidebarLink(text: "database", href: '/docs/database-system'),
-                  SidebarLink(text: "database reference", href: '/docs/database-reference'),
-                  SidebarLink(text: "database implementation history", href: '/docs/database-implementation-tracking'),
-                  SidebarLink(text: "backup strategy", href: '/docs/backup-strategy'),
-                  SidebarLink(text: "backup workflows", href: '/docs/backup-workflows'),
-                  SidebarLink(text: "backup quick reference", href: '/docs/backup-quick-reference'),
-                  SidebarLink(text: "podman migration", href: '/docs/podman-migration'),
-                  SidebarLink(text: "api reference", href: '/docs/api-reference'),
+                ],
+              ),
+              // CLI Documentation
+              SidebarGroup(
+                title: 'CLI',
+                links: [
+                  SidebarLink(text: "CLI Overview", href: '/docs/cli'),
+                  SidebarLink(text: "dart_cloud CLI", href: '/docs/cli/dart-cloud-cli'),
+                  SidebarLink(text: "dart_cloud_function", href: '/docs/cli/dart-cloud-function'),
+                ],
+              ),
+              // Backend Documentation
+              SidebarGroup(
+                title: 'Backend',
+                links: [
+                  SidebarLink(text: "Backend Overview", href: '/docs/backend'),
+                  SidebarLink(text: "Architecture", href: '/docs/backend/architecture'),
+                  SidebarLink(text: "API Reference", href: '/docs/backend/api-reference'),
+                ],
+              ),
+              // Database & Backup Documentation
+              SidebarGroup(
+                title: 'Database & Backup',
+                links: [
+                  SidebarLink(text: "Database Overview", href: '/docs/database'),
+                  SidebarLink(text: "Database System", href: '/docs/database/database-system'),
+                  SidebarLink(text: "Database Reference", href: '/docs/database/database-quick-reference'),
+                  SidebarLink(text: "Implementation History", href: '/docs/database/database-implementation-tracking'),
+                  SidebarLink(text: "Backup Strategy", href: '/docs/database/backup-strategy'),
+                  SidebarLink(text: "Backup Workflows", href: '/docs/database/backup-workflows'),
+                  SidebarLink(text: "Backup Reference", href: '/docs/database/backup-quick-reference'),
+                ],
+              ),
+              // Migration Documentation
+              SidebarGroup(
+                title: 'Migration',
+                links: [
+                  SidebarLink(text: "Podman Migration", href: '/docs/podman-migration'),
                 ],
               ),
             ],

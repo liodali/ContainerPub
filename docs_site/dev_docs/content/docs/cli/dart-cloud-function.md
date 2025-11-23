@@ -5,6 +5,7 @@ Minimal foundation for serverless HTTP functions in Dart.
 ## Overview
 
 `dart_cloud_function` is a lightweight Dart package that provides:
+
 - Simple abstract base class for cloud functions
 - Lightweight request/response models
 - Automatic HTTP parsing and handling
@@ -56,15 +57,19 @@ class EchoFunction extends CloudDartFunction {
 When deploying with `dart_cloud_cli`, your function **must** follow these rules:
 
 ### ✓ Exactly One CloudDartFunction Class
+
 Your `main.dart` must contain exactly one class extending `CloudDartFunction`.
 
 ### ✓ @cloudFunction Annotation
+
 The class must be annotated with `@cloudFunction`.
 
 ### ✓ No main() Function
+
 Do not include a `main()` function. The platform handles invocation.
 
 ### Example - Valid ✅
+
 ```dart
 @cloudFunction
 class MyFunction extends CloudDartFunction {
@@ -79,6 +84,7 @@ class MyFunction extends CloudDartFunction {
 ```
 
 ### Example - Invalid ❌
+
 ```dart
 // Missing @cloudFunction annotation
 class MyFunction extends CloudDartFunction { ... }
@@ -96,6 +102,7 @@ void main() { }
 ## API Reference
 
 ### CloudDartFunction
+
 Abstract base class for cloud functions.
 
 ```dart
@@ -108,9 +115,11 @@ abstract class CloudDartFunction {
 ```
 
 ### CloudRequest
+
 Incoming HTTP request.
 
 **Properties:**
+
 - `String method` - HTTP method (GET, POST, etc.)
 - `String path` - Request path
 - `Map<String, String> headers` - HTTP headers
@@ -119,24 +128,29 @@ Incoming HTTP request.
 - `HttpRequest? raw` - Access to underlying HttpRequest
 
 ### CloudResponse
+
 HTTP response to send back.
 
 **Properties:**
+
 - `int statusCode` - HTTP status code (default: 200)
 - `Map<String, String> headers` - Response headers
 - `dynamic body` - Response body (String, List<int>, or JSON-encodable object)
 
 **Constructors:**
+
 - `CloudResponse(statusCode, headers, body)` - Full control
 - `CloudResponse.json(Object body, {statusCode, headers})` - JSON response
 - `CloudResponse.text(String body, {statusCode, headers})` - Text response
 
 **Methods:**
+
 - `void writeTo(HttpResponse res)` - Write response to HttpResponse
 
 ## Usage Examples
 
 ### Error Handling
+
 ```dart
 @cloudFunction
 class SafeFunction extends CloudDartFunction {
@@ -159,6 +173,7 @@ class SafeFunction extends CloudDartFunction {
 ```
 
 ### Custom Status & Headers
+
 ```dart
 return CloudResponse(
   statusCode: 201,
@@ -168,6 +183,7 @@ return CloudResponse(
 ```
 
 ### Binary Responses
+
 ```dart
 return CloudResponse(
   statusCode: 200,
@@ -177,6 +193,7 @@ return CloudResponse(
 ```
 
 ### Basic Routing
+
 ```dart
 switch (request.path) {
   case '/health':
@@ -189,12 +206,14 @@ switch (request.path) {
 ```
 
 ### Query Parameters
+
 ```dart
 final name = request.query['name'] ?? 'World';
 return CloudResponse.json({'message': 'Hello, $name!'});
 ```
 
 ### Request Body Parsing
+
 ```dart
 // Automatic JSON parsing
 final data = request.body as Map<String, dynamic>;
@@ -204,12 +223,14 @@ final id = data['id'] as int;
 ## Deployment Validation
 
 The `dart_cloud_cli` analyzer validates:
+
 - ✓ Exactly one `CloudDartFunction` class
 - ✓ `@cloudFunction` annotation present
 - ✓ No `main()` function
 - ✓ Security checks (no process execution, FFI, mirrors)
 
 **Common Errors:**
+
 - `No CloudDartFunction class found` → Add a class extending `CloudDartFunction`
 - `Missing @cloudFunction annotation` → Add `@cloudFunction` above your class
 - `main() function is not allowed` → Remove the `main()` function
@@ -229,7 +250,7 @@ test('echo function works', () async {
     ),
     env: {},
   );
-  
+
   expect(res.statusCode, 200);
   expect(res.body, isNotNull);
 });
@@ -265,6 +286,7 @@ dart_cloud deploy ./my-function
 ```
 
 The CLI will:
+
 1. Validate deployment restrictions (size, files, directories)
 2. Analyze code structure and security
 3. Create an archive
@@ -273,5 +295,5 @@ The CLI will:
 ## See Also
 
 - [dart_cloud_cli Documentation](./dart-cloud-cli.md) - CLI usage guide
-- [Analyzer Rules](../../../dart_cloud_cli/docs/ANALYZER_RULES.md) - Validation rules
-- [Deployment Config](../../../dart_cloud_cli/docs/DEPLOYMENT_CONFIG.md) - Configuration details
+- [Backend API Reference](../backend/api-reference.md) - API endpoints
+- [Backend Architecture](../backend/architecture.md) - System architecture
