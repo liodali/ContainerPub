@@ -172,6 +172,8 @@ extension on TokenService {
     if (file.existsSync()) {
       return _readFromFile(file);
     }
+    print("Generating new key...");
+    file.createSync(recursive: true);
     return _writeFromFile(file);
   }
 
