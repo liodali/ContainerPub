@@ -7,5 +7,10 @@ environment:
   sdk: ^3.0.0
 
 dependencies:
+  dart_cloud_function:
+     path: ../../tools/dart_packages/dart_cloud_function
+
+
+dev_dependencies:
   dart_cloud_cli:
      path: ../../dart_cloud_cli

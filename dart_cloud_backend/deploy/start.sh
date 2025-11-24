@@ -86,21 +86,85 @@ trap cleanup_on_failure ERR
 # Check if services are already running
 POSTGRES_RUNNING=false
 BACKEND_RUNNING=false
+POSTGRES_EXISTS=false
+BACKEND_EXISTS=false
+SKIP_BUILD=false
 
 print_info "Checking if services are already running..."
 
 if $CONTAINER_RUNTIME ps | grep -q "dart_cloud_postgres.*Up"; then
     POSTGRES_RUNNING=true
+    POSTGRES_EXISTS=true
     print_info "PostgreSQL is already running"
 fi
 
 if $CONTAINER_RUNTIME ps | grep -q "dart_cloud_backend.*Up"; then
     BACKEND_RUNNING=true
+    BACKEND_EXISTS=true
     print_info "Backend is already running"
 fi
 
+# Check if services exist but are stopped
+if $CONTAINER_RUNTIME ps -a | grep -q "dart_cloud_postgres"; then
+    POSTGRES_EXISTS=true
+fi
+
+if $CONTAINER_RUNTIME ps -a | grep -q "dart_cloud_backend"; then
+    BACKEND_EXISTS=true
+fi
+
+# If services exist but are stopped (not running), ask what to do
+if ([ "$POSTGRES_EXISTS" = true ] || [ "$BACKEND_EXISTS" = true ]) && [ "$POSTGRES_RUNNING" = false ] && [ "$BACKEND_RUNNING" = false ]; then
+    print_header "Services Exist But Are Stopped"
+    
+    echo -e "${BLUE}Current status:${NC}"
+    echo -e "  PostgreSQL: $([ "$POSTGRES_EXISTS" = true ] && echo "${YELLOW}Stopped${NC}" || echo "${RED}Not Found${NC}")"
+    echo -e "  Backend:    $([ "$BACKEND_EXISTS" = true ] && echo "${YELLOW}Stopped${NC}" || echo "${RED}Not Found${NC}")"
+    echo ""
+    
+    echo -e "${BLUE}What would you like to do?${NC}"
+    echo "  1) Start stopped services (without rebuilding)"
+    echo "  2) Rebuild backend only (keep PostgreSQL and data)"
+    echo "  3) Cancel and exit"
+    echo ""
+    
+    read -p "Enter your choice (1-3): " -n 1 -r
+    echo ""
+    
+    case $REPLY in
+        1)
+            print_info "Starting stopped services..."
+            if [ "$POSTGRES_EXISTS" = true ]; then
+                print_info "Starting PostgreSQL..."
+                $CONTAINER_COMPOSE_RUNTIME start postgres 2>/dev/null || true
+            fi
+            if [ "$BACKEND_EXISTS" = true ]; then
+                print_info "Starting Backend..."
+                $CONTAINER_COMPOSE_RUNTIME start backend-cloud 2>/dev/null || true
+            fi
+            print_success "Services started"
+            SKIP_BUILD=true
+            ;;
+        2)
+            print_info "Rebuilding backend only..."
+            $CONTAINER_COMPOSE_RUNTIME stop dart_cloud_backend 2>/dev/null || true
+            $CONTAINER_COMPOSE_RUNTIME rm -f dart_cloud_backend 2>/dev/null || true
+            $CONTAINER_RUNTIME rmi $($CONTAINER_RUNTIME images -f "label=stage=builder-intermediate" -q) 2>/dev/null || true
+            print_info "Removing backend image..."
+            $CONTAINER_RUNTIME rmi dart_cloud_backend 2>/dev/null || true
+            ;;
+        3)
+            print_info "Cancelled"
+            exit 0
+            ;;
+        *)
+            print_error "Invalid choice"
+            exit 1
+            ;;
+    esac
+
 # If services are running, ask what to do
-if [ "$POSTGRES_RUNNING" = true ] || [ "$BACKEND_RUNNING" = true ]; then
+elif [ "$POSTGRES_RUNNING" = true ] || [ "$BACKEND_RUNNING" = true ]; then
     print_header "Services Already Running"
     
     echo -e "${BLUE}Current status:${NC}"
@@ -109,25 +173,40 @@ if [ "$POSTGRES_RUNNING" = true ] || [ "$BACKEND_RUNNING" = true ]; then
     echo ""
     
     echo -e "${BLUE}What would you like to do?${NC}"
-    echo "  1) Rebuild backend only (keep PostgreSQL and data)"
-    echo "  2) Rebuild backend and remove its volume"
-    echo "  3) Remove everything (PostgreSQL + Backend + all volumes)"
-    echo "  4) Cancel and exit"
+    echo "  1) Start stopped services (without rebuilding)"
+    echo "  2) Rebuild backend only (keep PostgreSQL and data)"
+    echo "  3) Rebuild backend and remove its volume"
+    echo "  4) Remove everything (PostgreSQL + Backend + all volumes)"
+    echo "  5) Cancel and exit"
     echo ""
     
-    read -p "Enter your choice (1-4): " -n 1 -r
+    read -p "Enter your choice (1-5): " -n 1 -r
     echo ""
     
     case $REPLY in
         1)
+            print_info "Starting stopped services..."
+            if [ "$POSTGRES_RUNNING" = false ]; then
+                print_info "Starting PostgreSQL..."
+                $CONTAINER_COMPOSE_RUNTIME start postgres 2>/dev/null || true
+            fi
+            if [ "$BACKEND_RUNNING" = false ]; then
+                print_info "Starting Backend..."
+                $CONTAINER_COMPOSE_RUNTIME start backend-cloud 2>/dev/null || true
+            fi
+            print_success "Services started"
+            SKIP_BUILD=true
+            ;;
+        2)
             print_info "Rebuilding backend only..."
             $CONTAINER_COMPOSE_RUNTIME stop dart_cloud_backend 2>/dev/null || true
             $CONTAINER_COMPOSE_RUNTIME rm -f dart_cloud_backend 2>/dev/null || true
             $CONTAINER_RUNTIME rmi $($CONTAINER_RUNTIME images -f "label=stage=builder-intermediate" -q) 2>/dev/null || true
             print_info "Removing backend image..."
             $CONTAINER_RUNTIME rmi dart_cloud_backend 2>/dev/null || true
+            SKIP_BUILD=true
             ;;
-        2)
+        3)
             print_info "Rebuilding backend and removing its volume..."
             $CONTAINER_COMPOSE_RUNTIME stop dart_cloud_backend 2>/dev/null || true
             $CONTAINER_COMPOSE_RUNTIME rm -f dart_cloud_backend 2>/dev/null || true
@@ -135,8 +214,9 @@ if [ "$POSTGRES_RUNNING" = true ] || [ "$BACKEND_RUNNING" = true ]; then
             print_success "Backend volume removed"
             print_info "Removing backend image..."
             $CONTAINER_RUNTIME rmi dart_cloud_backend 2>/dev/null || true
+            SKIP_BUILD=true
             ;;
-        3)
+        4)
             print_warning "This will remove all data!"
             read -p "Are you sure? (y/N): " -n 1 -r
             echo ""
@@ -150,7 +230,7 @@ if [ "$POSTGRES_RUNNING" = true ] || [ "$BACKEND_RUNNING" = true ]; then
                 exit 0
             fi
             ;;
-        4)
+        5)
             print_info "Cancelled"
             exit 0
             ;;
@@ -214,16 +294,16 @@ if [ ! -f ../s3_client_dart.so ]; then
     fi
 fi
 
+if [ "$SKIP_BUILD" = false ]; then
+    # Start services
+    print_header "Starting Services"
 
-# Start services
-print_header "Starting Services"
-
-print_info "Building and starting containers..."
-if ! $CONTAINER_COMPOSE_RUNTIME -p dart_cloud up  -d --force-recreate --build ; then
-    print_error "Failed to start services"
-    cleanup_on_failure
+    print_info "Building and starting containers..."
+    if ! $CONTAINER_COMPOSE_RUNTIME -p dart_cloud up  -d --force-recreate --build ; then
+        print_error "Failed to start services"
+        cleanup_on_failure
+    fi
 fi
-
 # Wait for services to be healthy
 print_info "Waiting for services to be ready..."
 sleep 5

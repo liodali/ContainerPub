@@ -56,10 +56,10 @@ services:
       - dart_cloud_network
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:${PORT:-8080}/health"]
-      interval: 30s
+      interval: 120s
       timeout: 10s
       retries: 3
-      start_period: 40s
+      start_period: 60s
 
 volumes:
   postgres_data:

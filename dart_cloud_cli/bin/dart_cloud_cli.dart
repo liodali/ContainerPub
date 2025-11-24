@@ -11,7 +11,7 @@ import 'package:dart_cloud_cli/commands/init_command.dart';
 import 'package:dart_cloud_cli/services/cache.dart' show AuthCache;
 
 void main(List<String> arguments) async {
-  AuthCache.init();
+  await AuthCache.init();
   final parser = ArgParser()
     ..addFlag('help', abbr: 'h', negatable: false, help: 'Show help')
     ..addFlag('version', abbr: 'v', negatable: false, help: 'Show version');

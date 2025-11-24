@@ -39,10 +39,10 @@ mixin AuthCache {
     await authBox.clear();
   }
 
-  static void init() {
+  static Future<void> init() async {
     Hive.init(
       '~/.containerpub/cache',
     );
-    _authBox = Hive.box('auth');
+    _authBox = await Hive.openBox('auth');
   }
 }
