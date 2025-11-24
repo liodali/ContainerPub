@@ -1,4 +1,7 @@
+import 'dart:io';
+
 import 'package:dart_cloud_cli/common/extension.dart';
+import 'package:dotenv/dotenv.dart';
 import 'package:hive_ce/hive.dart';
 
 mixin AuthCache {
@@ -40,9 +43,34 @@ mixin AuthCache {
   }
 
   static Future<void> init() async {
+    String homeDir = "./";
+    bool isDevLocal = _loadEnvs();
+    homeDir = !isDevLocal ? _getHomeDir() : "./.dart_tool";
     Hive.init(
-      '~/.containerpub/cache',
+      '$homeDir/.containerpub/cache',
     );
     _authBox = await Hive.openBox('auth');
+  }
+
+  static Future<void> close() async {
+    await _authBox?.close();
+    await Hive.close();
+  }
+
+  static bool _loadEnvs() {
+    final dotEnv = DotEnv()..load(['.env']);
+    return dotEnv.getOrElse('isDevLocal', () => 'false') == 'true';
+  }
+
+  static String _getHomeDir() {
+    String homeDir = "./";
+    if (Platform.isWindows) {
+      // Windows uses USERPROFILE
+      homeDir = Platform.environment['USERPROFILE']!;
+    } else if (Platform.isLinux || Platform.isMacOS) {
+      // Linux and macOS use HOME
+      homeDir = Platform.environment['HOME']!;
+    }
+    return homeDir;
   }
 }

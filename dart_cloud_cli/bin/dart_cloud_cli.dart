@@ -11,10 +11,20 @@ import 'package:dart_cloud_cli/commands/init_command.dart';
 import 'package:dart_cloud_cli/services/cache.dart' show AuthCache;
 
 void main(List<String> arguments) async {
+  print(arguments);
+  print('welcome to dart_cloud_cli');
   await AuthCache.init();
   final parser = ArgParser()
     ..addFlag('help', abbr: 'h', negatable: false, help: 'Show help')
-    ..addFlag('version', abbr: 'v', negatable: false, help: 'Show version');
+    ..addFlag('version', abbr: 'v', negatable: false, help: 'Show version')
+    ..addCommand('init')
+    ..addCommand('login')
+    ..addCommand('logout')
+    ..addCommand('deploy')
+    ..addCommand('list')
+    ..addCommand('logs')
+    ..addCommand('delete')
+    ..addCommand('invoke');
 
   if (arguments.isEmpty) {
     printUsage();
@@ -22,9 +32,7 @@ void main(List<String> arguments) async {
   }
   final commandParsed = parser.parse(arguments);
   final command = commandParsed.command?.name;
-  ;
-  final commandArgs = commandParsed.arguments;
-
+  final commandArgs = commandParsed.command?.arguments ?? [];
   try {
     switch (command) {
       case 'init':
@@ -66,8 +74,10 @@ void main(List<String> arguments) async {
         printUsage();
         exit(1);
     }
+    await AuthCache.close();
   } catch (e) {
     print('Error: $e');
+    await AuthCache.close();
     exit(1);
   }
 }
@@ -76,7 +86,7 @@ void printUsage() {
   print('''
 Dart Cloud CLI - Deploy and manage Dart serverless functions
 
-Usage: dart_cloud <command> [arguments]
+Usage: dart_cloud_cli <command> [arguments]
 
 Available commands:
   init               Initialize function config in .dart_tool directory
@@ -91,14 +101,14 @@ Available commands:
   version            Show version information
 
 Examples:
-  dart_cloud init
-  dart_cloud login
-  dart_cloud logout
-  dart_cloud deploy ./my_function
-  dart_cloud list
-  dart_cloud logs my-function-id
-  dart_cloud invoke my-function-id --data '{"key": "value"}'
-  dart_cloud delete my-function-id
+  dart_cloud_cli init
+  dart_cloud_cli login
+  dart_cloud_cli logout
+  dart_cloud_cli deploy ./my_function
+  dart_cloud_cli list
+  dart_cloud_cli logs my-function-id
+  dart_cloud_cli invoke my-function-id --data '{"key": "value"}'
+  dart_cloud_cli delete my-function-id
 
 For more information, visit: https://github.com/yourusername/ContainerPub
 ''');
