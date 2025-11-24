@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:dart_cloud_backend/services/token_service.dart';
+import 'package:dart_cloud_backend/utils/commons.dart' show StringExtension;
 import 'package:shelf/shelf.dart';
 import 'package:bcrypt/bcrypt.dart';
 import 'package:dart_jsonwebtoken/dart_jsonwebtoken.dart';
@@ -55,14 +56,13 @@ class AuthHandler {
     try {
       final body = jsonDecode(await request.readAsString()) as Map<String, dynamic>;
       final email = body['email'] as String?;
-      final password = body['password'] as String?;
-
-      if (email == null || password == null) {
+      if (body['password'] == null || body['email'] == null) {
         return Response.badRequest(
-          body: jsonEncode({'error': 'Email and password are required'}),
+          body: jsonEncode({'error': 'Email and Password are required'}),
           headers: {'Content-Type': 'application/json'},
         );
       }
+      final password = (body['password'] as String).decode;
 
       // Find user
       final userLogin = await DatabaseManagers.users.findOne(

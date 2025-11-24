@@ -8,10 +8,14 @@ class ApiClient {
     String email,
     String password,
   ) async {
+    final body = {
+      'email': email,
+      'password': base64.encode(password.codeUnits)
+    };
     final response = await http.post(
       Uri.parse('${Config.serverUrl}/api/auth/login'),
       headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({'email': email, 'password': password}),
+      body: jsonEncode(body),
     );
 
     if (response.statusCode == 200) {

@@ -5,16 +5,24 @@ import 'package:dart_cloud_cli/commands/base_command.dart' show BaseCommand;
 class LoginCommand extends BaseCommand {
   Future<void> execute(List<String> args) async {
     await config.loadConfig();
-
-    stdout.write('Email: ');
-    final email = stdin.readLineSync() ?? '';
-
-    stdout.write('Password: ');
-    stdin.echoMode = false;
-    final password = stdin.readLineSync() ?? '';
-    stdin.echoMode = true;
-    print('');
-
+    final indexEmailInput =
+        args.indexWhere((element) => element == '--email' || element == '-e');
+    final emailArgs = args[indexEmailInput + 1];
+    String email = emailArgs;
+    if (indexEmailInput == -1 || emailArgs.isEmpty) {
+      stdout.write('Email: ');
+      email = stdin.readLineSync() ?? '';
+    }
+    final indexPasswordInput = args
+        .indexWhere((element) => element == '--password' || element == '-p');
+    String password = args[indexPasswordInput + 1];
+    if (indexPasswordInput == -1 || password.isEmpty) {
+      stdout.write('Password: ');
+      stdin.echoMode = false;
+      password = stdin.readLineSync() ?? '';
+      stdin.echoMode = true;
+      print('');
+    }
     if (email.isEmpty || password.isEmpty) {
       print('Error: Email and password are required');
       exit(1);
@@ -23,7 +31,7 @@ class LoginCommand extends BaseCommand {
     try {
       print('Authenticating...');
       final response = await ApiClient.login(email, password);
-      final token = response['token'] as String;
+      final token = response['accessToken'] as String;
       final refreshToken = response['refreshToken'] as String;
 
       await config.saveAuth(token: token, refreshToken: refreshToken);
