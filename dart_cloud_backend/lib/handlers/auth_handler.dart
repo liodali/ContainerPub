@@ -94,6 +94,7 @@ class AuthHandler {
       });
       final accessToken = accessJwt.sign(
         SecretKey(Config.jwtSecret),
+        algorithm: JWTAlgorithm.HS512,
         expiresIn: Duration(hours: 1), // Access token expires in 1 hour
       );
 
@@ -197,7 +198,7 @@ class AuthHandler {
       // Ensure it's a refresh token
       if (tokenType != 'refresh') {
         return Response.forbidden(
-          jsonEncode({'error': 'Invalid token type'}),
+          jsonEncode({'error': 'Invalid request'}),
           headers: {'Content-Type': 'application/json'},
         );
       }
@@ -205,7 +206,7 @@ class AuthHandler {
       // Check if refresh token is valid in storage
       if (!TokenService.instance.isRefreshTokenValid(refreshToken)) {
         return Response.forbidden(
-          jsonEncode({'error': 'Invalid or expired refresh token'}),
+          jsonEncode({'error': 'Invalid request'}),
           headers: {'Content-Type': 'application/json'},
         );
       }
