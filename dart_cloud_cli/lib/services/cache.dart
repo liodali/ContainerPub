@@ -23,18 +23,18 @@ mixin AuthCache {
   }
 
   Future<Map<String, String>> getAuthToken() async {
-    final token = await authBox.get('token');
-    final refreshToken = await authBox.get('refreshToken');
+    final String token = await authBox.get('token');
+    final String refreshToken = await authBox.get('refreshToken');
     return {'token': token.decode, 'refreshToken': refreshToken.decode};
   }
 
   Future<String?> getToken() async {
-    final token = await authBox.get('token');
+    final String? token = await authBox.get('token');
     return token?.decode;
   }
 
   Future<String?> getRefreshToken() async {
-    final refreshToken = await authBox.get('refreshToken');
+    final String? refreshToken = await authBox.get('refreshToken');
     return refreshToken?.decode;
   }
 

@@ -79,7 +79,7 @@ class FunctionAnalyzer {
 
       // Perform static analysis
       final collection = AnalysisContextCollection(
-        includedPaths: [functionDir],
+        includedPaths: [path.absolute(functionDir)],
       );
 
       final context = collection.contextFor(mainFile);
@@ -121,8 +121,9 @@ class FunctionAnalyzer {
         cloudFunctionCount: cloudFunctionCount,
         hasMainFunction: hasMainFunction,
       );
-    } catch (e) {
+    } catch (e,trace) {
       errors.add('Analysis failed: $e');
+      print(trace);
       return AnalysisResult(
         isValid: false,
         errors: errors,

@@ -37,14 +37,19 @@ class Config with AuthCache {
   }
 
   Future<void> loadConfig() async {
-    final file = configFile;
-    if (await file.exists()) {
-      final content = await file.readAsString();
-      final data = jsonDecode(content) as Map<String, dynamic>;
-      _serverUrl = data['serverUrl'] as String? ?? defaultServerUrl;
+    try {
+      final file = configFile;
+      if (await file.exists()) {
+        final content = await file.readAsString();
+        final data = jsonDecode(content) as Map<String, dynamic>;
+        _serverUrl = data['serverUrl'] as String? ?? defaultServerUrl;
+      }
+      _token = (await getToken()) ?? null;
+      _refreshToken = await getRefreshToken() ?? null;
+    } catch (e) {
+      print('Error loading configuration');
+      exit(1);
     }
-    _token = (await getToken()) ?? null;
-    _refreshToken = await getRefreshToken() ?? null;
   }
 
   Future<void> save({
