@@ -21,7 +21,10 @@ Middleware get authMiddleware {
       try {
         final jwt = JWT.verify(token, SecretKey(Config.jwtSecret));
         final userId = jwt.payload['userId'] as String;
-        if (!TokenService.instance.isTokenValid(token)) {
+
+        // Check if token is valid in user's whitelist
+        final isValid = await TokenService.instance.isTokenValid(token, userId);
+        if (!isValid) {
           return Response.forbidden(
             jsonEncode({'error': 'Invalid or expired token'}),
             headers: {'Content-Type': 'application/json'},

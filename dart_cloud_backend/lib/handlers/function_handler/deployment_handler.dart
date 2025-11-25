@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:dart_cloud_backend/services/s3_service.dart' show S3Service;
+import 'package:dart_cloud_backend/utils/commons.dart' show StringExtension;
 import 'package:shelf/shelf.dart';
 import 'package:shelf_multipart/shelf_multipart.dart';
 import 'package:path/path.dart' as path;
@@ -63,17 +64,19 @@ class DeploymentHandler {
 
       await for (final part in multipart.parts) {
         final header = part.headers;
+        final contentDisposition = header['content-disposition'];
         // Extract function name from 'name' field
-        if (header['name'] == 'name') {
+        if (contentDisposition?.retrieveFieldName() == 'name') {
           // Extract function name
-          final fieldBytes = await part.fold<List<int>>(
-            [],
-            (prev, element) => prev..addAll(element),
-          );
-          functionName = utf8.decode(fieldBytes);
+          // final fieldBytes =
+          // await part.fold<List<int>>(
+          //   [],
+          //   (prev, element) => prev..addAll(element),
+          // );
+          functionName = await part.readString(); //utf8.decode(fieldBytes);
         } else
         // Extract archive file from 'archive' field
-        if (header['name'] == 'archive') {
+        if (contentDisposition?.retrieveFieldName() == 'archive') {
           // Create temporary directory for uploaded file
           final tempDir = Directory.systemTemp.createTempSync(
             'dart_cloud_upload_${DateTime.now().millisecondsSinceEpoch}_',

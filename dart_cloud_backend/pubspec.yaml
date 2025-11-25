@@ -19,6 +19,8 @@ dependencies:
   dotenv: ^4.2.0
   analyzer: ^9.0.0
   hive_ce: ^2.15.1
+  crypto: ^3.0.6
+  collection: ^1.19.1
   database: 
     path: packages/database
   s3_client_dart:
@@ -30,4 +32,4 @@ dependencies:
 
 dev_dependencies:
   lints: ^6.0.0
-  #test: ^1.26.3
+  test: ^1.28.0

@@ -34,12 +34,17 @@ class Config {
   static late String dockerBaseImage;
   static late String dockerRegistry;
 
+
+  static String get fileEnv {
+    return String.fromEnvironment('FILE_ENV', defaultValue: '.env');
+  }
+
   static Future<void> load() async {
     final env = DotEnv();
-    final envFile = File('.env');
+    final envFile = File(fileEnv);
 
     if (await envFile.exists()) {
-      env.load();
+      env.load([fileEnv]);
     }
 
     port = int.parse(env['PORT'] ?? Platform.environment['PORT'] ?? '8080');

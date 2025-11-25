@@ -158,12 +158,15 @@ class AuthHandler {
         );
       }
 
-      // Blacklist access token
-      await TokenService.instance.blacklistToken(token);
+      // Get userId from JWT for token management
+      final jwt = JWT.verify(token, SecretKey(Config.jwtSecret));
+      final userId = jwt.payload['userId'] as String;
+
+      // Blacklist access token and remove from user's whitelist
+      await TokenService.instance.blacklistToken(token, userId: userId);
 
       // Blacklist refresh token and remove it from storage
-      await TokenService.instance.blacklistToken(refreshToken);
-      await TokenService.instance.removeRefreshToken(refreshToken);
+      await TokenService.instance.blacklistRefreshToken(refreshToken);
 
       return Response.ok(
         jsonEncode({'message': 'Logout successful'}),
@@ -230,6 +233,7 @@ class AuthHandler {
       await TokenService.instance.updateLinkedAccessToken(
         refreshToken: refreshToken,
         newAccessToken: newAccessToken,
+        userId: userId,
       );
 
       return Response.ok(
