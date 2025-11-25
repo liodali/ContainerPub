@@ -6,11 +6,13 @@ class FunctionConfig {
   final String functionName;
   final String? functionId;
   final String? createdAt;
+  final String? functionPath;
 
   FunctionConfig({
     required this.functionName,
     this.functionId,
     this.createdAt,
+    this.functionPath,
   });
 
   Map<String, dynamic> toJson() {
@@ -18,6 +20,7 @@ class FunctionConfig {
       'function_name': functionName,
       if (functionId != null) 'function_id': functionId,
       if (createdAt != null) 'created_at': createdAt,
+      if (functionPath != null) 'function_path': functionPath,
     };
   }
 
@@ -26,6 +29,7 @@ class FunctionConfig {
       functionName: json['function_name'] as String? ?? 'function',
       functionId: json['function_id'] as String?,
       createdAt: json['created_at'] as String?,
+      functionPath: json['function_path'] as String?,
     );
   }
 
@@ -71,11 +75,12 @@ class FunctionConfig {
   }
 
   /// Update the function ID in the config
-  FunctionConfig copyWith({String? functionId}) {
+  FunctionConfig copyWith({String? functionId, String? functionPath}) {
     return FunctionConfig(
       functionName: functionName,
       functionId: functionId ?? this.functionId,
       createdAt: createdAt,
+      functionPath: functionPath ?? this.functionPath,
     );
   }
 }
