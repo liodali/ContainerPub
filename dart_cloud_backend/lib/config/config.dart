@@ -96,7 +96,7 @@ class Config {
     );
 
     // S3 Client Configuration
-    s3ClientLibraryPath = env['S3_CLIENT_LIBRARY_PATH'] ?? './s3_client_dart.so';
+    s3ClientLibraryPath = env['S3_CLIENT_LIBRARY_PATH'] ?? './s3_client_dart.dylib';
 
     // S3 Configuration
     s3Endpoint =

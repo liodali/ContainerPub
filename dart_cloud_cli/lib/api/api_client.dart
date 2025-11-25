@@ -36,6 +36,7 @@ class ApiClient {
 
     request.headers['Authorization'] = 'Bearer ${Config.token}';
     request.fields['name'] = functionName;
+    request.headers['Content-Type'] = 'multipart/form-data';
     request.files
         .add(await http.MultipartFile.fromPath('archive', archive.path));
 

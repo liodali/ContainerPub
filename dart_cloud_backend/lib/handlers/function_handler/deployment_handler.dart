@@ -63,16 +63,20 @@ class DeploymentHandler {
 
       await for (final part in multipart.parts) {
         final header = part.headers;
-
         // Extract function name from 'name' field
         if (header['name'] == 'name') {
-          functionName = await part.readString();
-        }
+          // Extract function name
+          final fieldBytes = await part.fold<List<int>>(
+            [],
+            (prev, element) => prev..addAll(element),
+          );
+          functionName = utf8.decode(fieldBytes);
+        } else
         // Extract archive file from 'archive' field
-        else if (header['name'] == 'archive') {
+        if (header['name'] == 'archive') {
           // Create temporary directory for uploaded file
           final tempDir = Directory.systemTemp.createTempSync(
-            'dart_cloud_upload_',
+            'dart_cloud_upload_${DateTime.now().millisecondsSinceEpoch}_',
           );
           final tempFile = File(path.join(tempDir.path, 'function.tar.gz'));
 
