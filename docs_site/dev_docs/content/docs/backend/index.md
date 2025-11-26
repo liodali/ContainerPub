@@ -22,6 +22,7 @@ The `dart_cloud_backend` is the core platform that:
 
 ### Core Documentation
 
+- [Authentication System](./authentication.md) - Complete authentication flow and token management
 - [Architecture Overview](./architecture.md) - System design and components
 - [API Reference](./api-reference.md) - Complete API endpoint documentation
 
@@ -30,10 +31,12 @@ The `dart_cloud_backend` is the core platform that:
 ### Authentication System
 
 - **Dual Token Architecture** - Access tokens (1 hour) + refresh tokens (30 days)
-- **Encrypted Storage** - Hive database with AES encryption
-- **Token Blacklisting** - Invalidate compromised tokens
+- **Whitelist-Based Storage** - Tokens stored as SHA-256 hashes in user-specific whitelists
+- **Multi-Session Support** - Multiple active sessions per user
+- **Encrypted Storage** - Hive database with AES-256 encryption
+- **Token Blacklisting** - Immediate token invalidation
 - **Token Linking** - Track refresh token to access token relationships
-- **Automatic Refresh** - Seamless token renewal
+- **Automatic Refresh** - Seamless token renewal with old token invalidation
 
 ### Container Management
 
@@ -159,40 +162,48 @@ Logout → Blacklist Both Tokens
 
 ### Storage Structure
 
-**Hive Boxes:**
+**Hive Boxes (Whitelist Approach):**
 
-- `auth_tokens` - Maps access tokens to user IDs (encrypted)
-- `blacklist_tokens` - Stores invalidated tokens
-- `refresh_tokens` - Maps refresh tokens to user IDs (encrypted)
-- `token_links` - Links refresh tokens to access tokens (encrypted)
+| Box                | Key         | Value             | Description                             |
+| ------------------ | ----------- | ----------------- | --------------------------------------- |
+| `auth_tokens`      | userId      | List\<tokenHash\> | User's whitelist of valid access tokens |
+| `blacklist_tokens` | tokenHash   | timestamp         | Invalidated tokens                      |
+| `refresh_tokens`   | refreshHash | userId            | Refresh token to user mapping           |
+| `token_links`      | refreshHash | accessHash        | Refresh to access token links           |
+
+> **Note:** All tokens are hashed with SHA-256 before storage (64 chars vs 255+ char JWTs) to overcome Hive's key length limitations.
 
 ### Token Operations
 
 ```dart
-// Add access token
+// Add access token to user's whitelist
 await TokenService.instance.addAuthToken(
   token: accessToken,
   userId: userId,
 );
 
-// Add refresh token
+// Add refresh token with link to access token
 await TokenService.instance.addRefreshToken(
   refreshToken: refreshToken,
   userId: userId,
   accessToken: accessToken,
 );
 
-// Validate token
-bool isValid = TokenService.instance.isTokenValid(token);
+// Validate token (async - checks whitelist)
+final isValid = await TokenService.instance.isTokenValid(token, userId);
 
-// Blacklist token
-await TokenService.instance.blacklistToken(token);
+// Blacklist token and remove from whitelist
+await TokenService.instance.blacklistToken(token, userId: userId);
 
-// Refresh access token
+// Refresh access token (blacklists old, links new)
 await TokenService.instance.updateLinkedAccessToken(
   refreshToken: refreshToken,
   newAccessToken: newAccessToken,
+  userId: userId,
 );
+
+// Logout from all devices
+await TokenService.instance.removeAllUserTokens(userId);
 ```
 
 ### Security Features
@@ -374,6 +385,7 @@ dart_cloud_backend/
 
 ## Next Steps
 
+- Read [Authentication System](./authentication.md) for complete auth flow documentation
 - Read [Architecture Overview](./architecture.md) for detailed system design
 - Check [API Reference](./api-reference.md) for complete API documentation
 - Explore [CLI Documentation](../cli/index.md) for client-side tools

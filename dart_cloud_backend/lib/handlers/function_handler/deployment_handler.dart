@@ -78,15 +78,28 @@ class DeploymentHandler {
         // Extract archive file from 'archive' field
         if (contentDisposition?.retrieveFieldName() == 'archive') {
           // Create temporary directory for uploaded file
-          final tempDir = Directory.systemTemp.createTempSync(
-            'dart_cloud_upload_${DateTime.now().millisecondsSinceEpoch}_',
+          // final tempDir = Directory.systemTemp.createTempSync(
+          //   'dart_cloud_upload_${DateTime.now().millisecondsSinceEpoch}_',
+          // );
+          final functDir = Directory(
+            '${Config.functionsDir}/dart_cloud_upload_${DateTime.now().millisecondsSinceEpoch}',
+          )..createSync(recursive: true);
+          final tempFile = File(
+            path.join(
+              functDir.path,
+              '${functionName}.zip',
+            ),
           );
-          final tempFile = File(path.join(tempDir.path, 'function.tar.gz'));
-
           // Stream uploaded file to temporary location
-          final sink = tempFile.openWrite();
-          await part.pipe(sink);
-          await sink.close();
+          // final sink = tempFile.openWrite();
+          // await part.pipe(sink);
+          // await sink.close();
+          final bytes = await part.readBytes();
+          // final bytes = await part.fold<List<int>>(
+          //   [],
+          //   (prev, element) => prev..addAll(element),
+          // );
+          tempFile.writeAsBytesSync(bytes);
 
           archiveFile = tempFile;
         }
@@ -100,16 +113,27 @@ class DeploymentHandler {
         );
       }
 
+      // Check if user exists
+      final userResult = await DatabaseManagers.users.findByUuid(userId);
+      if (userResult == null) {
+        return Response.badRequest(
+          body: jsonEncode({'error': 'User not found'}),
+          headers: {'Content-Type': 'application/json'},
+        );
+      }
+
       // Check if function with this name already exists for this user
-      final existingResult = await Database.connection.execute(
-        'SELECT id,uuid FROM functions WHERE user_id = \$1 AND name = \$2',
-        parameters: [userId, functionName],
+      final functionEntity = await DatabaseManagers.functions.findOne(
+        where: {
+          FunctionEntityExtension.userIdNameField: userResult.id,
+          FunctionEntityExtension.nameField: functionName,
+        },
       );
 
       String functionUUID;
-      String functionId;
+      int functionId;
       int version = 1;
-      bool isNewFunction = existingResult.isEmpty;
+      bool isNewFunction = functionEntity == null;
 
       if (isNewFunction) {
         // === NEW FUNCTION WORKFLOW ===
@@ -119,9 +143,9 @@ class DeploymentHandler {
         // Create function record in database with 'building' status
         final result = await Database.connection.execute(
           'INSERT INTO functions (uuid, user_id, name, status) VALUES (\$1, \$2, \$3, \$4)',
-          parameters: [functionUUID, userId, functionName, 'building'],
+          parameters: [functionUUID, userResult.id, functionName, 'building'],
         );
-        functionId = result.first[0] as String;
+        functionId = result.first[0] as int;
 
         // Log function creation
         await FunctionUtils.logFunction(
@@ -132,8 +156,8 @@ class DeploymentHandler {
       } else {
         // === UPDATE EXISTING FUNCTION WORKFLOW ===
         // Get existing function ID
-        functionId = existingResult.first[0] as String;
-        functionUUID = existingResult.first[1] as String;
+        functionId = functionEntity.id!;
+        functionUUID = functionEntity.uuid!;
 
         // Get the latest version number for this function
         final versionResult = await Database.connection.execute(
@@ -157,7 +181,7 @@ class DeploymentHandler {
 
         // Log function update
         await FunctionUtils.logFunction(
-          functionId,
+          functionUUID,
           'info',
           'Updating function: $functionName (version $version)',
         );
@@ -166,14 +190,15 @@ class DeploymentHandler {
       // === S3 UPLOAD ===
       // Upload archive to S3 with versioned path
       await FunctionUtils.logFunction(
-        functionId,
+        functionUUID,
         'info',
         'Uploading archive to S3...',
       );
 
       // S3 key format: functions/{function-id}/v{version}/function.tar.gz
-      final s3Key = 'functions/$functionId/v$version/function.tar.gz';
-
+      final s3Key = 'functions/$functionUUID/v$version/${functionName}.tar.gz';
+      print('Uploading to S3: $s3Key');
+      archiveFile.writeAsStringSync('test');
       // Upload file to S3
       final uploadResult = await _s3Client.upload(archiveFile.path, s3Key);
       if (uploadResult.isEmpty) {
@@ -181,7 +206,7 @@ class DeploymentHandler {
       }
 
       await FunctionUtils.logFunction(
-        functionId,
+        functionUUID,
         'info',
         'Archive uploaded to S3: $s3Key',
       );
@@ -189,7 +214,7 @@ class DeploymentHandler {
       // === LOCAL EXTRACTION ===
       // Create versioned directory for function code
       final functionDir = Directory(
-        path.join(Config.functionsDir, functionId, 'v$version'),
+        path.join(Config.functionsDir, functionUUID, 'v$version'),
       );
       await functionDir.create(recursive: true);
 
@@ -208,7 +233,7 @@ class DeploymentHandler {
       // Inject main.dart that reads environment and request.json,
       // then invokes the @cloudFunction annotated class
       await FunctionUtils.logFunction(
-        functionId,
+        functionUUID,
         'info',
         'Injecting main.dart...',
       );
@@ -224,7 +249,7 @@ class DeploymentHandler {
       }
 
       await FunctionUtils.logFunction(
-        functionId,
+        functionUUID,
         'info',
         'main.dart injected successfully',
       );
@@ -232,7 +257,7 @@ class DeploymentHandler {
       // === DOCKER IMAGE BUILD ===
       // Build Docker image with versioned tag
       await FunctionUtils.logFunction(
-        functionId,
+        functionUUID,
         'info',
         'Building Docker image...',
       );
@@ -244,7 +269,7 @@ class DeploymentHandler {
       );
 
       await FunctionUtils.logFunction(
-        functionId,
+        functionUUID,
         'info',
         'Docker image built: $imageTag',
       );
@@ -275,7 +300,7 @@ class DeploymentHandler {
 
       // Log successful deployment
       await FunctionUtils.logFunction(
-        functionId,
+        functionUUID,
         'info',
         'Function deployed successfully (version $version)',
       );

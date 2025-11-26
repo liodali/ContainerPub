@@ -96,3 +96,15 @@ class FunctionEntity extends Entity {
     );
   }
 }
+
+extension FunctionEntityExtension on FunctionEntity {
+  static String get idNameField => 'id';
+  static String get uuidNameField => 'uuid';
+  static String get userIdNameField => 'user_id';
+  static String get nameField => 'name';
+  static String get statusField => 'status';
+  static String get activeDeploymentIdField => 'active_deployment_id';
+  static String get analysisResultField => 'analysis_result';
+  static String get createdAtField => 'created_at';
+  static String get updatedAtField => 'updated_at';
+}

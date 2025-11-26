@@ -16,8 +16,8 @@ class DeployCommand extends BaseCommand {
     Directory functionDir,
     String functionName,
   ) async {
-    final tempDir = Directory.systemTemp.createTempSync('dart_cloud_');
-    final archivePath = path.join(tempDir.path, '$functionName.tar.gz');
+    final tempDir = Directory.systemTemp.createTempSync('dart_cloud');
+    final archivePath = path.join(tempDir.path, '$functionName.zip');
 
     final archive = Archive();
 
@@ -71,7 +71,7 @@ class DeployCommand extends BaseCommand {
     return archiveFile;
   }
 
-  /// Recursively adds a directory to the archive
+  /// Recursively adds a directory to the archive (only .dart files)
   Future<void> _addDirectoryToArchive(
     Archive archive,
     Directory directory,
@@ -81,7 +81,10 @@ class DeployCommand extends BaseCommand {
 
     for (final entity in entities) {
       if (entity is File) {
-        await _addFileToArchive(archive, entity, basePath);
+        // Only include .dart files in lib/ and bin/ directories
+        if (entity.path.endsWith('.dart')) {
+          await _addFileToArchive(archive, entity, basePath);
+        }
       } else if (entity is Directory) {
         await _addDirectoryToArchive(archive, entity, basePath);
       }

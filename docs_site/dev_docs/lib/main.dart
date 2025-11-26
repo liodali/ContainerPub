@@ -96,6 +96,7 @@ void main() async {
                 title: 'Backend',
                 links: [
                   SidebarLink(text: "Backend Overview", href: '/docs/backend'),
+                  SidebarLink(text: "Authentication", href: '/docs/backend/authentication'),
                   SidebarLink(text: "Architecture", href: '/docs/backend/architecture'),
                   SidebarLink(text: "API Reference", href: '/docs/backend/api-reference'),
                 ],
