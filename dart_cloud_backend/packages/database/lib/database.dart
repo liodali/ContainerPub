@@ -183,7 +183,7 @@ class Database {
       CREATE TABLE IF NOT EXISTS function_logs (
         id SERIAL PRIMARY KEY,
         uuid UUID UNIQUE NOT NULL DEFAULT uuid_generate_v4(),
-        function_id INTEGER NOT NULL REFERENCES functions(id) ON DELETE CASCADE,
+        function_uuid UUID NOT NULL REFERENCES functions(uuid) ON DELETE CASCADE,
         level VARCHAR(20) NOT NULL,
         message TEXT NOT NULL,
         timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -192,7 +192,7 @@ class Database {
 
     // Create index on function_id for fast function log queries
     await _connection.execute('''
-      CREATE INDEX IF NOT EXISTS idx_function_logs_function_id ON function_logs(function_id)
+      CREATE INDEX IF NOT EXISTS idx_function_logs_function_id ON function_logs(function_uuid)
     ''');
 
     // Create index on timestamp for time-based queries

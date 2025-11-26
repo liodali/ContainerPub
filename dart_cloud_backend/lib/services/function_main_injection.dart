@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:collection/collection.dart';
 import 'package:path/path.dart' as path;
 import 'package:analyzer/dart/analysis/analysis_context_collection.dart';
 import 'package:analyzer/dart/analysis/results.dart';
@@ -26,7 +27,7 @@ class FunctionMainInjection {
   /// - [functionPath]: Absolute path to the function directory
   ///
   /// Returns: true if injection succeeded, false otherwise
-  static Future<bool> injectMain(String functionPath) async {
+  static Future<({bool result, File? file})> injectMain(String functionPath) async {
     try {
       // Find the cloud function class
       final cloudFunctionInfo = await _findCloudFunctionClass(functionPath);
@@ -48,10 +49,10 @@ class FunctionMainInjection {
       final mainFile = File(path.join(functionPath, 'main.dart'));
       await mainFile.writeAsString(mainContent);
 
-      return true;
+      return (result: true, file: mainFile);
     } catch (e) {
       print('Failed to inject main.dart: $e');
-      return false;
+      return (result: false, file: null);
     }
   }
 
@@ -67,13 +68,24 @@ class FunctionMainInjection {
   ) async {
     final functionDir = Directory(functionPath);
 
-    if (!await functionDir.exists()) {
+    if (!functionDir.existsSync()) {
       throw Exception('Function directory does not exist: $functionPath');
     }
 
+    final dartMainFile = functionDir
+        .listSync(recursive: true)
+        .firstWhereOrNull(
+          (entity) => entity is File && !entity.path.endsWith('main.dart'),
+        );
+    if (dartMainFile != null) {
+      final result = await _analyzeFile(dartMainFile.path, functionPath);
+      if (result != null) {
+        return result;
+      }
+    }
     // Find all .dart files in the function directory (excluding main.dart)
-    final dartFiles = await functionDir
-        .list(recursive: true)
+    final dartFiles = functionDir
+        .listSync(recursive: true)
         .where(
           (entity) =>
               entity is File &&
@@ -82,16 +94,13 @@ class FunctionMainInjection {
         )
         .cast<File>()
         .toList();
-
-    if (dartFiles.isEmpty) {
-      throw Exception('No Dart files found in function directory');
-    }
-
-    // Analyze each file to find the @cloudFunction annotated class
-    for (final file in dartFiles) {
-      final result = await _analyzeFile(file.path, functionPath);
-      if (result != null) {
-        return result;
+    if (dartFiles.isNotEmpty) {
+      // Analyze each file to find the @cloudFunction annotated class
+      for (final file in dartFiles) {
+        final result = await _analyzeFile(file.path, functionPath);
+        if (result != null) {
+          return result;
+        }
       }
     }
 

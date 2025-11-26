@@ -10,18 +10,18 @@ class FunctionUtils {
   /// execution status, and debugging issues.
   ///
   /// Parameters:
-  /// - [functionId]: UUID of the function
+  /// - [functionUuid]: UUID of the function
   /// - [level]: Log level (info, warning, error, debug)
   /// - [message]: Human-readable log message
   static Future<void> logFunction(
-    String functionId,
+    String functionUuid,
     String level,
     String message,
   ) async {
     try {
       await Database.connection.execute(
-        'INSERT INTO function_logs (function_id, level, message) VALUES (\$1, \$2, \$3)',
-        parameters: [functionId, level, message],
+        'INSERT INTO function_logs (function_uuid, level, message) VALUES (\$1, \$2, \$3)',
+        parameters: [functionUuid, level, message],
       );
     } catch (e) {
       // Print to console if database logging fails

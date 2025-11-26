@@ -11,84 +11,75 @@ import 'package:yaml/yaml.dart';
 
 class DeployCommand extends BaseCommand {
   /// Creates a tar.gz archive containing only allowed files and directories
-  /// Includes: lib/, bin/, pubspec.yaml, pubspec.lock, .env
+  /// Includes: .dart files from lib/ and bin/, plus pubspec.yaml, pubspec.lock, .env
   Future<File> _createFunctionArchive(
     Directory functionDir,
     String functionName,
   ) async {
-    final tempDir = Directory.systemTemp.createTempSync('dart_cloud');
-    final archivePath = path.join(tempDir.path, '$functionName.zip');
+    final tempDir =
+        Directory.current; //Directory.systemTemp.createTempSync('dart_cloud');
+    final archivePath = path.join(tempDir.path, '$functionName.tar.gz');
 
     final archive = Archive();
-
-    // Allowed files and directories
-    final allowedItems = [
-      'lib',
-      'bin',
-      'pubspec.yaml',
-      'pubspec.lock',
-      '.env',
-    ];
-
     int filesAdded = 0;
-    for (final itemName in allowedItems) {
-      final itemPath = path.join(functionDir.path, itemName);
-      final item = FileSystemEntity.typeSync(itemPath);
 
-      if (item == FileSystemEntityType.directory) {
-        // Add directory recursively
-        await _addDirectoryToArchive(
-          archive,
-          Directory(itemPath),
-          functionDir.path,
-        );
-        filesAdded++;
-      } else if (item == FileSystemEntityType.file) {
-        // Add single file
-        await _addFileToArchive(
-          archive,
-          File(itemPath),
-          functionDir.path,
-        );
+    // Directories to scan for .dart files
+    final dartDirectories = ['lib', 'bin'];
+
+    // Root config files to include
+    final configFiles = ['pubspec.yaml', 'pubspec.lock', '.env'];
+
+    // Add .dart files from lib/ and bin/ directories
+    for (final dirName in dartDirectories) {
+      final dir = Directory(path.join(functionDir.path, dirName));
+      if (dir.existsSync()) {
+        final dartFiles = await _collectDartFiles(dir);
+        for (final file in dartFiles) {
+          await _addFileToArchive(archive, file, functionDir.path);
+          filesAdded++;
+        }
+      }
+    }
+
+    // Add config files from root
+    for (final fileName in configFiles) {
+      final file = File(path.join(functionDir.path, fileName));
+      if (file.existsSync()) {
+        await _addFileToArchive(archive, file, functionDir.path);
         filesAdded++;
       }
-      // Skip if item doesn't exist
     }
 
     if (filesAdded == 0) {
       throw Exception(
-          'No files found to archive. Ensure lib/ or bin/ directories exist.');
+        'No files found to archive. Ensure lib/ or bin/ directories contain .dart files.',
+      );
     }
 
-    // Encode to tar.gz
-    final tarData = TarEncoder().encode(archive);
-    final gzipData = GZipEncoder().encode(tarData);
+    // Encode to zip
+    final zipper = ZipEncoder().encode(archive);
+    // final gzipData = GZipEncoder().encode(tarData);
 
     // Write to file
     final archiveFile = File(archivePath);
-    await archiveFile.writeAsBytes(gzipData!);
+    await archiveFile.writeAsBytes(zipper!);
 
     return archiveFile;
   }
 
-  /// Recursively adds a directory to the archive (only .dart files)
-  Future<void> _addDirectoryToArchive(
-    Archive archive,
-    Directory directory,
-    String basePath,
-  ) async {
-    final entities = directory.listSync(recursive: false);
+  /// Recursively collects all .dart files from a directory
+  Future<List<File>> _collectDartFiles(Directory directory) async {
+    final dartFiles = <File>[];
+    final entities = directory.listSync(recursive: true);
 
     for (final entity in entities) {
-      if (entity is File) {
-        // Only include .dart files in lib/ and bin/ directories
-        if (entity.path.endsWith('.dart')) {
-          await _addFileToArchive(archive, entity, basePath);
-        }
-      } else if (entity is Directory) {
-        await _addDirectoryToArchive(archive, entity, basePath);
+      if (entity is File && entity.path.endsWith('.dart')) {
+        dartFiles.add(entity);
       }
     }
+    print('Found ${dartFiles.length} .dart files in ${directory.path}');
+    print('dartFiles: $dartFiles');
+    return dartFiles;
   }
 
   /// Adds a single file to the archive
@@ -98,6 +89,7 @@ class DeployCommand extends BaseCommand {
     String basePath,
   ) async {
     final relativePath = path.relative(file.path, from: basePath);
+    print('Adding file to archive: $relativePath');
     final bytes = await file.readAsBytes();
 
     final archiveFile = ArchiveFile(
@@ -107,7 +99,7 @@ class DeployCommand extends BaseCommand {
     );
 
     // Set file permissions (0644 for files)
-    archiveFile.mode = 420; // 0644 in octal
+    archiveFile.mode = 0644; // 0644 in octal,was 420
     archiveFile.lastModTime =
         file.lastModifiedSync().millisecondsSinceEpoch ~/ 1000;
 
@@ -239,7 +231,7 @@ class DeployCommand extends BaseCommand {
         'Archive created: ${(archiveFile.lengthSync() / (1024 * 1024)).toStringAsFixed(2)} MB',
       );
       print(
-          'Included: lib/, bin/, pubspec.yaml, pubspec.lock, .env (if present)');
+          'Included: lib/*.dart, bin/*.dart, pubspec.yaml, pubspec.lock, .env (if present)');
 
       // Deploy
       print('Deploying function...');
@@ -247,7 +239,8 @@ class DeployCommand extends BaseCommand {
         archiveFile,
         functionName,
       );
-
+      print('delete archive file');
+      archiveFile.deleteSync();
       final functionId = response['id'] as String;
 
       print('✓ Function deployed successfully!');

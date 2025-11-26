@@ -87,7 +87,7 @@ class DeploymentHandler {
           final tempFile = File(
             path.join(
               functDir.path,
-              '${functionName}.zip',
+              '${functionName}.tar.gz',
             ),
           );
           // Stream uploaded file to temporary location
@@ -95,10 +95,12 @@ class DeploymentHandler {
           // await part.pipe(sink);
           // await sink.close();
           final bytes = await part.readBytes();
+          // final zipper = ZipDecoder().decodeBytes(bytes);
           // final bytes = await part.fold<List<int>>(
           //   [],
           //   (prev, element) => prev..addAll(element),
           // );
+
           tempFile.writeAsBytesSync(bytes);
 
           archiveFile = tempFile;
@@ -187,6 +189,45 @@ class DeploymentHandler {
         );
       }
 
+      // === LOCAL EXTRACTION ===
+      // Create versioned directory for function code
+      final functionDir = Directory(
+        path.join(Config.functionsDir, functionUUID, 'v$version'),
+      );
+      await functionDir.create(recursive: true);
+
+      // Extract tar.gz archive to function directory
+      final inputStream = InputFileStream(archiveFile.path);
+      final archive = ZipDecoder().decodeBytes(
+        inputStream.toUint8List(),
+      );
+      extractArchiveToDisk(archive, functionDir.path);
+      inputStream.close();
+
+      // === MAIN.DART INJECTION ===
+      // Inject main.dart that reads environment and request.json,
+      // then invokes the @cloudFunction annotated class
+      await FunctionUtils.logFunction(
+        functionUUID,
+        'info',
+        'Injecting main.dart...',
+      );
+      final response = await FunctionMainInjection.injectMain(
+        functionDir.path,
+      );
+      if (!response.result) {
+        throw Exception(
+          'Failed to inject main.dart. Ensure function has exactly one class '
+          'extending CloudDartFunction with @cloudFunction annotation.',
+        );
+      }
+
+      await FunctionUtils.logFunction(
+        functionUUID,
+        'info',
+        'main.dart injected successfully',
+      );
+
       // === S3 UPLOAD ===
       // Upload archive to S3 with versioned path
       await FunctionUtils.logFunction(
@@ -197,8 +238,10 @@ class DeploymentHandler {
 
       // S3 key format: functions/{function-id}/v{version}/function.tar.gz
       final s3Key = 'functions/$functionUUID/v$version/${functionName}.tar.gz';
-      print('Uploading to S3: $s3Key');
-      archiveFile.writeAsStringSync('test');
+      final mainFile = response.file!;
+      final sizeMainFile = mainFile.lengthSync();
+      final contentFile = FileContentMemory(mainFile.readAsBytesSync());
+      archive.addFile(ArchiveFile.file('main.dart', sizeMainFile, contentFile));
       // Upload file to S3
       final uploadResult = await _s3Client.upload(archiveFile.path, s3Key);
       if (uploadResult.isEmpty) {
@@ -211,48 +254,8 @@ class DeploymentHandler {
         'Archive uploaded to S3: $s3Key',
       );
 
-      // === LOCAL EXTRACTION ===
-      // Create versioned directory for function code
-      final functionDir = Directory(
-        path.join(Config.functionsDir, functionUUID, 'v$version'),
-      );
-      await functionDir.create(recursive: true);
-
-      // Extract tar.gz archive to function directory
-      final inputStream = InputFileStream(archiveFile.path);
-      final archive = TarDecoder().decodeBytes(
-        GZipDecoder().decodeBytes(inputStream.toUint8List()),
-      );
-      extractArchiveToDisk(archive, functionDir.path);
-      inputStream.close();
-
       // Clean up temporary uploaded file
       await archiveFile.delete();
-
-      // === MAIN.DART INJECTION ===
-      // Inject main.dart that reads environment and request.json,
-      // then invokes the @cloudFunction annotated class
-      await FunctionUtils.logFunction(
-        functionUUID,
-        'info',
-        'Injecting main.dart...',
-      );
-      final injectionSuccess = await FunctionMainInjection.injectMain(
-        functionDir.path,
-      );
-
-      if (!injectionSuccess) {
-        throw Exception(
-          'Failed to inject main.dart. Ensure function has exactly one class '
-          'extending CloudDartFunction with @cloudFunction annotation.',
-        );
-      }
-
-      await FunctionUtils.logFunction(
-        functionUUID,
-        'info',
-        'main.dart injected successfully',
-      );
 
       // === DOCKER IMAGE BUILD ===
       // Build Docker image with versioned tag

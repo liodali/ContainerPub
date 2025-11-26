@@ -34,7 +34,6 @@ class Config {
   static late String dockerBaseImage;
   static late String dockerRegistry;
 
-
   static String get fileEnv {
     return String.fromEnvironment('FILE_ENV', defaultValue: '.env');
   }
@@ -117,7 +116,8 @@ class Config {
     s3SecretAccessKey =
         env['S3_SECRET_ACCESS_KEY'] ?? Platform.environment['S3_SECRET_ACCESS_KEY'] ?? '';
     s3Region = env['S3_REGION'] ?? Platform.environment['S3_REGION'] ?? 'us-east-1';
-    s3SessionToken = env['S3_SESSION_TOKEN'] ?? Platform.environment['S3_SESSION_TOKEN'];
+    s3SessionToken =
+        ''; //env['S3_SESSION_TOKEN'] ?? Platform.environment['S3_SESSION_TOKEN'];
     s3AccountId = env['S3_ACCOUNT_ID'] ?? Platform.environment['S3_ACCOUNT_ID'];
 
     // Docker Configuration
