@@ -5,11 +5,14 @@
 
 Minimal foundation for serverless HTTP functions in Dart. Extend `CloudDartFunction`, implement `handle()`, and deploy.
 
+**Note:** This package is still in development and subject to change. Not Fully opensource we will make opensource when our early access platform become available
+
+
 ## Install
 
 ```yaml
 dependencies:
-  dart_cloud_function: ^1.0.0
+  dart_cloud_function: ^0.1.0
 ```
 
 ```dart
