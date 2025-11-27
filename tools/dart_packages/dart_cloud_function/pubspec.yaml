@@ -1,7 +1,7 @@
 name: dart_cloud_function
 description: A starting point for Dart libraries or applications.
-version: 1.0.0
-# repository: https://github.com/my_org/my_repo
+version: 0.1.0
+repository: https://github.com/liodali/ContainerPub
 
 environment:
   sdk: ^3.10.0
