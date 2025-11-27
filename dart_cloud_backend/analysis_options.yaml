@@ -27,6 +27,7 @@ analyzer:
     - '**/*.g.dart'
     - '**/*.freezed.dart'
     - '**/*.gr.dart'
+    - 'data/app/**'
 
 formatter:
   trailing_commas: preserve  

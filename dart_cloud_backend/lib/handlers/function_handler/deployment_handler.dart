@@ -45,6 +45,9 @@ class DeploymentHandler {
   /// - 400: Invalid request
   /// - 500: Deployment failed
   static Future<Response> deploy(Request request) async {
+    final functDir = Directory(
+      '${Config.functionsDir}/dart_cloud_upload_${DateTime.now().millisecondsSinceEpoch}',
+    )..createSync(recursive: true);
     try {
       // Extract user ID from authenticated request context
       final userId = request.context['userId'] as String;
@@ -81,9 +84,7 @@ class DeploymentHandler {
           // final tempDir = Directory.systemTemp.createTempSync(
           //   'dart_cloud_upload_${DateTime.now().millisecondsSinceEpoch}_',
           // );
-          final functDir = Directory(
-            '${Config.functionsDir}/dart_cloud_upload_${DateTime.now().millisecondsSinceEpoch}',
-          )..createSync(recursive: true);
+
           final tempFile = File(
             path.join(
               functDir.path,
@@ -192,7 +193,7 @@ class DeploymentHandler {
       // === LOCAL EXTRACTION ===
       // Create versioned directory for function code
       final functionDir = Directory(
-        path.join(Config.functionsDir, functionUUID, 'v$version'),
+        path.join(Config.functionsDir, functionUUID, 'v$version', functionName),
       );
       await functionDir.create(recursive: true);
 
@@ -323,6 +324,7 @@ class DeploymentHandler {
         headers: {'Content-Type': 'application/json'},
       );
     } catch (e) {
+      functDir.deleteSync(recursive: true);
       // Handle any errors during deployment
       return Response.internalServerError(
         body: jsonEncode({'error': 'Deployment failed: $e'}),

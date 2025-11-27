@@ -6,6 +6,13 @@ import 'package:analyzer/dart/analysis/results.dart';
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/ast/visitor.dart';
 
+typedef CloudFunctionInfo = ({
+  String className,
+  String filePath,
+  String classCode,
+  String imports,
+});
+
 /// Service for injecting main.dart into deployed cloud functions
 ///
 /// This service analyzes the function code to find the class annotated with
@@ -40,9 +47,9 @@ class FunctionMainInjection {
 
       // Generate main.dart content
       final mainContent = _generateMainDart(
-        className: cloudFunctionInfo['className'] as String,
-        classCode: cloudFunctionInfo['classCode'] as String,
-        userImports: cloudFunctionInfo['imports'] as String,
+        className: cloudFunctionInfo.className,
+        classCode: cloudFunctionInfo.classCode,
+        userImports: cloudFunctionInfo.imports,
       );
 
       // Write main.dart to function directory
@@ -58,62 +65,78 @@ class FunctionMainInjection {
 
   /// Find the class annotated with @cloudFunction in the function directory
   ///
-  /// Returns a map with:
+  /// Validation rules:
+  /// - Only ONE class extending CloudDartFunction with @cloudFunction is allowed
+  /// - The class MUST be defined in main.dart file
+  /// - No @cloudFunction annotated classes are allowed in other .dart files
+  ///
+  /// Returns a record with:
   /// - className: Name of the class
   /// - filePath: Relative path to the file containing the class
   /// - classCode: The actual class code to embed in main.dart
-  /// - imports: List of import statements from the original file
-  static Future<Map<String, String>?> _findCloudFunctionClass(
-    String functionPath,
-  ) async {
+  /// - imports: Import statements from the original file
+  static Future<CloudFunctionInfo?> _findCloudFunctionClass(String functionPath) async {
     final functionDir = Directory(functionPath);
 
     if (!functionDir.existsSync()) {
       throw Exception('Function directory does not exist: $functionPath');
     }
 
-    final dartMainFile = functionDir
+    // Collect all .dart files
+    final allDartFiles = functionDir
         .listSync(recursive: true)
-        .firstWhereOrNull(
-          (entity) => entity is File && !entity.path.endsWith('main.dart'),
-        );
-    if (dartMainFile != null) {
-      final result = await _analyzeFile(dartMainFile.path, functionPath);
-      if (result != null) {
-        return result;
-      }
-    }
-    // Find all .dart files in the function directory (excluding main.dart)
-    final dartFiles = functionDir
-        .listSync(recursive: true)
-        .where(
-          (entity) =>
-              entity is File &&
-              entity.path.endsWith('.dart') &&
-              !entity.path.endsWith('main.dart'),
-        )
+        .where((entity) => entity is File && entity.path.endsWith('.dart'))
         .cast<File>()
         .toList();
-    if (dartFiles.isNotEmpty) {
-      // Analyze each file to find the @cloudFunction annotated class
-      for (final file in dartFiles) {
-        final result = await _analyzeFile(file.path, functionPath);
-        if (result != null) {
-          return result;
-        }
+
+    // Separate main.dart from other files
+    final mainDartFile = allDartFiles.firstWhereOrNull(
+      (file) => path.basename(file.path) == 'main.dart',
+    );
+    final otherDartFiles = allDartFiles
+        .where((file) => path.basename(file.path) != 'main.dart')
+        .toList();
+
+    // First, check other files - reject if any @cloudFunction class is found
+    for (final file in otherDartFiles) {
+      final hasCloudFunction = await _hasCloudFunctionClass(file.path, functionPath);
+      if (hasCloudFunction) {
+        throw Exception(
+          '@cloudFunction annotated class found in "${path.basename(file.path)}". '
+          'Cloud functions must be defined only in main.dart',
+        );
       }
     }
 
-    return null;
+    // main.dart must exist
+    if (mainDartFile == null) {
+      throw Exception(
+        'main.dart not found. Cloud function must be defined in main.dart',
+      );
+    }
+
+    // Analyze main.dart for the cloud function class
+    final result = await _analyzeFile(
+      mainDartFile.path,
+      functionPath,
+    );
+    if (result == null) {
+      throw Exception(
+        'No class extending CloudDartFunction with @cloudFunction annotation '
+        'found in main.dart',
+      );
+    }
+
+    return result;
   }
 
-  /// Analyze a single Dart file to find @cloudFunction annotated class
-  static Future<Map<String, String>?> _analyzeFile(
+  /// Check if a file contains a class with @cloudFunction annotation
+  /// extending CloudDartFunction (used for rejection validation)
+  static Future<bool> _hasCloudFunctionClass(
     String filePath,
     String functionPath,
   ) async {
     try {
-      // Create analysis context
       final collection = AnalysisContextCollection(
         includedPaths: [functionPath],
       );
@@ -122,23 +145,63 @@ class FunctionMainInjection {
       final result = await context.currentSession.getResolvedUnit(filePath);
 
       if (result is ResolvedUnitResult) {
+        final visitor = _CloudFunctionDetector();
+        result.unit.visitChildren(visitor);
+        return visitor.foundCloudFunction;
+      }
+    } catch (e) {
+      // Ignore analysis errors for detection
+    }
+    return false;
+  }
+
+  /// Analyze main.dart to find the single @cloudFunction annotated class
+  static Future<CloudFunctionInfo?> _analyzeFile(
+    String filePath,
+    String functionPath,
+  ) async {
+    try {
+      final normalizedFunctionPath = path.normalize(path.absolute(filePath));
+      final collection = AnalysisContextCollection(
+        includedPaths: [normalizedFunctionPath],
+      );
+      final normalizedFilePath = path.normalize(path.absolute(filePath));
+
+      final context = collection.contextFor(normalizedFilePath);
+      final result = await context.currentSession.getResolvedUnit(normalizedFilePath);
+
+      if (result is ResolvedUnitResult) {
         final visitor = _CloudFunctionVisitor();
         result.unit.visitChildren(visitor);
 
-        if (visitor.cloudFunctionClassName != null) {
-          // Get relative path from function directory
-          final relativePath = path.relative(filePath, from: functionPath);
-
-          return {
-            'className': visitor.cloudFunctionClassName!,
-            'filePath': relativePath,
-            'classCode': visitor.classCode,
-            'imports': visitor.imports.join('\n'),
-          };
+        // Validate: exactly one cloud function class
+        if (visitor.cloudFunctionClasses.isEmpty) {
+          return null;
         }
+
+        if (visitor.cloudFunctionClasses.length > 1) {
+          throw Exception(
+            'Multiple @cloudFunction annotated classes found in main.dart: '
+            '${visitor.cloudFunctionClasses.map((c) => c.name).join(", ")}. '
+            'Only one cloud function class is allowed.',
+          );
+        }
+
+        final cloudFunction = visitor.cloudFunctionClasses.first;
+        final relativePath = path.relative(
+          normalizedFilePath,
+          from: normalizedFunctionPath,
+        );
+
+        return (
+          className: cloudFunction.name,
+          filePath: relativePath,
+          classCode: cloudFunction.code,
+          imports: visitor.imports.join('\n'),
+        );
       }
     } catch (e) {
-      // Continue to next file if analysis fails
+      if (e is Exception) rethrow;
       print('Failed to analyze file $filePath: $e');
     }
 
@@ -227,15 +290,34 @@ $classCode
   }
 }
 
-/// AST visitor to find classes annotated with @cloudFunction
+/// Data class for cloud function class info
+class _CloudFunctionClassInfo {
+  final String name;
+  final String code;
+
+  _CloudFunctionClassInfo({required this.name, required this.code});
+}
+
+/// Simple detector to check if a file contains @cloudFunction class
+class _CloudFunctionDetector extends RecursiveAstVisitor<void> {
+  bool foundCloudFunction = false;
+
+  @override
+  void visitClassDeclaration(ClassDeclaration node) {
+    if (_isCloudFunctionClass(node)) {
+      foundCloudFunction = true;
+    }
+    super.visitClassDeclaration(node);
+  }
+}
+
+/// AST visitor to find and collect classes annotated with @cloudFunction
 class _CloudFunctionVisitor extends RecursiveAstVisitor<void> {
-  String? cloudFunctionClassName;
-  String classCode = '';
+  final List<_CloudFunctionClassInfo> cloudFunctionClasses = [];
   final List<String> imports = [];
 
   @override
   void visitImportDirective(ImportDirective node) {
-    // Capture all import statements except dart_cloud_function
     final uri = node.uri.stringValue ?? '';
     if (!uri.contains('dart_cloud_function')) {
       imports.add(node.toSource());
@@ -245,23 +327,31 @@ class _CloudFunctionVisitor extends RecursiveAstVisitor<void> {
 
   @override
   void visitClassDeclaration(ClassDeclaration node) {
-    // Check if class has @cloudFunction annotation
-    final hasCloudFunctionAnnotation = node.metadata.any((annotation) {
-      final name = annotation.name.toString();
-      return name == 'cloudFunction' || name == 'CloudFunction';
-    });
-
-    // Check if class extends CloudDartFunction
-    final extendsClause = node.extendsClause;
-    if (extendsClause != null) {
-      final superclass = extendsClause.superclass.toString();
-      if (superclass == 'CloudDartFunction' && hasCloudFunctionAnnotation) {
-        cloudFunctionClassName = node.name.lexeme;
-        // Extract the entire class code including annotations
-        classCode = node.toSource();
-      }
+    if (_isCloudFunctionClass(node)) {
+      cloudFunctionClasses.add(
+        _CloudFunctionClassInfo(
+          name: node.name.lexeme,
+          code: node.toSource(),
+        ),
+      );
     }
-
     super.visitClassDeclaration(node);
   }
+}
+
+/// Check if a class declaration is a valid cloud function class
+/// (extends CloudDartFunction and has @cloudFunction annotation)
+bool _isCloudFunctionClass(ClassDeclaration node) {
+  final hasAnnotation = node.metadata.any((annotation) {
+    final name = annotation.name.toString();
+    return name == 'cloudFunction' || name == 'CloudFunction';
+  });
+
+  if (!hasAnnotation) return false;
+
+  final extendsClause = node.extendsClause;
+  if (extendsClause == null) return false;
+
+  final superclass = extendsClause.superclass.toString();
+  return superclass == 'CloudDartFunction';
 }
