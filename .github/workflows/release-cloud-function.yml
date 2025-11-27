@@ -1,0 +1,28 @@
+name: Release  Dart Cloud Function Package
+
+on:
+  push:
+    tags:
+      - 'dart_cloud_function-v*.*.*'  # Triggers on version tags like v1.0.0
+  workflow_dispatch:  # Allows manual trigger
+
+jobs:
+  build-and-release:
+    name: Publish Dart Cloud Function Package
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Dart SDK
+        uses: dart-lang/setup-dart@v1
+        with:
+          sdk: stable
+
+      - name: Get dependencies
+        working-directory: tools/dart_packages/dart_cloud_function
+        run: dart pub get
+
+      - name: Publish package
+        working-directory: tools/dart_packages/dart_cloud_function
+        run: dart pub publish
