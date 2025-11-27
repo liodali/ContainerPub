@@ -1,5 +1,5 @@
 name: dart_cloud_function
-description: A starting point for Dart libraries or applications.
+description: Dart Cloud Function package for serverless functions in Dart
 version: 0.1.0
 repository: https://github.com/liodali/ContainerPub
 
