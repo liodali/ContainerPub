@@ -4,7 +4,7 @@ import 'package:dart_cloud_backend/utils/commons.dart' show StringExtension;
 import 'package:shelf/shelf.dart';
 import 'package:bcrypt/bcrypt.dart';
 import 'package:dart_jsonwebtoken/dart_jsonwebtoken.dart';
-import 'package:dart_cloud_backend/config/config.dart';
+import 'package:dart_cloud_backend/configuration/config.dart';
 import 'package:database/database.dart';
 
 class AuthHandler {

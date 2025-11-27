@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'package:postgres/postgres.dart';
-import 'package:dart_cloud_backend/config/config.dart';
+import 'package:dart_cloud_backend/configuration/config.dart';
 
 /// Database connection pool for function execution
 /// Provides controlled, time-limited database access for functions

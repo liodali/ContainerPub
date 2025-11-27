@@ -6,7 +6,7 @@ import 'package:shelf/shelf.dart';
 import 'package:shelf/shelf_io.dart' as shelf_io;
 import 'package:dart_cloud_backend/router.dart';
 import 'package:database/database.dart';
-import 'package:dart_cloud_backend/config/config.dart';
+import 'package:dart_cloud_backend/configuration/config.dart';
 
 void main() async {
   // Load configuration

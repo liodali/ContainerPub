@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:path/path.dart' as path;
-import 'package:dart_cloud_backend/config/config.dart';
+import 'package:dart_cloud_backend/configuration/config.dart';
 
 /// Service for managing Podman containers for function execution
 ///

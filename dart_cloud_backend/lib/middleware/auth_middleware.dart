@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'package:dart_cloud_backend/services/token_service.dart';
 import 'package:shelf/shelf.dart';
 import 'package:dart_jsonwebtoken/dart_jsonwebtoken.dart';
-import 'package:dart_cloud_backend/config/config.dart';
+import 'package:dart_cloud_backend/configuration/config.dart';
 
 Middleware get authMiddleware {
   return (Handler handler) {
