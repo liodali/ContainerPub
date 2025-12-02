@@ -2,6 +2,10 @@
 
 Command-line interface for deploying and managing Dart serverless functions on Dart Cloud.
 
+
+**Note:** we are not live yet, this is a development version.
+our live version will be available soon.we are working hard to make it live.and provide you with the best experience.
+
 ## Installation
 
 ### From Source

@@ -1,6 +1,6 @@
 name: dart_cloud_cli
 description: CLI tool for deploying and managing Dart serverless functions
-version: 1.0.0
+version: 0.1.0
 publish_to: none
 
 environment:
