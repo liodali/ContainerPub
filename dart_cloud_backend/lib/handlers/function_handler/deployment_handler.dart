@@ -1,17 +1,20 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:dart_cloud_backend/services/s3_service.dart' show S3Service;
+import 'package:dart_cloud_backend/utils/archive_utils.dart';
 import 'package:dart_cloud_backend/utils/commons.dart' show StringExtension;
+import 'package:json2yaml/json2yaml.dart';
 import 'package:shelf/shelf.dart';
 import 'package:shelf_multipart/shelf_multipart.dart';
 import 'package:path/path.dart' as path;
 import 'package:uuid/uuid.dart';
 import 'package:archive/archive_io.dart';
 import 'package:s3_client_dart/s3_client_dart.dart';
-import 'package:dart_cloud_backend/config/config.dart';
+import 'package:dart_cloud_backend/configuration/config.dart';
 import 'package:database/database.dart';
 import 'package:dart_cloud_backend/services/docker_service.dart';
 import 'package:dart_cloud_backend/services/function_main_injection.dart';
+import 'package:yaml/yaml.dart';
 import 'utils.dart';
 
 /// Handles function deployment operations including:
@@ -205,6 +208,15 @@ class DeploymentHandler {
       extractArchiveToDisk(archive, functionDir.path);
       inputStream.close();
 
+      // === REMOVE dart_cloud_cli FROM DEV_DEPENDENCIES ===
+      // Remove dart_cloud_cli from pubspec.yaml to avoid unnecessary dependencies in production
+      await _removeDartCloudCliFromPubspec(functionDir.path);
+      await FunctionUtils.logFunction(
+        functionUUID,
+        'info',
+        'Removed dart_cloud_cli from dev_dependencies',
+      );
+
       // === MAIN.DART INJECTION ===
       // Inject main.dart that reads environment and request.json,
       // then invokes the @cloudFunction annotated class
@@ -229,33 +241,29 @@ class DeploymentHandler {
         'main.dart injected successfully',
       );
 
-      // === S3 UPLOAD ===
-      // Upload archive to S3 with versioned path
+      // === S3 UPLOAD (FUNCTION FOLDER) ===
+      // Upload the entire function folder to S3 before building Docker image
       await FunctionUtils.logFunction(
         functionUUID,
         'info',
-        'Uploading archive to S3...',
+        'Uploading function folder to S3...',
       );
 
-      // S3 key format: functions/{function-id}/v{version}/function.tar.gz
-      final s3Key = 'functions/$functionUUID/v$version/${functionName}.tar.gz';
-      final mainFile = response.file!;
-      final sizeMainFile = mainFile.lengthSync();
-      final contentFile = FileContentMemory(mainFile.readAsBytesSync());
-      archive.addFile(ArchiveFile.file('main.dart', sizeMainFile, contentFile));
-      // Upload file to S3
-      final uploadResult = await _s3Client.upload(archiveFile.path, s3Key);
-      if (uploadResult.isEmpty) {
-        throw Exception('Failed to upload archive to S3');
-      }
+      // S3 key prefix: functions/{function-uuid}/v{version}/
+      final s3KeyPrefix = 'functions/$functionUUID/v$version';
+      await _uploadFunctionFolderToS3(
+        functionName,
+        functionDir.path,
+        s3KeyPrefix,
+      );
 
       await FunctionUtils.logFunction(
         functionUUID,
         'info',
-        'Archive uploaded to S3: $s3Key',
+        'Function folder uploaded to S3: $s3KeyPrefix',
       );
 
-      // Clean up temporary uploaded file
+      // Clean up temporary uploaded archive file
       await archiveFile.delete();
 
       // === DOCKER IMAGE BUILD ===
@@ -290,7 +298,7 @@ class DeploymentHandler {
           functionId,
           version,
           imageTag,
-          s3Key,
+          s3KeyPrefix,
           'active',
           true, // Mark as active deployment
         ],
@@ -331,5 +339,43 @@ class DeploymentHandler {
         headers: {'Content-Type': 'application/json'},
       );
     }
+  }
+
+  /// Remove dart_cloud_cli from dev_dependencies in pubspec.yaml
+  static Future<void> _removeDartCloudCliFromPubspec(String functionPath) async {
+    final pubspecFile = File(path.join(functionPath, 'pubspec.yaml'));
+    if (!(await pubspecFile.exists())) {
+      return;
+    }
+
+    final content = await pubspecFile.readAsString();
+    var docPubspec = loadYaml(content);
+    final jsonYaml = json.decode(json.encode(docPubspec));
+    final devDep = Map.from(jsonYaml["dev_dependencies"]);
+    devDep.remove("dart_cloud_cli");
+    if (devDep.isNotEmpty) {
+      jsonYaml["dev_dependencies"] = devDep;
+    } else {
+      jsonYaml.remove("dev_dependencies");
+    }
+    final Map<String, dynamic> jsonConvYamlTransformed = Map<String, dynamic>.from(
+      jsonYaml,
+    );
+    final newYamlContent = json2yaml(jsonConvYamlTransformed);
+
+    await pubspecFile.writeAsString(newYamlContent);
+  }
+
+  /// Upload entire function folder to S3
+  static Future<void> _uploadFunctionFolderToS3(
+    String functionName,
+    String folderPath,
+    String s3KeyPrefix,
+  ) async {
+    final dirFunction = Directory(folderPath);
+    // final files = dir.listSync(recursive: true).whereType<File>();
+    final archiveFile = await dirFunction.createFunctionArchive(functionName);
+
+    await _s3Client.upload(archiveFile.path, s3KeyPrefix);
   }
 }
