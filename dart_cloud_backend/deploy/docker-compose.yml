@@ -28,8 +28,11 @@ services:
     build:
       context: ../..
       dockerfile: dart_cloud_backend/deploy/Dockerfile.backend
+      args:
+        PORT: ${PORT:-8080}
       ssh:
         - default
+      platform: linux/amd64
     platform: linux/amd64
     container_name: dart_cloud_backend
     restart: unless-stopped

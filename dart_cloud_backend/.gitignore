@@ -41,3 +41,4 @@ Thumbs.db
 *.dylib
 data
 .env*
+.dockerignore

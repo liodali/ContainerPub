@@ -9,47 +9,65 @@ WORKDIR /app
 
 # Copy pubspec files
 COPY ./dart_cloud_backend/pubspec.* /app/dart_cloud_backend/
-COPY ./dart_cloud_backend/s3_client_dart.so /app/dart_cloud_backend/
+COPY ./dart_cloud_backend/s3_client_dart.so /app/dart_cloud_backend
 
 COPY dart_cloud_backend /app/dart_cloud_backend
 
 # Copy source code
 COPY ./tools/dart_packages/s3_client_dart /app/tools/dart_packages/s3_client_dart
+RUN  rm -rf  /app/dart_cloud_backend/s3_client_dart.dylib
 
 WORKDIR /app/dart_cloud_backend
 # Get dependencies
 RUN dart pub get
 
+# Create functions directory
+RUN mkdir -p /app/functions
+
 # Compile to native executable for better performance
-RUN dart compile exe bin/server.dart -o bin/server
+RUN dart compile exe bin/server.dart --target-os=linux --target-arch=x64 -o bin/server 
+#RUN dart compile exe bin/server.dart -o bin/server 
 
 # Runtime stage - use minimal image
-FROM debian:bookworm-slim
+#FROM scratch
 
-# Install runtime dependencies
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends \
-    ca-certificates \
-    curl \
-    && rm -rf /var/lib/apt/lists/*
+FROM alpine
+
+#FROM debian:bookworm-slim
+
+# #Install runtime dependencies
+# RUN apt-get update && \
+#     apt-get install -y --no-install-recommends \
+#     curl \
+#     ca-certificates \
+#     # This is for running the binary on musl/alpine, NOT usually needed on debian slim
+#     # If your binary requires a specific system library, install it here. 
+#     && apt-get clean \
+#     && rm -rf /var/lib/apt/lists/*
+
+# RUN apk add --no-cache curl ca-certificates
+
+ARG PORT
 
 # Create app directory
 WORKDIR /app
 
 # Copy compiled binary from build stage
+COPY --from=build /runtime/ /
 COPY --from=build /app/dart_cloud_backend/bin/server /app/server
 COPY --from=build /app/dart_cloud_backend/.env /app/.env
 COPY --from=build /app/dart_cloud_backend/s3_client_dart.so /app/s3_client_dart.so
+COPY --from=build /app/functions /app/functions
 
 # Create functions directory
-RUN mkdir -p /app/functions
+#RUN mkdir -p /app/functions
 
 # Expose port
-EXPOSE 8080
+#EXPOSE PORT
 
 # Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:8080/api/health || exit 1
+#HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+#    CMD curl -f http://localhost:8080/api/health || exit 1
 
 # Run the server
 CMD ["./server", "--dart-define=S3_CLIENT_LIBRARY_PATH=/app/s3_client_dart.so"]
