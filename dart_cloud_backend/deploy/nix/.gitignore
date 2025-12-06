@@ -1,0 +1,6 @@
+# Nix build outputs
+result
+result-*
+
+# Flake lock (optional - you may want to commit this for reproducibility)
+# flake.lock
