@@ -136,4 +136,12 @@ class Config {
       await dir.create(recursive: true);
     }
   }
+
+  static void loadFake() {
+    dockerRegistry = 'localhost:5000';
+    functionMaxMemoryMb = 128;
+    functionDatabaseUrl = 'postgres://dart_cloud:dart_cloud@postgres:5432/dart_cloud';
+    functionDatabaseMaxConnections = 5;
+    functionDatabaseConnectionTimeoutMs = 5000;
+  }
 }
