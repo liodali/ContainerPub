@@ -1,8 +1,8 @@
 import 'dart:io';
 import 'dart:async';
+import 'package:dart_cloud_backend/services/docker/docker_service.dart';
 import 'package:path/path.dart' as path;
 import 'package:dart_cloud_backend/configuration/config.dart';
-import 'package:dart_cloud_backend/services/docker_service.dart';
 import 'package:database/database.dart';
 
 class FunctionExecutor {
@@ -91,7 +91,7 @@ class FunctionExecutor {
 
       // Run the function in a Docker container
       final timeoutMs = Config.functionTimeoutSeconds * 1000;
-      final executionResult = await DockerService.runContainer(
+      final executionResult = await DockerService.runContainerStatic(
         imageTag: imageTag,
         input: httpRequest,
         timeoutMs: timeoutMs,

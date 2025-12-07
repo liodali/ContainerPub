@@ -275,7 +275,7 @@ class DeploymentHandler {
       );
 
       // Image tag format: {registry}/dart-function-{id}-v{version}:latest
-      final imageTag = await DockerService.buildImage(
+      final imageTag = await DockerService.buildImageStatic(
         '$functionId-v$version',
         functionDir.path,
       );

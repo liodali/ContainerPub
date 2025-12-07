@@ -174,7 +174,7 @@ class CrudHandler {
         await S3Service.s3Client.deleteObject(s3Key);
 
         // Delete Docker image
-        await DockerService.removeImage(imageTag);
+        await DockerService.removeImageStatic(imageTag);
       });
 
       // Delete function from database
