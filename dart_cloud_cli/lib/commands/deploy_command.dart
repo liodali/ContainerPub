@@ -159,10 +159,6 @@ class DeployCommand extends BaseCommand {
               .copyWith(functionId: functionId, functionPath: functionDir.path);
       await updatedConfig.save(functionDir.path);
       print('✓ Function ID cached in .dart_tool/function_config.json');
-
-      // Cleanup
-      final tempDir = archiveFile.parent;
-      tempDir.deleteSync(recursive: true);
     } catch (e) {
       print('✗ Deployment failed: $e');
       exit(1);
