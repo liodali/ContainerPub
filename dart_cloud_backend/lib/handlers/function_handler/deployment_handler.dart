@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'package:dart_cloud_backend/services/docker/docker.dart';
 import 'package:dart_cloud_backend/services/s3_service.dart' show S3Service;
 import 'package:dart_cloud_backend/utils/archive_utils.dart';
 import 'package:dart_cloud_backend/utils/commons.dart' show StringExtension;
@@ -12,7 +13,6 @@ import 'package:archive/archive_io.dart';
 import 'package:s3_client_dart/s3_client_dart.dart';
 import 'package:dart_cloud_backend/configuration/config.dart';
 import 'package:database/database.dart';
-import 'package:dart_cloud_backend/services/docker_service.dart';
 import 'package:dart_cloud_backend/services/function_main_injection.dart';
 import 'package:yaml/yaml.dart';
 import 'utils.dart';
@@ -105,7 +105,7 @@ class DeploymentHandler {
           //   (prev, element) => prev..addAll(element),
           // );
 
-          tempFile.writeAsBytesSync(bytes);
+          await tempFile.writeAsBytes(bytes);
 
           archiveFile = tempFile;
         }
@@ -225,20 +225,21 @@ class DeploymentHandler {
         'info',
         'Injecting main.dart...',
       );
-      final response = await FunctionMainInjection.injectMain(
+      final injectionResult = await FunctionMainInjection.injectMain(
         functionDir.path,
       );
-      if (!response.result) {
+      if (!injectionResult.success) {
         throw Exception(
-          'Failed to inject main.dart. Ensure function has exactly one class '
-          'extending CloudDartFunction with @cloudFunction annotation.',
+          'Failed to inject main.dart: ${injectionResult.error ?? "Unknown error"}. '
+          'Ensure function has exactly one class extending CloudDartFunction '
+          'with @cloudFunction annotation.',
         );
       }
 
       await FunctionUtils.logFunction(
         functionUUID,
         'info',
-        'main.dart injected successfully',
+        'main.dart injected at ${injectionResult.entrypoint}',
       );
 
       // === S3 UPLOAD (FUNCTION FOLDER) ===
@@ -271,13 +272,14 @@ class DeploymentHandler {
       await FunctionUtils.logFunction(
         functionUUID,
         'info',
-        'Building Docker image...',
+        'Building Docker image with entrypoint: ${injectionResult.entrypoint}...',
       );
 
       // Image tag format: {registry}/dart-function-{id}-v{version}:latest
-      final imageTag = await DockerService.buildImageStatic(
+      final imageTag = await DockerService.buildImageWithEntrypointStatic(
         '$functionId-v$version',
         functionDir.path,
+        injectionResult.entrypoint,
       );
 
       await FunctionUtils.logFunction(

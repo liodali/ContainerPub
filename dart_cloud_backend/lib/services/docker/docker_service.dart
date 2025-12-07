@@ -106,14 +106,19 @@ class DockerService {
   /// Returns: Image tag (e.g., 'localhost:5000/dart-function-id:latest')
   ///
   /// Throws: Exception if build fails or times out
-  Future<String> buildImage(String functionId, String functionDir) async {
+  Future<String> buildImage(
+    String functionId,
+    String functionDir, {
+    String entrypoint = 'bin/main.dart',
+  }) async {
     final imageTag = '${Config.dockerRegistry}/dart-function-$functionId:latest';
     final buildStageTag = 'dart-function-build-$functionId';
 
-    // Generate and write Dockerfile
+    // Generate and write Dockerfile with the correct entrypoint
     final dockerfilePath = _fileSystem.joinPath(functionDir, 'Dockerfile');
     final dockerfileContent = _dockerfileGenerator.generate(
       buildStageTag: buildStageTag,
+      entrypoint: entrypoint,
     );
     await _fileSystem.writeFile(dockerfilePath, dockerfileContent);
 
@@ -273,6 +278,18 @@ class DockerService {
     String functionId,
     String functionDir,
   ) => _instance.buildImage(functionId, functionDir);
+
+  /// Static method to build image with custom entrypoint (delegates to singleton)
+  ///
+  /// Parameters:
+  /// - [functionId]: Unique identifier for the function
+  /// - [functionDir]: Path to directory containing function code
+  /// - [entrypoint]: Path to main.dart relative to function dir (e.g., 'bin/main.dart')
+  static Future<String> buildImageWithEntrypointStatic(
+    String functionId,
+    String functionDir,
+    String entrypoint,
+  ) => _instance.buildImage(functionId, functionDir, entrypoint: entrypoint);
 
   /// Static method to run container (delegates to singleton)
   /// Returns Map for backward compatibility

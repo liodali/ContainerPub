@@ -61,6 +61,10 @@ RUN if [ -f pubspec.yaml ]; then dart pub get; fi
 # Copy all function source files
 COPY . .
 
+RUN dart pub get
+
+RUN dart format .
+
 # Compile Dart to native AOT executable
 RUN dart compile exe $entrypoint -o /app/$outputBinary
 
