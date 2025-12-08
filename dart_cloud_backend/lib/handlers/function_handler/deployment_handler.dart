@@ -208,15 +208,6 @@ class DeploymentHandler {
       extractArchiveToDisk(archive, functionDir.path);
       inputStream.close();
 
-      // === REMOVE dart_cloud_cli FROM DEV_DEPENDENCIES ===
-      // Remove dart_cloud_cli from pubspec.yaml to avoid unnecessary dependencies in production
-      await _removeDartCloudCliFromPubspec(functionDir.path);
-      await FunctionUtils.logFunction(
-        functionUUID,
-        'info',
-        'Removed dart_cloud_cli from dev_dependencies',
-      );
-
       // === MAIN.DART INJECTION ===
       // Inject main.dart that reads environment and request.json,
       // then invokes the @cloudFunction annotated class
@@ -236,6 +227,16 @@ class DeploymentHandler {
         );
       }
 
+      // === REMOVE dart_cloud_cli FROM DEV_DEPENDENCIES ===
+      // Remove dart_cloud_cli from pubspec.yaml to avoid unnecessary dependencies in production
+      await _removeDartCloudCliFromPubspec(functionDir.path);
+
+      await FunctionUtils.logFunction(
+        functionUUID,
+        'info',
+        'Removed dart_cloud_cli from dev_dependencies',
+      );
+
       await FunctionUtils.logFunction(
         functionUUID,
         'info',
@@ -253,9 +254,9 @@ class DeploymentHandler {
       // S3 key prefix: functions/{function-uuid}/v{version}/
       final s3KeyPrefix = 'functions/$functionUUID/v$version';
       await _uploadFunctionFolderToS3(
-        functionName,
-        functionDir.path,
-        s3KeyPrefix,
+        functionName: functionName,
+        folderPath: functionDir.path,
+        s3KeyPrefix: s3KeyPrefix,
       );
 
       await FunctionUtils.logFunction(
@@ -263,7 +264,7 @@ class DeploymentHandler {
         'info',
         'Function folder uploaded to S3: $s3KeyPrefix',
       );
-
+      print('archieve file received ${archiveFile.path}');
       // Clean up temporary uploaded archive file
       await archiveFile.delete();
 
@@ -290,26 +291,35 @@ class DeploymentHandler {
 
       // === CREATE DEPLOYMENT RECORD ===
       // Generate unique ID for this deployment
-      final deploymentId = _uuid.v4();
+      final deploymentUUId = _uuid.v4();
 
       // Store deployment metadata in database
-      await Database.connection.execute(
-        'INSERT INTO function_deployments (id, function_id, version, image_tag, s3_key, status, is_active) VALUES (\$1, \$2, \$3, \$4, \$5, \$6, \$7)',
-        parameters: [
-          deploymentId,
-          functionId,
-          version,
-          imageTag,
-          s3KeyPrefix,
-          'active',
-          true, // Mark as active deployment
-        ],
-      );
+      final result = await DatabaseManagers.functionDeployments.insert({
+        'uuid': deploymentUUId,
+        'function_id': functionId,
+        'version': version,
+        'image_tag': imageTag,
+        's3_key': s3KeyPrefix,
+        'status': 'active',
+        'is_active': true,
+      });
+      // final result = await Database.connection.execute(
+      //   'INSERT INTO function_deployments (uuid, function_id, version, image_tag, s3_key, status, is_active) VALUES (\$1, \$2, \$3, \$4, \$5, \$6, \$7)',
+      //   parameters: [
+      //     deploymentUUId,
+      //     functionId,
+      //     version,
+      //     imageTag,
+      //     s3KeyPrefix,
+      //     'active',
+      //     true, // Mark as active deployment
+      //   ],
+      // );
 
       // Update function record with active deployment reference
       await Database.connection.execute(
         'UPDATE functions SET active_deployment_id = \$1, status = \$2 WHERE id = \$3',
-        parameters: [deploymentId, 'active', functionId],
+        parameters: [result!.id, 'active', functionId],
       );
 
       // Log successful deployment
@@ -323,10 +333,10 @@ class DeploymentHandler {
       return Response(
         isNewFunction ? 201 : 200, // 201 for new, 200 for update
         body: jsonEncode({
-          'id': functionId,
+          'id': functionUUID,
           'name': functionName,
           'version': version,
-          'deploymentId': deploymentId,
+          'deploymentId': deploymentUUId,
           'status': 'active',
           'isNewFunction': isNewFunction,
           'createdAt': DateTime.now().toIso8601String(),
@@ -369,15 +379,17 @@ class DeploymentHandler {
   }
 
   /// Upload entire function folder to S3
-  static Future<void> _uploadFunctionFolderToS3(
-    String functionName,
-    String folderPath,
-    String s3KeyPrefix,
-  ) async {
+  static Future<void> _uploadFunctionFolderToS3({
+    
+    required String functionName,
+    required String folderPath,
+    required String s3KeyPrefix,
+  }) async {
     final dirFunction = Directory(folderPath);
     // final files = dir.listSync(recursive: true).whereType<File>();
-    final archiveFile = await dirFunction.createFunctionArchive(functionName);
-
+    final (archiveFile,path) = await dirFunction.createFunctionArchive(
+      functionName,
+    );
     await _s3Client.upload(archiveFile.path, s3KeyPrefix);
   }
 }
