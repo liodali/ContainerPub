@@ -68,7 +68,7 @@ class DeployCommand extends BaseCommand {
     final functionName =
         pubspec['name'] as String? ?? path.basename(functionDir.path);
     print('Preparing to deploy function: $functionName');
-
+    File? archiveFile;
     try {
       // Step 1: Validate deployment restrictions
       print('Validating deployment restrictions...');
@@ -127,7 +127,7 @@ class DeployCommand extends BaseCommand {
 
       // Create archive using extension method
       print('Creating archive...');
-      final archiveFile = await functionDir.createFunctionArchive(functionName);
+      archiveFile = await functionDir.createFunctionArchive(functionName);
       print(
         'Archive created: ${(archiveFile.lengthSync() / (1024 * 1024)).toStringAsFixed(2)} MB',
       );
@@ -141,8 +141,6 @@ class DeployCommand extends BaseCommand {
         archiveFile,
         functionName,
       );
-      print('delete archive file');
-      archiveFile.deleteSync();
       final functionId = response['id'] as String;
 
       print('✓ Function deployed successfully!');
@@ -162,6 +160,10 @@ class DeployCommand extends BaseCommand {
     } catch (e) {
       print('✗ Deployment failed: $e');
       exit(1);
+    } finally {
+      print('delete archive file');
+      archiveFile?.deleteSync();
+      archiveFile = null;
     }
   }
 }
