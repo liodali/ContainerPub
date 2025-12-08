@@ -58,6 +58,9 @@ mixin AuthCache {
   }
 
   static bool _loadEnvs() {
+    if (!File('.env').existsSync()) {
+      return false;
+    }
     final dotEnv = DotEnv()..load(['.env']);
     return dotEnv.getOrElse('isDevLocal', () => 'false') == 'true';
   }
