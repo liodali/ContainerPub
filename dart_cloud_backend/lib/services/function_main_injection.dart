@@ -67,11 +67,17 @@ class FunctionMainInjection {
         cloudFunctionInfo,
       );
 
+      // Check if the cloud function is in bin/main.dart itself
+      final isInBinMain =
+          cloudFunctionInfo.filePath.endsWith('bin/main.dart') ||
+          cloudFunctionInfo.filePath.endsWith('bin${path.separator}main.dart');
+
       // Generate main.dart content
       final mainContent = _generateMainDart(
         className: cloudFunctionInfo.className,
         importPath: mainLocation.importPath,
         userImports: cloudFunctionInfo.imports,
+        classCode: isInBinMain ? cloudFunctionInfo.classCode : null,
       );
 
       // Ensure directory exists
@@ -161,10 +167,8 @@ class FunctionMainInjection {
     final allDartFiles = functionDir
         .listSync(recursive: true)
         .where(
-          (entity) =>
-              entity is File &&
-              entity.path.endsWith('.dart') &&
-              !entity.path.contains('bin/main.dart'),
+          (entity) => entity is File && entity.path.endsWith('.dart'),
+          // && !entity.path.contains('bin/main.dart'),
         )
         .cast<File>()
         .toList();
@@ -260,21 +264,51 @@ class FunctionMainInjection {
   ///
   /// Uses import to reference the cloud function class instead of embedding code.
   /// This keeps the user's source files intact and allows proper dependency resolution.
+  ///
+  /// If [classCode] is provided, the class is embedded directly (for bin/main.dart case)
+  /// instead of importing it, since we're overwriting the original file.
   static String _generateMainDart({
     required String className,
     required String importPath,
     required String userImports,
+    String? classCode,
   }) {
-    return '''
+    // If classCode is provided, embed it directly instead of importing
+    final importOrEmbed = classCode != null
+        ? '''
+// User's cloud function class (embedded from original bin/main.dart)
+$classCode
+'''
+        : '''
+// Import the cloud function class
+import '$importPath';
+''';
+    final importDefaults = '''
 import 'dart:io';
 import 'dart:convert';
 import 'package:dart_cloud_function/dart_cloud_function.dart';
+''';
 
-// Import the cloud function class
-import '$importPath';
+    final importDefaultsSet = importDefaults
+        .split('import ')
+        .map((importEle) => importEle.trim())
+        .toSet();
+    final userImportsSet = userImports
+        .split('import ')
+        .map((importEle) => importEle.trim())
+        .toSet();
+
+    final imports = importDefaultsSet
+        .union(userImportsSet)
+        .where((ele) => ele.isNotEmpty)
+        .map((importEle) => 'import $importEle')
+        .join('\n');
+
+    return '''
 
 // User imports from original function file
-$userImports
+// Default imports Auto generated
+$imports
 
 /// Auto-generated main.dart for cloud function execution
 ///
@@ -336,6 +370,7 @@ void _writeError(String message) {
   };
   stdout.writeln(jsonEncode(errorResponse));
 }
+$importOrEmbed
 ''';
   }
 }

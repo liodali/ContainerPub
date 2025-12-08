@@ -49,8 +49,12 @@ extension ArchiveUtils on Directory {
 
   /// Creates a zip archive containing only allowed files and directories
   /// Includes: .dart files from lib/ and bin/, plus pubspec.yaml, pubspec.lock, .env
-  Future<File> createFunctionArchive(String functionName) async {
-    final archivePath = path.join(Directory.current.path, '$functionName.zip');
+  Future<(File, String)> createFunctionArchive(String functionName) async {
+    // final dirArchive = path.join(functDir, 'data/app/functions/archives');
+    // if (!(await Directory(dirArchive).exists())) {
+    //   await Directory(dirArchive).create(recursive: true);
+    // }
+    final archivePath = path.join(this.path, '$functionName.zip');
 
     final archive = buildFunctionArchive(functionName);
 
@@ -61,7 +65,7 @@ extension ArchiveUtils on Directory {
     final archiveFile = File(archivePath);
     await archiveFile.writeAsBytes(zipData);
 
-    return archiveFile;
+    return (archiveFile, archivePath);
   }
 
   /// Recursively collects all .dart files from this directory
