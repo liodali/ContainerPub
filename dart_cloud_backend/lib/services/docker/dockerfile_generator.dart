@@ -66,7 +66,7 @@ RUN dart pub get
 RUN dart format .
 
 # Compile Dart to native AOT executable
-RUN dart compile exe $entrypoint -o /app/$outputBinary
+RUN dart compile exe $entrypoint --target-os=linux --target-arch=x64  -o /app/$outputBinary
 
 # ============================================
 # Stage 2: Runtime - Minimal image

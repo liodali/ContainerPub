@@ -111,7 +111,7 @@ class DockerService {
     String functionDir, {
     String entrypoint = 'bin/main.dart',
   }) async {
-    final imageTag = '${Config.dockerRegistry}/dart-function-$functionId:latest';
+    final imageTag = 'dart-function-$functionId:latest';
     final buildStageTag = 'dart-function-build-$functionId';
 
     // Generate and write Dockerfile with the correct entrypoint
@@ -289,7 +289,11 @@ class DockerService {
     String functionId,
     String functionDir,
     String entrypoint,
-  ) => _instance.buildImage(functionId, functionDir, entrypoint: entrypoint);
+  ) => _instance.buildImage(
+    functionId,
+    functionDir,
+    entrypoint: entrypoint,
+  );
 
   /// Static method to run container (delegates to singleton)
   /// Returns Map for backward compatibility

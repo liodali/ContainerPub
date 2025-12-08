@@ -82,8 +82,10 @@ class PodmanRuntime implements ContainerRuntime {
       '${memoryMb}m',
       '--cpus',
       cpus.toString(),
-      '--network',
-      network,
+      if (network != 'none') ...[
+        '--network',
+        network,
+      ],
     ];
 
     // Add volume mounts
