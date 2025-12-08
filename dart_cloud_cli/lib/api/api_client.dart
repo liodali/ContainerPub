@@ -91,13 +91,18 @@ class ApiClient {
     String functionId,
     Map<String, dynamic>? data,
   ) async {
+    final body = data != null
+        ? {
+            'body': data,
+          }
+        : null;
     final response = await http.post(
       Uri.parse('${Config.serverUrl}/api/functions/$functionId/invoke'),
       headers: {
         'Authorization': 'Bearer ${Config.token}',
         'Content-Type': 'application/json',
       },
-      body: jsonEncode(data ?? {}),
+      body: jsonEncode(body ?? {}),
     );
 
     if (response.statusCode == 200) {

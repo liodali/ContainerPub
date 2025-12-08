@@ -50,10 +50,10 @@ class ExecutionHandler {
   /// - 404: Function not found
   /// - 413: Request payload too large
   /// - 500: Execution failed
-  static Future<Response> invoke(Request request, String id) async {
+  static Future<Response> invoke(Request request, String uuid) async {
     try {
       // Extract user ID from authenticated request
-      final userId = request.context['userId'] as String;
+      // final userId = request.context['userId'] as String;
 
       // === REQUEST SIZE VALIDATION ===
       // Read entire request body to check size before processing
@@ -84,13 +84,18 @@ class ExecutionHandler {
 
       // === FUNCTION OWNERSHIP VERIFICATION ===
       // Verify that function exists and belongs to requesting user
-      final result = await Database.connection.execute(
-        'SELECT id, name FROM functions WHERE id = \$1 AND user_id = \$2',
-        parameters: [id, userId],
+
+      final functionEntity = await DatabaseManagers.functions.findOne(
+        where: {'uuid': uuid},
       );
 
+      // final result = await Database.connection.execute(
+      //   'SELECT id, name FROM functions WHERE uuid = \$1 AND user_id = \$2',
+      //   parameters: [uuid, userId],
+      // );
+
       // Check if function exists and user has access
-      if (result.isEmpty) {
+      if (functionEntity == null) {
         return Response.notFound(
           jsonEncode({'error': 'Function not found'}),
           headers: {'Content-Type': 'application/json'},
@@ -107,7 +112,7 @@ class ExecutionHandler {
       // 2. Run Docker container with function code
       // 3. Wait for result with timeout
       // 4. Schedule container cleanup (10ms timer)
-      final executor = FunctionExecutor(id);
+      final executor = FunctionExecutor(functionEntity.uuid!);
       final executionResult = await executor.execute(body);
 
       // Calculate execution duration
@@ -118,7 +123,7 @@ class ExecutionHandler {
       await Database.connection.execute(
         'INSERT INTO function_invocations (function_id, status, duration_ms, error) VALUES (\$1, \$2, \$3, \$4)',
         parameters: [
-          id,
+          functionEntity.id,
           executionResult['success'] == true ? 'success' : 'error',
           duration,
           executionResult['error'],
@@ -127,7 +132,7 @@ class ExecutionHandler {
 
       // Log execution result for debugging and monitoring
       await FunctionUtils.logFunction(
-        id,
+        uuid,
         executionResult['success'] == true ? 'info' : 'error',
         executionResult['success'] == true
             ? 'Function executed successfully in ${duration}ms'

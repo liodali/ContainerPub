@@ -34,7 +34,10 @@ class LoginCommand extends BaseCommand {
       final token = response['accessToken'] as String;
       final refreshToken = response['refreshToken'] as String;
 
-      await config.saveAuth(token: token, refreshToken: refreshToken);
+      await config.saveAuth(
+        token: token,
+        refreshToken: refreshToken,
+      );
       print('✓ Successfully logged in!');
     } catch (e) {
       print('✗ Login failed: $e');

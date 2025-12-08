@@ -6,16 +6,16 @@ import 'package:dart_cloud_backend/configuration/config.dart';
 import 'package:database/database.dart';
 
 class FunctionExecutor {
-  final String functionId;
+  final String functionUUId;
   static int _activeExecutions = 0;
   static final Map<String, Timer> _containerCleanupTimers = {};
 
-  FunctionExecutor(this.functionId);
+  FunctionExecutor(this.functionUUId);
 
   /// Execute function with HTTP request structure
   /// Input should contain 'body' and 'query' fields
   Future<Map<String, dynamic>> execute(Map<String, dynamic> input) async {
-    final functionDir = path.join(Config.functionsDir, functionId);
+    final functionDir = path.join(Config.functionsDir, functionUUId);
     final functionDirObj = Directory(functionDir);
 
     if (!await functionDirObj.exists()) {
@@ -74,9 +74,9 @@ class FunctionExecutor {
         SELECT fd.image_tag
         FROM functions f
         JOIN function_deployments fd ON f.active_deployment_id = fd.id
-        WHERE f.id = \$1 AND fd.is_active = true
+        WHERE f.uuid = \$1 AND fd.is_active = true
         ''',
-        parameters: [functionId],
+        parameters: [functionUUId],
       );
 
       if (result.isEmpty) {
@@ -98,7 +98,7 @@ class FunctionExecutor {
       );
 
       // Schedule container cleanup after 10ms
-      _scheduleContainerCleanup(functionId, imageTag);
+      _scheduleContainerCleanup(functionUUId, imageTag);
 
       return executionResult;
     } catch (e) {
@@ -107,17 +107,17 @@ class FunctionExecutor {
   }
 
   /// Schedule container cleanup after 10ms
-  static void _scheduleContainerCleanup(String functionId, String imageTag) {
+  static void _scheduleContainerCleanup(String functionUUId, String imageTag) {
     // Cancel existing timer if any
-    _containerCleanupTimers[functionId]?.cancel();
+    _containerCleanupTimers[functionUUId]?.cancel();
 
     // Schedule new cleanup timer for 10ms
-    _containerCleanupTimers[functionId] = Timer(
+    _containerCleanupTimers[functionUUId] = Timer(
       const Duration(milliseconds: 10),
       () {
         // Cleanup is handled by Docker's --rm flag
         // This timer just ensures we track cleanup timing
-        _containerCleanupTimers.remove(functionId);
+        _containerCleanupTimers.remove(functionUUId);
       },
     );
   }

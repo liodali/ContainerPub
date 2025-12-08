@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 import 'package:args/args.dart';
 import 'package:dart_cloud_cli/commands/deploy_command.dart';
@@ -16,6 +17,16 @@ void main(List<String> arguments) async {
   final loginArgs = ArgParser()
     ..addOption('email', abbr: 'e', help: 'Email address')
     ..addOption('password', abbr: 'p', help: 'Password', hide: true);
+
+  final invokeArgs = ArgParser()
+    ..addOption(
+      'data',
+      abbr: 'd',
+      help: 'Data to send to the function',
+      mandatory: false,
+      defaultsTo: json.encode({}),
+    );
+
   final parser = ArgParser()
     ..addFlag('help', abbr: 'h', negatable: false, help: 'Show help')
     ..addFlag('version', abbr: 'v', negatable: false, help: 'Show version')
@@ -26,7 +37,7 @@ void main(List<String> arguments) async {
     ..addCommand('list')
     ..addCommand('logs')
     ..addCommand('delete')
-    ..addCommand('invoke');
+    ..addCommand('invoke', invokeArgs);
 
   if (arguments.isEmpty) {
     printUsage();
