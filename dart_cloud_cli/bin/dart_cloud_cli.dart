@@ -9,6 +9,7 @@ import 'package:dart_cloud_cli/commands/login_command.dart';
 import 'package:dart_cloud_cli/commands/logout_command.dart';
 import 'package:dart_cloud_cli/commands/invoke_command.dart';
 import 'package:dart_cloud_cli/commands/init_command.dart';
+import 'package:dart_cloud_cli/commands/status_command.dart';
 import 'package:dart_cloud_cli/services/cache.dart' show AuthCache;
 
 void main(List<String> arguments) async {
@@ -31,9 +32,18 @@ void main(List<String> arguments) async {
     ..addFlag('help', abbr: 'h', negatable: false, help: 'Show help')
     ..addFlag('version', abbr: 'v', negatable: false, help: 'Show version')
     ..addCommand('init')
+    ..addCommand('status')
     ..addCommand('login', loginArgs)
     ..addCommand('logout')
-    ..addCommand('deploy')
+    ..addCommand(
+      'deploy',
+      ArgParser()
+        ..addFlag(
+          'force',
+          abbr: 'f',
+          help: 'Force deployment even if no changes detected',
+        ),
+    )
     ..addCommand('list')
     ..addCommand('logs')
     ..addCommand('delete')
@@ -50,6 +60,9 @@ void main(List<String> arguments) async {
     switch (command) {
       case 'init':
         await InitCommand().execute(commandArgs);
+        break;
+      case 'status':
+        await StatusCommand().execute(commandArgs);
         break;
       case 'login':
         await LoginCommand().execute(commandArgs);
@@ -103,9 +116,10 @@ Usage: dart_cloud_cli <command> [arguments]
 
 Available commands:
   init               Initialize function config in .dart_tool directory
+  status             Show function status and deployment hash
   login              Authenticate with the Dart Cloud platform
   logout             Clear authentication token and logout
-  deploy <path>      Deploy a Dart function from the specified path
+  deploy [path]      Deploy a Dart function (use -f to force deploy)
   list               List all deployed functions
   logs <id>          View logs for a specific function
   invoke <id>        Invoke a deployed function
@@ -115,9 +129,11 @@ Available commands:
 
 Examples:
   dart_cloud_cli init
+  dart_cloud_cli status
   dart_cloud_cli login
   dart_cloud_cli logout
   dart_cloud_cli deploy ./my_function
+  dart_cloud_cli deploy -f              # Force deploy even if no changes
   dart_cloud_cli list
   dart_cloud_cli logs my-function-id
   dart_cloud_cli invoke my-function-id --data '{"key": "value"}'

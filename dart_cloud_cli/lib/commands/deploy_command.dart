@@ -5,6 +5,7 @@ import 'package:dart_cloud_cli/api/api_client.dart';
 import 'package:dart_cloud_cli/config/config.dart';
 import 'package:dart_cloud_cli/services/function_analyzer.dart';
 import 'package:dart_cloud_cli/services/deployment_validator.dart';
+import 'package:dart_cloud_cli/services/function_hasher.dart';
 import 'package:dart_cloud_cli/common/function_config.dart';
 import 'package:dart_cloud_cli/common/archive_utils.dart';
 import 'package:yaml/yaml.dart';
@@ -68,6 +69,32 @@ class DeployCommand extends BaseCommand {
     final functionName =
         pubspec['name'] as String? ?? path.basename(functionDir.path);
     print('Preparing to deploy function: $functionName');
+
+    // Check for --force flag to bypass hash check
+    final forceDeployment = args.contains('--force') || args.contains('-f');
+
+    // Generate hash of current function code
+    print('Generating function hash...');
+    final hasher = FunctionHasher(functionDir.path);
+    final currentHash = await hasher.generateHash();
+    print('Current hash: ${currentHash.substring(0, 16)}...');
+
+    // Load existing config and check hash
+    final existingConfig = await FunctionConfig.load(functionDir.path);
+    if (!forceDeployment &&
+        existingConfig != null &&
+        existingConfig.hasUnchangedCode(currentHash)) {
+      print('\n✓ No changes detected since last deployment.');
+      print('  Last deployed: ${existingConfig.lastDeployedAt ?? 'unknown'}');
+      print('  Version: ${existingConfig.deployVersion ?? 1}');
+      print('  Hash: ${currentHash.substring(0, 16)}...');
+      print('\nUse --force or -f to deploy anyway.');
+      return;
+    }
+
+    final newVersion = existingConfig?.nextVersion ?? 1;
+    print('Deploying version: $newVersion');
+
     File? archiveFile;
     try {
       // Step 1: Validate deployment restrictions
@@ -146,17 +173,24 @@ class DeployCommand extends BaseCommand {
       print('✓ Function deployed successfully!');
       print('  Function ID: $functionId');
       print('  Name: ${response['name']}');
+      print('  Version: $newVersion');
       print(
         '  Endpoint: ${Config.serverUrl}/api/functions/$functionId/invoke',
       );
 
-      // Save function ID and path to config
-      final existingConfig = await FunctionConfig.load(functionDir.path);
-      final updatedConfig =
-          (existingConfig ?? FunctionConfig(functionName: functionName))
-              .copyWith(functionId: functionId, functionPath: functionDir.path);
+      // Save function ID, path, hash, and version to config
+      final configToUpdate =
+          existingConfig ?? FunctionConfig(functionName: functionName);
+      final updatedConfig = configToUpdate.copyWith(
+        functionId: functionId,
+        functionPath: functionDir.path,
+        lastDeployHash: currentHash,
+        lastDeployedAt: DateTime.now().toIso8601String(),
+        deployVersion: newVersion,
+      );
       await updatedConfig.save(functionDir.path);
-      print('✓ Function ID cached in .dart_tool/function_config.json');
+      print('✓ Config cached in .dart_tool/function_config.json');
+      print('  Hash: ${currentHash.substring(0, 16)}...');
     } catch (e) {
       print('✗ Deployment failed: $e');
       exit(1);

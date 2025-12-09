@@ -7,12 +7,18 @@ class FunctionConfig {
   final String? functionId;
   final String? createdAt;
   final String? functionPath;
+  final String? lastDeployHash;
+  final String? lastDeployedAt;
+  final int? deployVersion;
 
   FunctionConfig({
     required this.functionName,
     this.functionId,
     this.createdAt,
     this.functionPath,
+    this.lastDeployHash,
+    this.lastDeployedAt,
+    this.deployVersion,
   });
 
   Map<String, dynamic> toJson() {
@@ -21,6 +27,9 @@ class FunctionConfig {
       if (functionId != null) 'function_id': functionId,
       if (createdAt != null) 'created_at': createdAt,
       if (functionPath != null) 'function_path': functionPath,
+      if (lastDeployHash != null) 'last_deploy_hash': lastDeployHash,
+      if (lastDeployedAt != null) 'last_deployed_at': lastDeployedAt,
+      if (deployVersion != null) 'deploy_version': deployVersion,
     };
   }
 
@@ -30,6 +39,9 @@ class FunctionConfig {
       functionId: json['function_id'] as String?,
       createdAt: json['created_at'] as String?,
       functionPath: json['function_path'] as String?,
+      lastDeployHash: json['last_deploy_hash'] as String?,
+      lastDeployedAt: json['last_deployed_at'] as String?,
+      deployVersion: json['deploy_version'] as int?,
     );
   }
 
@@ -74,13 +86,30 @@ class FunctionConfig {
     }
   }
 
-  /// Update the function ID in the config
-  FunctionConfig copyWith({String? functionId, String? functionPath}) {
+  /// Update the function config fields
+  FunctionConfig copyWith({
+    String? functionId,
+    String? functionPath,
+    String? lastDeployHash,
+    String? lastDeployedAt,
+    int? deployVersion,
+  }) {
     return FunctionConfig(
       functionName: functionName,
       functionId: functionId ?? this.functionId,
       createdAt: createdAt,
       functionPath: functionPath ?? this.functionPath,
+      lastDeployHash: lastDeployHash ?? this.lastDeployHash,
+      lastDeployedAt: lastDeployedAt ?? this.lastDeployedAt,
+      deployVersion: deployVersion ?? this.deployVersion,
     );
   }
+
+  /// Check if the given hash matches the last deployed hash
+  bool hasUnchangedCode(String currentHash) {
+    return lastDeployHash != null && lastDeployHash == currentHash;
+  }
+
+  /// Get the next deploy version
+  int get nextVersion => (deployVersion ?? 0) + 1;
 }
