@@ -380,16 +380,15 @@ class DeploymentHandler {
 
   /// Upload entire function folder to S3
   static Future<void> _uploadFunctionFolderToS3({
-    
     required String functionName,
     required String folderPath,
     required String s3KeyPrefix,
   }) async {
     final dirFunction = Directory(folderPath);
     // final files = dir.listSync(recursive: true).whereType<File>();
-    final (archiveFile,path) = await dirFunction.createFunctionArchive(
+    final (archiveFile, path) = await dirFunction.createFunctionArchive(
       functionName,
     );
-    await _s3Client.upload(archiveFile.path, s3KeyPrefix);
+    await _s3Client.upload(archiveFile.path, '$s3KeyPrefix/${functionName}.zip');
   }
 }
