@@ -121,7 +121,7 @@ class FunctionAnalyzer {
         cloudFunctionCount: cloudFunctionCount,
         hasMainFunction: hasMainFunction,
       );
-    } catch (e,trace) {
+    } catch (e, trace) {
       errors.add('Analysis failed: $e');
       print(trace);
       return AnalysisResult(
@@ -206,9 +206,15 @@ class FunctionAnalyzer {
       risks.add('Reflection (dart:mirrors) is not allowed');
     }
 
-    // Check for network operations (allow http client)
-    if (content.contains('Socket') || content.contains('ServerSocket')) {
-      risks.add('Raw socket operations are not allowed');
+    // Check for raw socket operations
+    if (content.contains('Socket.connect') ||
+        content.contains('ServerSocket') ||
+        content.contains('RawSocket') ||
+        content.contains('RawServerSocket') ||
+        content.contains('SecureSocket') ||
+        content.contains('SecureServerSocket')) {
+      risks.add(
+          'Raw socket operations are not allowed - use HTTP client instead');
     }
 
     // Check for dart:ffi usage
@@ -219,6 +225,46 @@ class FunctionAnalyzer {
     // Check for isolate spawning
     if (content.contains('Isolate.spawn')) {
       warnings.add('Isolate spawning detected - may impact performance');
+    }
+
+    // Check for localhost/loopback connections
+    _checkLocalhostConnections(content, risks);
+  }
+
+  /// Check for localhost/loopback connection attempts
+  void _checkLocalhostConnections(String content, List<String> risks) {
+    // Patterns that indicate localhost connections
+    final localhostPatterns = [
+      RegExp(r'''['"]localhost['"]'''),
+      RegExp(r'''['"]127\.0\.0\.1['"]'''),
+      RegExp(r'''['"]0\.0\.0\.0['"]'''),
+      RegExp(r'''['"]::1['"]'''),
+      RegExp(r'''['"]\[::1\]['"]'''),
+      RegExp(r'http://localhost'),
+      RegExp(r'https://localhost'),
+      RegExp(r'http://127\.0\.0\.1'),
+      RegExp(r'https://127\.0\.0\.1'),
+      RegExp(r'http://0\.0\.0\.0'),
+      RegExp(r'ws://localhost'),
+      RegExp(r'wss://localhost'),
+    ];
+
+    for (final pattern in localhostPatterns) {
+      if (pattern.hasMatch(content)) {
+        risks.add(
+          'Localhost/loopback connection detected - only external connections are allowed',
+        );
+        break;
+      }
+    }
+
+    // Check for InternetAddress.loopbackIPv4/IPv6
+    if (content.contains('InternetAddress.loopback') ||
+        content.contains('InternetAddress.anyIPv4') ||
+        content.contains('InternetAddress.anyIPv6')) {
+      risks.add(
+        'Local network binding detected - functions cannot bind to local addresses',
+      );
     }
   }
 }
@@ -266,12 +312,23 @@ class SecurityVisitor extends RecursiveAstVisitor<void> {
   @override
   void visitMethodInvocation(MethodInvocation node) {
     final methodName = node.methodName.name;
+    final target = node.target?.toString() ?? '';
 
     // Check for dangerous method calls
     if (methodName == 'run' || methodName == 'start') {
-      final target = node.target?.toString() ?? '';
       if (target.contains('Process')) {
         risks.add('Process execution detected: ${node.toString()}');
+      }
+    }
+
+    // Check for socket creation
+    if (methodName == 'connect' || methodName == 'bind') {
+      if (target.contains('Socket') ||
+          target.contains('ServerSocket') ||
+          target.contains('RawSocket') ||
+          target.contains('SecureSocket')) {
+        risks.add(
+            'Socket operation detected: $target.$methodName() - not allowed');
       }
     }
 
@@ -281,6 +338,55 @@ class SecurityVisitor extends RecursiveAstVisitor<void> {
     }
 
     super.visitMethodInvocation(node);
+  }
+
+  @override
+  void visitInstanceCreationExpression(InstanceCreationExpression node) {
+    final typeName = node.constructorName.type.toString();
+
+    // Check for socket instantiation
+    if (typeName == 'Socket' ||
+        typeName == 'ServerSocket' ||
+        typeName == 'RawSocket' ||
+        typeName == 'RawServerSocket' ||
+        typeName == 'SecureSocket' ||
+        typeName == 'SecureServerSocket') {
+      risks.add('Socket creation detected: $typeName - not allowed');
+    }
+
+    // Check for HttpServer (binding to local port)
+    if (typeName == 'HttpServer') {
+      risks.add(
+          'HttpServer creation detected - functions cannot create servers');
+    }
+
+    super.visitInstanceCreationExpression(node);
+  }
+
+  @override
+  void visitSimpleStringLiteral(SimpleStringLiteral node) {
+    final value = node.value;
+
+    // Check for localhost URLs in string literals
+    if (_isLocalhostUrl(value)) {
+      risks
+          .add('Localhost URL detected: "$value" - only external URLs allowed');
+    }
+
+    super.visitSimpleStringLiteral(node);
+  }
+
+  /// Check if a string is a localhost URL
+  bool _isLocalhostUrl(String value) {
+    final lowered = value.toLowerCase();
+    return lowered.contains('://localhost') ||
+        lowered.contains('://127.0.0.1') ||
+        lowered.contains('://0.0.0.0') ||
+        lowered.contains('://[::1]') ||
+        lowered == 'localhost' ||
+        lowered == '127.0.0.1' ||
+        lowered == '0.0.0.0' ||
+        lowered == '::1';
   }
 
   @override
