@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'dart:io';
 import 'dart:math';
 
 import 'package:dart_cloud_function/dart_cloud_function.dart';
@@ -12,7 +11,8 @@ class MyProcessor extends CloudDartFunction {
     Map<String, String>? env,
   }) async {
     // Read input from environment variable
-    final inputJson = Platform.environment['FUNCTION_INPUT'] ?? '{}';
+    final inputJson =
+        request.body ?? {}; //Platform.environment['FUNCTION_INPUT'] ?? '{}';
     final input = jsonDecode(inputJson) as Map<String, dynamic>;
 
     // Extract numbers array
