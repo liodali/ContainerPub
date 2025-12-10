@@ -214,7 +214,8 @@ class FunctionAnalyzer {
         content.contains('SecureSocket') ||
         content.contains('SecureServerSocket')) {
       risks.add(
-          'Raw socket operations are not allowed - use HTTP client instead');
+        'Raw socket operations are not allowed - use HTTP client instead',
+      );
     }
 
     // Check for dart:ffi usage
@@ -328,7 +329,8 @@ class SecurityVisitor extends RecursiveAstVisitor<void> {
           target.contains('RawSocket') ||
           target.contains('SecureSocket')) {
         risks.add(
-            'Socket operation detected: $target.$methodName() - not allowed');
+          'Socket operation detected: $target.$methodName() - not allowed',
+        );
       }
     }
 
@@ -357,7 +359,8 @@ class SecurityVisitor extends RecursiveAstVisitor<void> {
     // Check for HttpServer (binding to local port)
     if (typeName == 'HttpServer') {
       risks.add(
-          'HttpServer creation detected - functions cannot create servers');
+        'HttpServer creation detected - functions cannot create servers',
+      );
     }
 
     super.visitInstanceCreationExpression(node);

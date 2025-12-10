@@ -10,7 +10,7 @@ class ApiClient {
   ) async {
     final body = {
       'email': email,
-      'password': base64.encode(password.codeUnits)
+      'password': base64.encode(password.codeUnits),
     };
     final response = await http.post(
       Uri.parse('${Config.serverUrl}/api/auth/login'),

@@ -44,11 +44,13 @@ class InitCommand extends BaseCommand {
 
       print('✓ Successfully initialized function config');
       print(
-          '✓ Config file created at: ${path.join(currentDir.path, '.dart_tool', 'function_config.json')}');
+        '✓ Config file created at: ${path.join(currentDir.path, '.dart_tool', 'function_config.json')}',
+      );
       print('✓ Function name: $projectName');
       print('✓ Function path: ${currentDir.path}');
       print(
-          '✓ Entry point: ${binMainFile.existsSync() ? 'bin/main.dart' : 'lib/main.dart'}');
+        '✓ Entry point: ${binMainFile.existsSync() ? 'bin/main.dart' : 'lib/main.dart'}',
+      );
     } catch (e) {
       print('✗ Initialization failed: $e');
       exit(1);

@@ -59,7 +59,8 @@ class StatusCommand extends BaseCommand {
       print('  Version:       ${config.deployVersion ?? 'Never deployed'}');
       print('  Last Deployed: ${config.lastDeployedAt ?? 'Never'}');
       print(
-          '  Last Hash:     ${config.lastDeployHash != null ? '${config.lastDeployHash!.substring(0, 16)}...' : 'None'}');
+        '  Last Hash:     ${config.lastDeployHash != null ? '${config.lastDeployHash!.substring(0, 16)}...' : 'None'}',
+      );
       print('  Current Hash:  ${currentHash.substring(0, 16)}...');
       print('');
 
@@ -71,7 +72,8 @@ class StatusCommand extends BaseCommand {
       } else {
         print('🔄 Status: Changes detected - ready to deploy');
         print(
-            '   Run "dart_cloud deploy" to deploy version ${config.nextVersion}');
+          '   Run "dart_cloud deploy" to deploy version ${config.nextVersion}',
+        );
       }
 
       print('');
