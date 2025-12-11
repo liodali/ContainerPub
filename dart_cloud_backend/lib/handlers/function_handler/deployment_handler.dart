@@ -214,6 +214,14 @@ class DeploymentHandler {
       await FunctionUtils.logFunction(
         functionUUID,
         'info',
+        'Injecting DotEnv...',
+      );
+
+      await _injectDoEnv(functionDir.path);
+
+      await FunctionUtils.logFunction(
+        functionUUID,
+        'info',
         'Injecting main.dart...',
       );
       final injectionResult = await FunctionMainInjection.injectMain(
@@ -370,6 +378,27 @@ class DeploymentHandler {
     } else {
       jsonYaml.remove("dev_dependencies");
     }
+    final Map<String, dynamic> jsonConvYamlTransformed = Map<String, dynamic>.from(
+      jsonYaml,
+    );
+    final newYamlContent = json2yaml(jsonConvYamlTransformed);
+
+    await pubspecFile.writeAsString(newYamlContent);
+  }
+
+  /// Remove dart_cloud_cli from dev_dependencies in pubspec.yaml
+  static Future<void> _injectDoEnv(String functionPath) async {
+    final pubspecFile = File(path.join(functionPath, 'pubspec.yaml'));
+    if (!(await pubspecFile.exists())) {
+      return;
+    }
+
+    final content = await pubspecFile.readAsString();
+    var docPubspec = loadYaml(content);
+    final jsonYaml = json.decode(json.encode(docPubspec));
+    final dependencies = Map<String, dynamic>.from(jsonYaml["dependencies"]);
+    dependencies.putIfAbsent('dotenv', () => '^4.2.0');
+    jsonYaml["dependencies"] = dependencies;
     final Map<String, dynamic> jsonConvYamlTransformed = Map<String, dynamic>.from(
       jsonYaml,
     );

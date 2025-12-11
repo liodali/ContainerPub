@@ -174,17 +174,20 @@ class DockerService {
       final requestInfo = await _requestFileManager.createRequestFile(input);
       tempDirPath = requestInfo.tempDirPath;
 
-      // Prepare environment variables
+      // Prepare environment variables and create .env.config file
       final environment = _buildEnvironment(timeoutMs);
+      final envConfigPath = await _createEnvConfigFile(tempDirPath, environment);
 
-      // Prepare volume mounts
-      final volumeMounts = ['${requestInfo.filePath}:/request.json:ro'];
+      // Prepare volume mounts (request.json and .env.config at same level: /)
+      final volumeMounts = [
+        '${requestInfo.filePath}:/request.json:ro',
+        '$envConfigPath:/.env.config:ro',
+      ];
 
-      // Run the container
+      // Run the container with env file mounted as volume
       final result = await _runtime.runContainer(
         imageTag: imageTag,
         containerName: containerName,
-        environment: environment,
         volumeMounts: volumeMounts,
         memoryMb: Config.functionMaxMemoryMb,
         cpus: 0.5,
@@ -261,6 +264,7 @@ class DockerService {
   }
 
   /// Build environment variables for container execution
+  /// Returns a map of environment variables to be written to .env.config
   Map<String, String> _buildEnvironment(int timeoutMs) {
     final environment = {
       'DART_CLOUD_RESTRICTED': 'true',
@@ -268,15 +272,19 @@ class DockerService {
       'FUNCTION_MAX_MEMORY_MB': Config.functionMaxMemoryMb.toString(),
     };
 
-    if (Config.functionDatabaseUrl != null) {
-      environment['DATABASE_URL'] = Config.functionDatabaseUrl!;
-      environment['DB_MAX_CONNECTIONS'] = Config.functionDatabaseMaxConnections
-          .toString();
-      environment['DB_TIMEOUT_MS'] = Config.functionDatabaseConnectionTimeoutMs
-          .toString();
-    }
-
     return environment;
+  }
+
+  /// Create .env.config file with environment variables
+  /// Returns the path to the created file
+  Future<String> _createEnvConfigFile(
+    String tempDirPath,
+    Map<String, String> environment,
+  ) async {
+    final envConfigPath = _fileSystem.joinPath(tempDirPath, '.env.config');
+    final envContent = environment.entries.map((e) => '${e.key}=${e.value}').join('\n');
+    await _fileSystem.writeFile(envConfigPath, envContent);
+    return envConfigPath;
   }
 
   /// Remove intermediate build image

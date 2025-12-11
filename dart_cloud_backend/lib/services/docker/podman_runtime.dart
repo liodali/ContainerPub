@@ -131,6 +131,7 @@ class PodmanRuntime implements ContainerRuntime {
     required String imageTag,
     required String containerName,
     Map<String, String> environment = const {},
+    String? envFilePath,
     List<String> volumeMounts = const [],
     int memoryMb = 128,
     double cpus = 0.5,
@@ -157,7 +158,12 @@ class PodmanRuntime implements ContainerRuntime {
       args.addAll(['-v', mount]);
     }
 
-    // Add environment variables
+    // // Add env file if provided (preferred method)
+    // if (envFilePath != null) {
+    //   args.addAll(['--env-file', envFilePath]);
+    // }
+
+    // Add environment variables (legacy support)
     environment.forEach((key, value) {
       args.addAll(['-e', '$key=$value']);
     });

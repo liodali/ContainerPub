@@ -68,7 +68,8 @@ abstract class ContainerRuntime {
   /// Parameters:
   /// - [imageTag]: Image to run
   /// - [containerName]: Unique name for the container
-  /// - [environment]: Environment variables
+  /// - [environment]: Environment variables (deprecated, use envFilePath)
+  /// - [envFilePath]: Path to .env.config file to inject into container
   /// - [volumeMounts]: Volume mounts (host:container:mode)
   /// - [memoryMb]: Memory limit in MB
   /// - [cpus]: CPU limit
@@ -78,6 +79,7 @@ abstract class ContainerRuntime {
     required String imageTag,
     required String containerName,
     Map<String, String> environment = const {},
+    String? envFilePath,
     List<String> volumeMounts = const [],
     int memoryMb = 128,
     double cpus = 0.5,
