@@ -260,14 +260,15 @@ class QueryHelpers {
   }
 
   /// Get function invocations by function UUID
-  static Future<List<Map<String, dynamic>>> getFunctionInvocationsByFunctionUuid(
+  static Future<List<Map<String, dynamic>>>
+  getFunctionInvocationsByFunctionUuid(
     String functionUuid, {
     int limit = 100,
     int offset = 0,
   }) async {
     final result = await Database.connection.execute(
       Sql.named('''
-        SELECT fi.uuid, fi.status, fi.duration_ms, fi.error, fi.timestamp
+        SELECT fi.uuid, fi.status, fi.duration_ms, fi.error, fi.logs, fi.timestamp
         FROM function_invocations fi
         JOIN functions f ON fi.function_id = f.id
         WHERE f.uuid = @function_uuid
@@ -287,7 +288,8 @@ class QueryHelpers {
         'status': row[1],
         'duration_ms': row[2],
         'error': row[3],
-        'timestamp': row[4],
+        'logs': row[4],
+        'timestamp': row[5],
       };
     }).toList();
   }
@@ -298,11 +300,12 @@ class QueryHelpers {
     required String status,
     int? durationMs,
     String? error,
+    Map<String, dynamic>? logs,
   }) async {
     final result = await Database.connection.execute(
       Sql.named('''
-        INSERT INTO function_invocations (function_id, status, duration_ms, error)
-        SELECT f.id, @status, @duration_ms, @error
+        INSERT INTO function_invocations (function_id, status, duration_ms, error, logs)
+        SELECT f.id, @status, @duration_ms, @error, @logs::jsonb
         FROM functions f
         WHERE f.uuid = @function_uuid
         RETURNING uuid
@@ -312,6 +315,7 @@ class QueryHelpers {
         'status': status,
         'duration_ms': durationMs,
         'error': error,
+        'logs': logs,
       },
     );
 
