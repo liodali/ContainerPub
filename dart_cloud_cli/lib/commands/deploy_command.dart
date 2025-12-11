@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:args/args.dart';
 import 'package:dart_cloud_cli/commands/base_command.dart' show BaseCommand;
 import 'package:path/path.dart' as path;
 import 'package:dart_cloud_cli/api/api_client.dart';
@@ -19,9 +20,21 @@ class DeployCommand extends BaseCommand {
       exit(1);
     }
 
+    // Parse arguments properly
+    final parser = ArgParser()
+      ..addFlag(
+        'force',
+        abbr: 'f',
+        help: 'Force deployment even if no changes detected',
+      );
+
+    final parsedArgs = parser.parse(args);
+    final forceDeployment = parsedArgs['force'] as bool;
+    final pathArgs = parsedArgs.rest;
+
     // Determine function path: use provided path or current directory
     String functionPath;
-    if (args.isEmpty) {
+    if (pathArgs.isEmpty) {
       // Try to load from function_config.json first
       final currentDir = Directory.current;
       final existingConfig = await FunctionConfig.load(currentDir.path);
@@ -34,7 +47,7 @@ class DeployCommand extends BaseCommand {
         print('Using current directory: $functionPath');
       }
     } else {
-      functionPath = args[0];
+      functionPath = pathArgs[0];
     }
 
     final functionDir = Directory(functionPath);
@@ -69,9 +82,6 @@ class DeployCommand extends BaseCommand {
     final functionName =
         pubspec['name'] as String? ?? path.basename(functionDir.path);
     print('Preparing to deploy function: $functionName');
-
-    // Check for --force flag to bypass hash check
-    final forceDeployment = args.contains('--force') || args.contains('-f');
 
     // Generate hash of current function code
     print('Generating function hash...');
