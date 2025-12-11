@@ -15,6 +15,20 @@ class ProcessResult {
   bool get isSuccess => exitCode == 0;
 }
 
+enum Architecture {
+  x64,
+  arm64,
+}
+
+enum ArchitecturePlatform {
+  linuxArm64('linux/arm64'),
+  linuxX64('linux/amd64')
+  ;
+
+  const ArchitecturePlatform(this.buildPlatform);
+  final String buildPlatform;
+}
+
 /// Abstract interface for container runtime operations
 ///
 /// This abstraction allows for:
@@ -24,6 +38,12 @@ class ProcessResult {
 abstract class ContainerRuntime {
   /// Runtime name (e.g., 'podman', 'docker')
   String get name;
+
+  /// Get architecture of the runtime
+  Future<Architecture> getArch();
+
+  /// Get architecture platform of the runtime
+  Future<ArchitecturePlatform> getArchPlatform();
 
   /// Build a container image from a Dockerfile
   ///
@@ -67,6 +87,17 @@ abstract class ContainerRuntime {
 
   /// Remove a container image
   Future<ProcessResult> removeImage(String imageTag, {bool force = true});
+
+  /// Get the platform of an existing image
+  /// Returns null if image doesn't exist
+  Future<String?> getImagePlatform(String imageTag);
+
+  /// Check if image exists and matches the target platform
+  /// If image exists with wrong platform, removes it
+  Future<void> ensureImagePlatformCompatibility(
+    String imageTag,
+    ArchitecturePlatform targetPlatform,
+  );
 
   /// Kill a running container
   Future<ProcessResult> killContainer(String containerName);

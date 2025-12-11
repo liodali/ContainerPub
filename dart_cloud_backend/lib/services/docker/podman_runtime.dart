@@ -21,6 +21,58 @@ class PodmanRuntime implements ContainerRuntime {
   String get name => 'podman';
 
   @override
+  Future<Architecture> getArch() async {
+    final result = await Process.run(_executable, ['info', '--format', '{{.Host.Arch}}']);
+    final arch = result.stdout.toString().trim();
+    if (arch == 'amd64') return Architecture.x64;
+    if (arch == 'arm64') return Architecture.arm64;
+    throw Exception('Unsupported architecture: $arch');
+  }
+
+  @override
+  Future<ArchitecturePlatform> getArchPlatform() async {
+    final result = await Process.run(_executable, [
+      'info',
+      '--format',
+      '{{.Version.OsArch}}',
+    ]);
+    final archPlatform = result.stdout.toString().trim();
+    if (archPlatform == 'linux/arm64') return ArchitecturePlatform.linuxArm64;
+    if (archPlatform == 'linux/amd64') return ArchitecturePlatform.linuxX64;
+    throw Exception('Unsupported architecture platform: $archPlatform');
+  }
+
+  @override
+  Future<String?> getImagePlatform(String imageTag) async {
+    final result = await Process.run(
+      _executable,
+      ['image', 'inspect', imageTag, '--format', '{{.Os}}/{{.Architecture}}'],
+    );
+    if (result.exitCode != 0) {
+      return null;
+    }
+    return result.stdout.toString().trim();
+  }
+
+  @override
+  Future<void> ensureImagePlatformCompatibility(
+    String imageTag,
+    ArchitecturePlatform targetPlatform,
+  ) async {
+    final currentPlatform = await getImagePlatform(imageTag);
+    if (currentPlatform == null) {
+      return;
+    }
+    if (currentPlatform != targetPlatform.buildPlatform) {
+      print(
+        '[Podman] Image $imageTag has platform $currentPlatform, '
+        'expected ${targetPlatform.buildPlatform}. Removing...',
+      );
+      await removeImage(imageTag, force: true);
+    }
+  }
+
+  @override
   Future<ProcessResult> buildImage({
     required String imageTag,
     required String dockerfilePath,
@@ -29,9 +81,21 @@ class PodmanRuntime implements ContainerRuntime {
     void Function(String)? onStdout,
     void Function(String)? onStderr,
   }) async {
+    // Get architecture platform
+    final archPlatform = await getArchPlatform();
+    final platformStr = archPlatform.buildPlatform;
     final process = await Process.start(
       _executable,
-      ['build', '-t', imageTag, '-f', dockerfilePath, contextDir],
+      [
+        'build',
+        '--platform',
+        platformStr,
+        '-t',
+        imageTag,
+        '-f',
+        dockerfilePath,
+        contextDir,
+      ],
     );
 
     final stdoutBuffer = StringBuffer();

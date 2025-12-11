@@ -1,3 +1,6 @@
+import 'package:dart_cloud_backend/services/docker/container_runtime.dart'
+    show ArchitecturePlatform;
+
 /// Generates Dockerfile content for Dart cloud functions
 ///
 /// This class is responsible for creating optimized multi-stage Dockerfiles
@@ -42,7 +45,12 @@ class DockerfileGenerator {
     required String buildStageTag,
     String entrypoint = 'main.dart',
     String outputBinary = 'function',
+    ArchitecturePlatform targetPlatform = ArchitecturePlatform.linuxX64,
   }) {
+    final archCMD = targetPlatform == ArchitecturePlatform.linuxX64
+        ? '--target-os=linux --target-arch=x64 '
+        : '';
+
     return '''
 # ============================================
 # Stage 1: Build - Compile Dart to native AOT
@@ -66,7 +74,7 @@ RUN dart pub get
 RUN dart format .
 
 # Compile Dart to native AOT executable
-RUN dart compile exe $entrypoint --target-os=linux --target-arch=x64  -o /app/$outputBinary
+RUN dart compile exe $entrypoint $archCMD -o /app/$outputBinary
 
 # ============================================
 # Stage 2: Runtime - Minimal image
@@ -81,7 +89,7 @@ COPY --from=$buildStageTag /app/$outputBinary /$outputBinary
 
 # Set the entrypoint to the compiled function
 # Request data will be mounted at /request.json at runtime
-ENTRYPOINT ["/$outputBinary"]
+CMD ["./$outputBinary"]
 ''';
   }
 
