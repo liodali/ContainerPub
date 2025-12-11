@@ -1,4 +1,3 @@
-
 import 'package:dart_cloud_backend/services/docker/docker.dart';
 
 /// Mock implementation of ContainerRuntime for testing
@@ -64,6 +63,15 @@ class MockContainerRuntime extends ContainerRuntime {
 
   /// Version string to return
   String? version = 'mock-runtime 1.0.0';
+
+  /// Architecture to return
+  Architecture arch = Architecture.arm64;
+
+  /// Architecture platform to return
+  ArchitecturePlatform archPlatform = ArchitecturePlatform.linuxArm64;
+
+  /// Image platform to return (null means image doesn't exist)
+  String? imagePlatform;
 
   /// Track method calls for verification
   final List<MethodCall> methodCalls = [];
@@ -176,6 +184,43 @@ class MockContainerRuntime extends ContainerRuntime {
   Future<String?> getVersion() async {
     methodCalls.add(MethodCall('getVersion', {}));
     return version;
+  }
+
+  @override
+  Future<Architecture> getArch() async {
+    methodCalls.add(MethodCall('getArch', {}));
+    return arch;
+  }
+
+  @override
+  Future<ArchitecturePlatform> getArchPlatform() async {
+    methodCalls.add(MethodCall('getArchPlatform', {}));
+    return archPlatform;
+  }
+
+  @override
+  Future<String?> getImagePlatform(String imageTag) async {
+    methodCalls.add(MethodCall('getImagePlatform', {'imageTag': imageTag}));
+    return imagePlatform;
+  }
+
+  @override
+  Future<void> ensureImagePlatformCompatibility(
+    String imageTag,
+    ArchitecturePlatform targetPlatform,
+  ) async {
+    methodCalls.add(
+      MethodCall('ensureImagePlatformCompatibility', {
+        'imageTag': imageTag,
+        'targetPlatform': targetPlatform,
+      }),
+    );
+    if (imagePlatform == null) {
+      return;
+    }
+    if (imagePlatform != targetPlatform.buildPlatform) {
+      await removeImage(imageTag, force: true);
+    }
   }
 
   /// Reset all method calls
