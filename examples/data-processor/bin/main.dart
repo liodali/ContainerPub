@@ -3,6 +3,12 @@ import 'dart:math';
 
 import 'package:dart_cloud_function/dart_cloud_function.dart';
 
+extension ExtCloudRequest on CloudRequest {
+  String str() {
+    return 'CloudRequest(method: $method, path: $path, headers: $headers, query: $query, body: $body)';
+  }
+}
+
 @cloudFunction
 class MyProcessor extends CloudDartFunction {
   @override
@@ -10,10 +16,11 @@ class MyProcessor extends CloudDartFunction {
     required CloudRequest request,
     Map<String, String>? env,
   }) async {
+    print(request.str());
     // Read input from environment variable
-    final inputJson =
-        request.body ?? {}; //Platform.environment['FUNCTION_INPUT'] ?? '{}';
-    final input = jsonDecode(inputJson) as Map<String, dynamic>;
+    final input = request.body is String
+        ? jsonDecode(request.body as String) as Map<String, dynamic>
+        : (request.body as Map<String, dynamic>? ?? {});
 
     // Extract numbers array
     final numbers = (input['numbers'] as List?)?.cast<num>() ?? [];
