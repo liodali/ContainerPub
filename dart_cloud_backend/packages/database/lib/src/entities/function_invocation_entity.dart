@@ -8,6 +8,7 @@ class FunctionInvocationEntity extends Entity {
   final String status;
   final int? durationMs;
   final String? error;
+  final Map<String, dynamic>? logs;
   final DateTime? timestamp;
 
   FunctionInvocationEntity({
@@ -17,6 +18,7 @@ class FunctionInvocationEntity extends Entity {
     required this.status,
     this.durationMs,
     this.error,
+    this.logs,
     this.timestamp,
   });
 
@@ -31,6 +33,7 @@ class FunctionInvocationEntity extends Entity {
       'status': status,
       if (durationMs != null) 'duration_ms': durationMs,
       if (error != null) 'error': error,
+      if (logs != null) 'logs': logs,
       if (timestamp != null) 'timestamp': timestamp,
     };
   }
@@ -44,6 +47,7 @@ class FunctionInvocationEntity extends Entity {
       'status': status,
       if (durationMs != null) 'duration_ms': durationMs,
       if (error != null) 'error': error,
+      if (logs != null) 'logs': logs,
       if (timestamp != null) 'timestamp': timestamp,
     };
   }
@@ -56,6 +60,7 @@ class FunctionInvocationEntity extends Entity {
       status: map['status'] as String,
       durationMs: map['duration_ms'] as int?,
       error: map['error'] as String?,
+      logs: map['logs'] as Map<String, dynamic>?,
       timestamp: map['timestamp'] as DateTime?,
     );
   }
@@ -67,6 +72,7 @@ class FunctionInvocationEntity extends Entity {
     String? status,
     int? durationMs,
     String? error,
+    Map<String, dynamic>? logs,
     DateTime? timestamp,
   }) {
     return FunctionInvocationEntity(
@@ -76,6 +82,7 @@ class FunctionInvocationEntity extends Entity {
       status: status ?? this.status,
       durationMs: durationMs ?? this.durationMs,
       error: error ?? this.error,
+      logs: logs ?? this.logs,
       timestamp: timestamp ?? this.timestamp,
     );
   }

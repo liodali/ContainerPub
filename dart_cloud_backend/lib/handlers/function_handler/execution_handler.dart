@@ -120,13 +120,19 @@ class ExecutionHandler {
 
       // === INVOCATION LOGGING ===
       // Record invocation metrics in database for analytics
+      // Convert logs to JSON string for JSONB storage
+      final logsJson = executionResult['logs'] != null
+          ? jsonEncode(executionResult['logs'])
+          : null;
+
       await Database.connection.execute(
-        'INSERT INTO function_invocations (function_id, status, duration_ms, error) VALUES (\$1, \$2, \$3, \$4)',
+        'INSERT INTO function_invocations (function_id, status, duration_ms, error, logs) VALUES (\$1, \$2, \$3, \$4, \$5::jsonb)',
         parameters: [
           functionEntity.id,
           executionResult['success'] == true ? 'success' : 'error',
           duration,
           executionResult['error'],
+          logsJson,
         ],
       );
 

@@ -12,17 +12,20 @@ class ExecutionResult {
   final bool success;
   final String? error;
   final dynamic result;
+  final Map<String, dynamic>? logs;
 
   const ExecutionResult({
     required this.success,
     this.error,
     this.result,
+    this.logs,
   });
 
   Map<String, dynamic> toJson() => {
     'success': success,
     'error': error,
     'result': result,
+    'logs': logs,
   };
 }
 
@@ -114,11 +117,20 @@ class DockerService {
     final imageTag = 'dart-function-$functionId:latest';
     final buildStageTag = 'dart-function-build-$functionId';
 
+    // Check base image platform compatibility before building
+    // This ensures dart:stable (or configured buildImage) matches host architecture
+    final targetPlatform = await _runtime.getArchPlatform();
+    await _runtime.ensureImagePlatformCompatibility(
+      _dockerfileGenerator.buildImage,
+      targetPlatform,
+    );
+
     // Generate and write Dockerfile with the correct entrypoint
     final dockerfilePath = _fileSystem.joinPath(functionDir, 'Dockerfile');
     final dockerfileContent = _dockerfileGenerator.generate(
       buildStageTag: buildStageTag,
       entrypoint: entrypoint,
+      targetPlatform: targetPlatform,
     );
     await _fileSystem.writeFile(dockerfilePath, dockerfileContent);
 
@@ -180,11 +192,20 @@ class DockerService {
         timeout: Duration(milliseconds: timeoutMs),
       );
 
+      // Capture container logs (stdout and stderr)
+      final containerLogs = {
+        'stdout': result.stdout,
+        'stderr': result.stderr,
+        'exit_code': result.exitCode,
+        'timestamp': DateTime.now().toIso8601String(),
+      };
+
       // Handle timeout
       if (result.exitCode == -1) {
         return ExecutionResult(
           success: false,
           error: 'Function execution timed out (${timeoutMs}ms)',
+          logs: containerLogs,
         );
       }
 
@@ -193,6 +214,7 @@ class DockerService {
         return ExecutionResult(
           success: false,
           error: 'Function exited with code ${result.exitCode}: ${result.stderr}',
+          logs: containerLogs,
         );
       }
 
@@ -205,7 +227,7 @@ class DockerService {
         parsedResult = output;
       }
 
-      return ExecutionResult(success: true, result: parsedResult);
+      return ExecutionResult(success: true, result: parsedResult, logs: containerLogs);
     } catch (e) {
       return ExecutionResult(
         success: false,

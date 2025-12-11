@@ -209,6 +209,7 @@ class Database {
         status VARCHAR(50) NOT NULL,
         duration_ms INTEGER,
         error TEXT,
+        logs JSONB,
         timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     ''');
@@ -221,6 +222,12 @@ class Database {
     // Create index on timestamp for time-based queries
     await _connection.execute('''
       CREATE INDEX IF NOT EXISTS idx_function_invocations_timestamp ON function_invocations(timestamp DESC)
+    ''');
+
+    // Migration: Add logs column to function_invocations if not exists
+    await _connection.execute('''
+      ALTER TABLE function_invocations 
+      ADD COLUMN IF NOT EXISTS logs JSONB
     ''');
 
     // Create triggers for updated_at
