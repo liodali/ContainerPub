@@ -45,10 +45,11 @@ void main() async {
       components: [
         // The <Info> block and other callouts.
         Callout(),
-        // Adds syntax highlighting to code blocks.
+        // // Adds syntax highlighting to code blocks.
         CodeBlock(
           defaultLanguage: 'dart',
         ),
+       
         // Adds zooming and caption support to images.
         Image(zoom: true),
       ],
@@ -131,8 +132,14 @@ void main() async {
       ],
       theme: ContentTheme(
         // Customizes the default theme colors.
-        primary: ThemeColor(ThemeColors.blue.$500, dark: ThemeColors.blue.$300),
-        background: ThemeColor(ThemeColors.slate.$50, dark: ThemeColors.zinc.$950),
+        primary: ThemeColor(
+          ThemeColors.blue.$500,
+          dark: ThemeColors.blue.$300,
+        ),
+        background: ThemeColor(
+          ThemeColors.slate.$50,
+          dark: ThemeColors.zinc.$950,
+        ),
         colors: [
           ContentColors.quoteBorders.apply(ThemeColors.blue.$400),
         ],
