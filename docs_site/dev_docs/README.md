@@ -1,16 +1,18 @@
 # ContainerPub Documentation Site
 
-A professional documentation site for ContainerPub built with **Jaspr** and **jaspr_content**.
+A professional documentation site for ContainerPub built with **Jaspr 0.22.0** and **jaspr_content 0.4.5**.
 
 ## Features
 
-- 📚 **Markdown-based Content** - Write documentation in markdown
-- 🎨 **Beautiful UI** - Professional design with light/dark mode
-- 🔍 **Full-text Search** - Find documentation quickly
-- 📱 **Responsive Design** - Works on all devices
-- 🎯 **Organized Navigation** - Sidebar with documentation structure
-- 💻 **Syntax Highlighting** - Code blocks with syntax highlighting
-- 📖 **Table of Contents** - Auto-generated for each page
+- **Markdown-based Content** - Write documentation in markdown with Mustache templating
+- **Beautiful UI** - Professional design with light/dark mode toggle
+- **Responsive Design** - Works on all devices
+- **Organized Navigation** - Sidebar with hierarchical documentation structure
+- **Syntax Highlighting** - Code blocks with Dart as default language
+- **Table of Contents** - Auto-generated for each page
+- **Heading Anchors** - Deep linking to sections
+- **Image Zoom** - Click to zoom images with captions
+- **Callouts** - Info, warning, and other callout blocks
 
 ## Project Structure
 
@@ -18,24 +20,43 @@ A professional documentation site for ContainerPub built with **Jaspr** and **ja
 dev_docs/
 ├── content/
 │   ├── _data/
-│   │   ├── site.yaml          # Site configuration
-│   │   └── links.yaml         # External links
-│   ├── index.md               # Home page
-│   ├── about.md               # About page
+│   │   ├── site.yaml              # Site configuration
+│   │   └── links.yaml             # External links
+│   ├── index.md                   # Home page
+│   ├── about.md                   # About page
 │   └── docs/
-│       ├── development.md     # Development guide
-│       ├── architecture.md    # Architecture overview
-│       ├── podman-migration.md # Podman migration
-│       └── api-reference.md   # API reference
+│       ├── development.md         # Development guide
+│       ├── architecture.md        # Architecture overview
+│       ├── podman-migration.md    # Podman migration
+│       ├── cli/                   # CLI documentation (3 pages)
+│       │   ├── index.md           # CLI overview
+│       │   ├── dart-cloud-cli.md  # dart_cloud CLI reference
+│       │   └── dart-cloud-function.md
+│       ├── backend/               # Backend documentation (4 pages)
+│       │   ├── index.md           # Backend overview
+│       │   ├── authentication.md  # Auth system docs
+│       │   ├── architecture.md    # System architecture
+│       │   └── api-reference.md   # API endpoints
+│       └── database/              # Database & Backup (7 pages)
+│           ├── index.md           # Database overview
+│           ├── database-system.md
+│           ├── database-quick-reference.md
+│           ├── database-implementation-tracking.md
+│           ├── backup-strategy.md
+│           ├── backup-workflows.md
+│           └── backup-quick-reference.md
 ├── lib/
-│   ├── main.dart              # Application entry point
-│   ├── jaspr_options.dart     # Jaspr configuration
-│   └── components/            # Custom components
+│   ├── main.server.dart           # Server entry point
+│   ├── main.server.options.dart   # Generated Jaspr options
+│   └── components/
+│       └── clicker.dart           # Example client component
 ├── web/
-│   ├── index.html             # HTML template
-│   └── images/                # Static images
-├── pubspec.yaml               # Dependencies
-└── README.md                  # This file
+│   ├── index.html                 # HTML template
+│   └── images/                    # Static images
+├── cloudflare_deploy_site/        # Cloudflare Pages deployment
+├── deploy.sh                      # Deployment script
+├── pubspec.yaml                   # Dependencies
+└── README.md                      # This file
 ```
 
 ## Running the Project
@@ -50,16 +71,33 @@ dart pub get
 jaspr serve
 ```
 
-The development server will be available on `http://localhost:8080`.
+The development server will be available at `http://localhost:8080`.
 
 ### Building for Production
 
 ```bash
-# Build static site
-jaspr build
+# Build static site with optimization
+jaspr build --sitemap-exclude -O 3
 ```
 
 The output will be located in the `build/jaspr/` directory.
+
+### Deploying to Cloudflare Pages
+
+```bash
+# Full build and deploy
+./deploy.sh
+
+# Skip build (deploy existing build)
+./deploy.sh --skip
+```
+
+The deploy script:
+
+1. Cleans previous builds
+2. Runs `jaspr build` with optimization level 3
+3. Copies output to `cloudflare_deploy_site/public/build`
+4. Deploys via Wrangler to Cloudflare Pages
 
 ## Content Organization
 
@@ -78,17 +116,29 @@ The output will be located in the `build/jaspr/` directory.
 
 ### Updating Navigation
 
-Edit `lib/main.dart` to add new pages to the sidebar:
+Edit `lib/main.server.dart` to add new pages to the sidebar:
 
 ```dart
-SidebarGroup(title: 'Documentation', links: [
-  SidebarLink(text: "Page Title", href: '/docs/page-name'),
-]),
+SidebarGroup(
+  title: 'Section Name',
+  links: [
+    SidebarLink(text: "Page Title", href: '/docs/section/page-name'),
+  ],
+),
 ```
+
+**Current Navigation Structure:**
+
+- **General** - Development guide
+- **CLI** - CLI overview, dart_cloud CLI, dart_cloud_function
+- **Backend** - Overview, Authentication, Architecture, API Reference
+- **Database & Backup** - 7 pages covering database system and backup strategies
+- **Migration** - Podman migration guide
 
 ### Site Configuration
 
 Edit `content/_data/site.yaml` to customize:
+
 - Site title
 - Social media links
 - Favicon
@@ -98,18 +148,21 @@ Edit `content/_data/site.yaml` to customize:
 
 ### Colors and Theme
 
-Edit `lib/main.dart` theme configuration:
+Edit `lib/main.server.dart` theme configuration:
 
 ```dart
 theme: ContentTheme(
   primary: ThemeColor(ThemeColors.blue.$500, dark: ThemeColors.blue.$300),
   background: ThemeColor(ThemeColors.slate.$50, dark: ThemeColors.zinc.$950),
+  colors: [
+    ContentColors.quoteBorders.apply(ThemeColors.blue.$400),
+  ],
 ),
 ```
 
 ### Header and Logo
 
-Update `Header` component in `lib/main.dart`:
+Update `Header` component in `lib/main.server.dart`:
 
 ```dart
 Header(
@@ -122,16 +175,31 @@ Header(
 ),
 ```
 
+### Custom Components
+
+Client-side components use the `@client` annotation. Example in `lib/components/clicker.dart`:
+
+```dart
+@client
+class Clicker extends StatefulComponent {
+  // Interactive component that runs on the client
+}
+```
+
 ## Markdown Features
 
 ### Headings
+
 ```markdown
 # H1
+
 ## H2
+
 ### H3
 ```
 
 ### Lists
+
 ```markdown
 - Item 1
 - Item 2
@@ -142,62 +210,93 @@ Header(
 ```
 
 ### Code Blocks
-```markdown
+
+````markdown
 ```dart
 void main() {
   print('Hello');
 }
 ```
-```
+````
+
+````
 
 ### Links
 ```markdown
 [Link text](https://example.com)
 [Internal link](/docs/page)
-```
+````
 
 ### Blockquotes
+
 ```markdown
 > This is a quote
 > It can span multiple lines
 ```
 
 ### Tables
+
 ```markdown
 | Column 1 | Column 2 |
-|----------|----------|
+| -------- | -------- |
 | Cell 1   | Cell 2   |
 ```
 
 ## Deployment
 
-### Static Hosting
+### Cloudflare Pages (Primary)
+
+The project is configured for Cloudflare Pages deployment:
+
+```bash
+./deploy.sh
+```
+
+### Other Static Hosting
 
 ```bash
 # Build the site
-jaspr build
+jaspr build --sitemap-exclude -O 3
 
 # Deploy build/jaspr/ to your hosting service
 # (Netlify, Vercel, GitHub Pages, etc.)
 ```
 
-### Docker
-
-```dockerfile
-FROM dart:stable
-WORKDIR /app
-COPY . .
-RUN dart pub get
-RUN jaspr build
-EXPOSE 8080
-CMD ["dart", "run", "bin/server.dart"]
-```
-
 ## Dependencies
 
-- **jaspr** - Web framework
-- **jaspr_content** - Content rendering
-- **jaspr_router** - Client-side routing
+| Package       | Version | Purpose                     |
+| ------------- | ------- | --------------------------- |
+| jaspr         | ^0.22.0 | Web framework               |
+| jaspr_content | ^0.4.5  | Content rendering & layouts |
+| jaspr_router  | ^0.8.1  | Client-side routing         |
+
+### Dev Dependencies
+
+- **build_runner** - Build system
+- **jaspr_builder** - Jaspr code generation
+- **jaspr_lints** - Linting rules
+
+## Content Extensions
+
+Configured in `lib/main.server.dart`:
+
+- **HeadingAnchorsExtension** - Adds anchor links to headings
+- **TableOfContentsExtension** - Auto-generates TOC
+- **MustacheTemplateEngine** - Enables `{{variable}}` templating
+- **CodeBlock** - Syntax highlighting (default: Dart)
+- **Image** - Zoom support with captions
+- **Callout** - Info/warning blocks
+
+## Documentation Stats
+
+| Section           | Pages  | Description                                           |
+| ----------------- | ------ | ----------------------------------------------------- |
+| General           | 3      | Development, architecture, roadmap                    |
+| CLI               | 5      | CLI tools, analyzer rules, deployment config          |
+| Backend           | 5      | Authentication, architecture, function execution, API |
+| Database & Backup | 7      | Database system and backup strategies                 |
+| Migration         | 1      | Podman migration guide                                |
+| **Total**         | **21** | Complete documentation coverage                       |
 
 ## Resources
 

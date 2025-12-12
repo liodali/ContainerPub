@@ -80,6 +80,7 @@ void main() async {
                 title: 'General',
                 links: [
                   SidebarLink(text: "Development", href: '/docs/development'),
+                  SidebarLink(text: "Roadmap", href: '/docs/roadmap'),
                 ],
               ),
               // CLI Documentation
@@ -89,6 +90,8 @@ void main() async {
                   SidebarLink(text: "CLI Overview", href: '/docs/cli'),
                   SidebarLink(text: "dart_cloud CLI", href: '/docs/cli/dart-cloud-cli'),
                   SidebarLink(text: "dart_cloud_function", href: '/docs/cli/dart-cloud-function'),
+                  SidebarLink(text: "Analyzer Rules", href: '/docs/cli/analyzer-rules'),
+                  SidebarLink(text: "Deployment Config", href: '/docs/cli/deployment-config'),
                 ],
               ),
               // Backend Documentation
@@ -98,6 +101,7 @@ void main() async {
                   SidebarLink(text: "Backend Overview", href: '/docs/backend'),
                   SidebarLink(text: "Authentication", href: '/docs/backend/authentication'),
                   SidebarLink(text: "Architecture", href: '/docs/backend/architecture'),
+                  SidebarLink(text: "Function Execution", href: '/docs/backend/function-execution'),
                   SidebarLink(text: "API Reference", href: '/docs/backend/api-reference'),
                 ],
               ),
