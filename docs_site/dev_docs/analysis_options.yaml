@@ -18,8 +18,8 @@ analyzer:
   #
   # Unfortunately, running 'dart analyze' does not pick up the custom lints. Instead, you need to
   # run a separate command for this: `jaspr analyze`
-  plugins:
-    - custom_lint
+plugins:
+  jaspr_lints:
 #   exclude:
 #     - path/to/excluded/files/**
 

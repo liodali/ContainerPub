@@ -17,12 +17,12 @@ import 'package:jaspr_content/jaspr_content.dart';
 import 'package:jaspr_content/theme.dart';
 
 // This file is generated automatically by Jaspr, do not remove or edit.
-import 'jaspr_options.dart';
+import 'main.server.options.dart';
 
 void main() async {
   // Initializes the server environment with the generated default options.
   Jaspr.initializeApp(
-    options: defaultJasprOptions,
+    options: defaultServerOptions,
   );
 
   // Starts the app.
