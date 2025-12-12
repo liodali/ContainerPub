@@ -11,6 +11,7 @@ typedef CloudFunctionInfo = ({
   String filePath,
   String classCode,
   String imports,
+  String allUserCode, // All top-level declarations except main() and imports
 });
 
 /// Result of main injection with file location info
@@ -77,7 +78,7 @@ class FunctionMainInjection {
         className: cloudFunctionInfo.className,
         importPath: mainLocation.importPath,
         userImports: cloudFunctionInfo.imports,
-        classCode: isInBinMain ? cloudFunctionInfo.classCode : null,
+        allUserCode: isInBinMain ? cloudFunctionInfo.allUserCode : null,
       );
 
       // Ensure directory exists
@@ -204,6 +205,7 @@ class FunctionMainInjection {
       filePath: filePath,
       classCode: info.classCode,
       imports: info.imports,
+      allUserCode: info.allUserCode,
     );
   }
 
@@ -250,6 +252,7 @@ class FunctionMainInjection {
           filePath: relativePath,
           classCode: cloudFunction.code,
           imports: visitor.imports.join('\n'),
+          allUserCode: visitor.topLevelDeclarations.join('\n\n'),
         );
       }
     } catch (e) {
@@ -265,19 +268,21 @@ class FunctionMainInjection {
   /// Uses import to reference the cloud function class instead of embedding code.
   /// This keeps the user's source files intact and allows proper dependency resolution.
   ///
-  /// If [classCode] is provided, the class is embedded directly (for bin/main.dart case)
-  /// instead of importing it, since we're overwriting the original file.
+  /// If [allUserCode] is provided, all user code (classes, extensions, functions, etc.)
+  /// is embedded directly (for bin/main.dart case) instead of importing,
+  /// since we're overwriting the original file.
   static String _generateMainDart({
     required String className,
     required String importPath,
     required String userImports,
-    String? classCode,
+    String? allUserCode,
   }) {
-    // If classCode is provided, embed it directly instead of importing
-    final importOrEmbed = classCode != null
+    // If allUserCode is provided, embed it directly instead of importing
+    final importOrEmbed = allUserCode != null && allUserCode.isNotEmpty
         ? '''
-// User's cloud function class (embedded from original bin/main.dart)
-$classCode
+// User's code (embedded from original bin/main.dart)
+// Includes all classes, extensions, functions, variables, etc.
+$allUserCode
 '''
         : '''
 // Import the cloud function class
@@ -335,7 +340,7 @@ void main() async {
     }
 
     final requestJson = jsonDecode(await requestFile.readAsString());
-    print(requestJson)
+    print(requestJson);
     // Parse CloudRequest from JSON
     final request = CloudRequest(
       method: requestJson['method'] as String? ?? 'POST',
@@ -409,14 +414,23 @@ $importOrEmbed
 class _CloudFunctionClassInfo {
   final String name;
   final String code;
+  final String allUserCode;
+  final String imports;
 
-  _CloudFunctionClassInfo({required this.name, required this.code});
+  _CloudFunctionClassInfo({
+    required this.name,
+    required this.code,
+    required this.allUserCode,
+    required this.imports,
+  });
 }
 
 /// AST visitor to find and collect classes annotated with @cloudFunction
+/// Also collects ALL top-level declarations except main() and imports
 class _CloudFunctionVisitor extends RecursiveAstVisitor<void> {
   final List<_CloudFunctionClassInfo> cloudFunctionClasses = [];
   final List<String> imports = [];
+  final List<String> topLevelDeclarations = []; // All non-import, non-main code
 
   @override
   void visitImportDirective(ImportDirective node) {
@@ -429,15 +443,73 @@ class _CloudFunctionVisitor extends RecursiveAstVisitor<void> {
 
   @override
   void visitClassDeclaration(ClassDeclaration node) {
+    // Collect ALL classes (including CloudDartFunction class)
+    topLevelDeclarations.add(node.toSource());
+
     if (_isCloudFunctionClass(node)) {
+      // Note: allUserCode and imports will be populated after full traversal
+      // We store just the class info here, full data is assembled in _analyzeFile
       cloudFunctionClasses.add(
         _CloudFunctionClassInfo(
           name: node.name.lexeme,
           code: node.toSource(),
+          allUserCode: '', // Will be set after full traversal
+          imports: '', // Will be set after full traversal
         ),
       );
     }
     super.visitClassDeclaration(node);
+  }
+
+  @override
+  void visitExtensionDeclaration(ExtensionDeclaration node) {
+    // Collect extension declarations
+    topLevelDeclarations.add(node.toSource());
+    super.visitExtensionDeclaration(node);
+  }
+
+  @override
+  void visitFunctionDeclaration(FunctionDeclaration node) {
+    // Collect all functions EXCEPT main()
+    if (node.name.lexeme != 'main') {
+      topLevelDeclarations.add(node.toSource());
+    }
+    super.visitFunctionDeclaration(node);
+  }
+
+  @override
+  void visitTopLevelVariableDeclaration(TopLevelVariableDeclaration node) {
+    // Collect top-level variables
+    topLevelDeclarations.add(node.toSource());
+    super.visitTopLevelVariableDeclaration(node);
+  }
+
+  @override
+  void visitGenericTypeAlias(GenericTypeAlias node) {
+    // Collect typedef declarations
+    topLevelDeclarations.add(node.toSource());
+    super.visitGenericTypeAlias(node);
+  }
+
+  @override
+  void visitFunctionTypeAlias(FunctionTypeAlias node) {
+    // Collect old-style typedef declarations
+    topLevelDeclarations.add(node.toSource());
+    super.visitFunctionTypeAlias(node);
+  }
+
+  @override
+  void visitMixinDeclaration(MixinDeclaration node) {
+    // Collect mixin declarations
+    topLevelDeclarations.add(node.toSource());
+    super.visitMixinDeclaration(node);
+  }
+
+  @override
+  void visitEnumDeclaration(EnumDeclaration node) {
+    // Collect enum declarations
+    topLevelDeclarations.add(node.toSource());
+    super.visitEnumDeclaration(node);
   }
 }
 
