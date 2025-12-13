@@ -86,7 +86,7 @@ class ExecutionHandler {
       // Verify that function exists and belongs to requesting user
 
       final functionEntity = await DatabaseManagers.functions.findOne(
-        where: {'uuid': uuid},
+        where: {'uuid': uuid,'status':'active'},
       );
 
       // final result = await Database.connection.execute(
