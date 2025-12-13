@@ -245,4 +245,22 @@ class PodmanRuntime implements ContainerRuntime {
       return null;
     }
   }
+
+  @override
+  Future<bool> imageExists(String imageTag) async {
+    try {
+      final result = await Process.run(_executable, [
+        'images',
+        '--format',
+        '{{.Repository}}:{{.Tag}}',
+        imageTag,
+      ]);
+      if (result.exitCode == 0 && result.stdout.toString().trim().isNotEmpty) {
+        return true;
+      }
+      return false;
+    } catch (e) {
+      return false;
+    }
+  }
 }
