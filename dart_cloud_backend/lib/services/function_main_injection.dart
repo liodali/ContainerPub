@@ -340,7 +340,6 @@ void main() async {
     }
 
     final requestJson = jsonDecode(await requestFile.readAsString());
-    print(requestJson);
     // Parse CloudRequest from JSON
     final request = CloudRequest(
       method: requestJson['method'] as String? ?? 'POST',
