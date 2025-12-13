@@ -25,6 +25,7 @@ class S3FFIBindings {
   late final Pointer<Utf8> Function(Pointer<Utf8>) _delete;
   late final Pointer<Utf8> Function(Pointer<Utf8>, Pointer<Utf8>) _download;
   late final Pointer<Utf8> Function(Pointer<Utf8>, int) _getPresignedUrl;
+  late final int Function(Pointer<Utf8>) _checkKeyBucketExist;
 
   /// Create S3FFIBindings with optional custom library path
   ///
@@ -73,6 +74,11 @@ class S3FFIBindings {
           'getPresignedUrl',
         )
         .asFunction();
+    _checkKeyBucketExist = _dylib
+        .lookup<NativeFunction<Int32 Function(Pointer<Utf8>)>>(
+          'checkKeyBucketExist',
+        )
+        .asFunction();
   }
 
   /// Load the appropriate shared library based on the platform
@@ -84,7 +90,8 @@ class S3FFIBindings {
     final customPath = _customLibraryPath;
     if (customPath != null && customPath.isNotEmpty) {
       final fileS3Lib = File(customPath);
-      if (fileS3Lib.existsSync()) {///TODO: note we should do build amd64,arm64
+      if (fileS3Lib.existsSync()) {
+        ///TODO: note we should do build amd64,arm64
         return DynamicLibrary.open(fileS3Lib.path);
       } else if (!_autoDownload) {
         throw Exception('Library not found at: $customPath');
@@ -265,6 +272,18 @@ class S3FFIBindings {
       final result = resultPtr.toDartString();
       malloc.free(resultPtr);
       return result;
+    } finally {
+      malloc.free(objectKeyPtr);
+    }
+  }
+
+  /// Check if an object exists in the bucket
+  bool isKeyBucketExist(String objectKey) {
+    final objectKeyPtr = objectKey.toNativeUtf8();
+
+    try {
+      final result = _checkKeyBucketExist(objectKeyPtr);
+      return result == 1;
     } finally {
       malloc.free(objectKeyPtr);
     }

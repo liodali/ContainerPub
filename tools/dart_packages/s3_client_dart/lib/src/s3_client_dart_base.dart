@@ -18,9 +18,9 @@ class S3Client {
     String? libraryPath,
     bool autoDownload = true,
   }) : _bindings = S3FFIBindings(
-          libraryPath: libraryPath,
-          autoDownload: autoDownload,
-        );
+         libraryPath: libraryPath,
+         autoDownload: autoDownload,
+       );
 
   /// Initialize the S3 client with bucket credentials, region, and endpoint
   ///
@@ -97,6 +97,16 @@ class S3Client {
   }) async {
     _ensureInitialized();
     return _bindings.getPresignedUrl(objectKey, expirationSeconds);
+  }
+
+  /// Check if an object exists in the bucket
+  ///
+  /// [objectKey] - The key of the object to check
+  ///
+  /// Returns true if the object exists, false otherwise
+  Future<bool> isKeyBucketExist(String objectKey) async {
+    _ensureInitialized();
+    return _bindings.isKeyBucketExist(objectKey);
   }
 
   void _ensureInitialized() {
