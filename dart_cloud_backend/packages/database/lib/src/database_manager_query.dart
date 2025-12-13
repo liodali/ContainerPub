@@ -19,8 +19,15 @@ class DatabaseManagerQuery<T extends Entity> {
   }
 
   /// Find a single record by ID
-  Future<T?> findById(dynamic id, {String idColumn = 'id'}) async {
+  Future<T?> findById(
+    dynamic id, {
+    String idColumn = 'id',
+    List<String>? select,
+  }) async {
     final builder = query().where(idColumn, id).limit(1);
+    if (select != null) {
+      builder.select(select);
+    }
     final result = await Database.connection.execute(
       builder.toSql(builder.buildSelect()),
       parameters: builder.parameters,
@@ -42,8 +49,13 @@ class DatabaseManagerQuery<T extends Entity> {
     String orderDirection = 'ASC',
     int? limit,
     int? offset,
+    List<String>? select,
   }) async {
     final builder = query();
+
+    if (select != null) {
+      builder.select(select);
+    }
 
     if (where != null) {
       for (final entry in where.entries) {
@@ -72,8 +84,11 @@ class DatabaseManagerQuery<T extends Entity> {
   }
 
   /// Find first record matching the query
-  Future<T?> findOne({Map<String, dynamic>? where}) async {
-    final results = await findAll(where: where, limit: 1);
+  Future<T?> findOne({
+    Map<String, dynamic>? where,
+    List<String>? select,
+  }) async {
+    final results = await findAll(where: where, limit: 1, select: select);
     return results.isEmpty ? null : results.first;
   }
 
@@ -186,6 +201,15 @@ class DatabaseManagerQuery<T extends Entity> {
     return result.map((row) => fromMap(_rowToMap(row))).toList();
   }
 
+  /// Execute a custom query with selective columns
+  Future<List<T>> executeQueryWithSelect(
+    QueryBuilder builder,
+    List<String> select,
+  ) async {
+    builder.select(select);
+    return executeQuery(builder);
+  }
+
   /// Execute a raw SQL query and return entities
   Future<List<T>> raw(String sql, {Map<String, dynamic>? parameters}) async {
     final result = await Database.connection.execute(
@@ -242,6 +266,25 @@ class DatabaseManagerQuery<T extends Entity> {
     return result.map((row) => _rowToMap(row)).toList();
   }
 
+  /// Perform a JOIN query and map to entities
+  Future<List<T>> joinQueryAsEntity({
+    required String joinTable,
+    required String joinCondition,
+    List<String>? select,
+    Map<String, dynamic>? where,
+    String joinType = 'INNER',
+  }) async {
+    final results = await joinQuery(
+      joinTable: joinTable,
+      joinCondition: joinCondition,
+      select: select,
+      where: where,
+      joinType: joinType,
+    );
+
+    return results.map((row) => fromMap(row)).toList();
+  }
+
   /// Get related records (one-to-many)
   Future<List<Map<String, dynamic>>> hasMany({
     required String relatedTable,
@@ -249,10 +292,15 @@ class DatabaseManagerQuery<T extends Entity> {
     required dynamic parentId,
     String? orderBy,
     String orderDirection = 'ASC',
+    List<String>? select,
   }) async {
     final builder = QueryBuilder()
         .table(relatedTable)
         .where(foreignKey, parentId);
+
+    if (select != null) {
+      builder.select(select);
+    }
 
     if (orderBy != null) {
       builder.orderBy(orderBy, direction: orderDirection);
@@ -271,11 +319,16 @@ class DatabaseManagerQuery<T extends Entity> {
     required String relatedTable,
     required String foreignKey,
     required dynamic foreignKeyValue,
+    List<String>? select,
   }) async {
     final builder = QueryBuilder()
         .table(relatedTable)
         .where('id', foreignKeyValue)
         .limit(1);
+
+    if (select != null) {
+      builder.select(select);
+    }
 
     final result = await Database.connection.execute(
       builder.toSql(builder.buildSelect()),
@@ -293,10 +346,15 @@ class DatabaseManagerQuery<T extends Entity> {
     required String foreignKey,
     required String relatedKey,
     required dynamic parentId,
+    List<String>? select,
   }) async {
+    final selectClause = select != null
+        ? select.map((col) => '$relatedTable.$col').join(', ')
+        : '$relatedTable.*';
+
     final sql =
         '''
-      SELECT $relatedTable.*
+      SELECT $selectClause
       FROM $relatedTable
       INNER JOIN $pivotTable ON $relatedTable.id = $pivotTable.$relatedKey
       WHERE $pivotTable.$foreignKey = @parent_id
@@ -318,6 +376,69 @@ class DatabaseManagerQuery<T extends Entity> {
       map[columnName] = row[i];
     }
     return map;
+  }
+
+  /// Map raw data to entity with selective attributes
+  T mapToEntity(Map<String, dynamic> data) {
+    return fromMap(data);
+  }
+
+  /// Filter map to only include specified attributes
+  Map<String, dynamic> filterAttributes(
+    Map<String, dynamic> data,
+    List<String> attributes,
+  ) {
+    final filtered = <String, dynamic>{};
+    for (final attr in attributes) {
+      if (data.containsKey(attr)) {
+        filtered[attr] = data[attr];
+      }
+    }
+    return filtered;
+  }
+
+  /// Map raw data to entity with only specified attributes
+  T mapToEntityWithAttributes(
+    Map<String, dynamic> data,
+    List<String> attributes,
+  ) {
+    final filtered = filterAttributes(data, attributes);
+    return fromMap(filtered);
+  }
+
+  /// Get only specific attributes from a single record
+  Future<Map<String, dynamic>?> findByIdWithAttributes(
+    dynamic id, {
+    String idColumn = 'id',
+    required List<String> attributes,
+  }) async {
+    final result = await findById(id, idColumn: idColumn, select: attributes);
+    return result != null
+        ? filterAttributes(result.toDBMap(), attributes)
+        : null;
+  }
+
+  /// Get only specific attributes from multiple records
+  Future<List<Map<String, dynamic>>> findAllWithAttributes({
+    Map<String, dynamic>? where,
+    String? orderBy,
+    String orderDirection = 'ASC',
+    int? limit,
+    int? offset,
+    required List<String> attributes,
+  }) async {
+    final results = await findAll(
+      where: where,
+      orderBy: orderBy,
+      orderDirection: orderDirection,
+      limit: limit,
+      offset: offset,
+      select: attributes,
+    );
+
+    return results
+        .map((entity) => filterAttributes(entity.toDBMap(), attributes))
+        .toList();
   }
 
   /// Begin a transaction
