@@ -34,6 +34,12 @@ export 'src/relationship_manager.dart';
 export 'src/managers/user_relationships.dart';
 export 'src/managers/organization_relationships.dart';
 
+// Utilities
+export 'src/utils/secure_data_encoder.dart';
+
+// Models
+export 'src/models/invocation_logs.dart';
+
 // DTOs (Data Transfer Objects)
 export 'src/dto/user_dto.dart';
 export 'src/dto/organization_dto.dart';
@@ -201,6 +207,8 @@ class Database {
     ''');
 
     // Function invocations table with serial ID (internal) and UUID (public)
+    // Stores request metadata and execution logs
+    // Body is NOT stored for security - only request info (headers, query, method, path)
     await _connection.execute('''
       CREATE TABLE IF NOT EXISTS function_invocations (
         id SERIAL PRIMARY KEY,
@@ -210,7 +218,10 @@ class Database {
         duration_ms INTEGER,
         error TEXT,
         logs JSONB,
-        timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        request_info JSONB,
+        result TEXT,
+        success BOOLEAN
       )
     ''');
 
@@ -228,6 +239,14 @@ class Database {
     await _connection.execute('''
       ALTER TABLE function_invocations 
       ADD COLUMN IF NOT EXISTS logs JSONB
+    ''');
+
+    // Migration: Add request info and result fields to function_invocations
+    await _connection.execute('''
+      ALTER TABLE function_invocations 
+      ADD COLUMN IF NOT EXISTS request_info JSONB,
+      ADD COLUMN IF NOT EXISTS result TEXT,
+      ADD COLUMN IF NOT EXISTS success BOOLEAN
     ''');
 
     // Create triggers for updated_at

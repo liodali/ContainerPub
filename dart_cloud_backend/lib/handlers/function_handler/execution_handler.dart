@@ -120,21 +120,68 @@ class ExecutionHandler {
 
       // === INVOCATION LOGGING ===
       // Record invocation metrics in database for analytics
-      // Convert logs to JSON string for JSONB storage
-      final logsJson = executionResult['logs'] != null
-          ? jsonEncode(executionResult['logs'])
+      // Encode sensitive data (body, raw, result, error) as Base64 for security
+      // This prepares for future encryption with developer-specific keys
+      final isSuccess = executionResult['success'] == true;
+      final resultString = executionResult['result'] != null
+          ? jsonEncode(executionResult['result'])
           : null;
 
-      await Database.connection.execute(
-        'INSERT INTO function_invocations (function_id, status, duration_ms, error, logs) VALUES (\$1, \$2, \$3, \$4, \$5::jsonb)',
-        parameters: [
-          functionEntity.id,
-          executionResult['success'] == true ? 'success' : 'error',
-          duration,
-          executionResult['error'],
-          logsJson,
-        ],
+      // Build structured logs with container output and execution errors
+      var invocationLogs = InvocationLogs.fromContainerLogs(
+        executionResult['logs'] as Map<String, dynamic>?,
       );
+
+      // Add execution metadata
+      invocationLogs = invocationLogs.withMetadata(
+        ExecutionMetadata(
+          functionUuid: uuid,
+          startTime: startTime.toIso8601String(),
+          endTime: DateTime.now().toIso8601String(),
+          timeoutMs: Config.functionTimeoutSeconds * 1000,
+          memoryLimitMb: Config.functionMaxMemoryMb,
+        ),
+      );
+
+      // Add execution error if failed
+      if (!isSuccess && executionResult['error'] != null) {
+        invocationLogs = invocationLogs.addError(
+          ExecutionError.create(
+            phase: 'execution',
+            message: executionResult['error'] as String,
+            code: invocationLogs.exitCode?.toString(),
+          ),
+        );
+      }
+
+      // Build error message (only on error) - no body included for security
+      String? errorMessage;
+      if (!isSuccess && executionResult['error'] != null) {
+        errorMessage = executionResult['error'] as String;
+      }
+
+      // Build request info with all metadata (no body for security)
+      final requestInfo = <String, dynamic>{
+        'headers': body['headers'] as Map<String, dynamic>? ?? {},
+        'query': body['query'] as Map<String, dynamic>? ?? {},
+        'method': body['method'] as String? ?? 'POST',
+        'path': body['path'] as String? ?? '/',
+        'content_type': body['content_type'] as String?,
+        'timestamp': startTime.toIso8601String(),
+      };
+
+      // Store invocation with request info (no body for security)
+      final entity = FunctionInvocationEntity(
+        functionId: functionEntity.id,
+        status: isSuccess ? 'success' : 'error',
+        durationMs: duration,
+        error: SecureDataEncoder.encodeOrNull(errorMessage),
+        logs: invocationLogs.toJson(),
+        requestInfo: requestInfo,
+        result: SecureDataEncoder.encodeOrNull(resultString),
+        success: isSuccess,
+      );
+      DatabaseManagers.functionInvocations.insert(entity.toDBMap());
 
       // Log execution result for debugging and monitoring
       await FunctionUtils.logFunction(
@@ -146,16 +193,25 @@ class ExecutionHandler {
       );
 
       // === RETURN RESULT ===
-      // Return execution result with metrics
-      return Response.ok(
-        jsonEncode({
-          'success': executionResult['success'],
-          'result': executionResult['result'],
-          'error': executionResult['error'],
-          'duration_ms': duration,
-        }),
-        headers: {'Content-Type': 'application/json'},
-      );
+      // Return clean response with only result and success
+      // Excludes sensitive data (body, raw, logs) from response
+      if (isSuccess) {
+        return Response.ok(
+          jsonEncode({
+            'success': true,
+            'result': executionResult['result'],
+          }),
+          headers: {'Content-Type': 'application/json'},
+        );
+      } else {
+        return Response.ok(
+          jsonEncode({
+            'success': false,
+            'error': executionResult['error'],
+          }),
+          headers: {'Content-Type': 'application/json'},
+        );
+      }
     } catch (e) {
       // Handle unexpected errors during invocation
       return Response.internalServerError(

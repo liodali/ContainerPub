@@ -66,6 +66,8 @@ CREATE TABLE IF NOT EXISTS function_logs (
 \echo "Function logs table created"
 
 -- Create function_invocations table with serial ID (internal) and UUID (public)
+-- Stores request metadata and execution logs
+-- Body is NOT stored for security - only request info (headers, query, method, path)
 CREATE TABLE IF NOT EXISTS function_invocations (
     id SERIAL PRIMARY KEY,
     uuid UUID UNIQUE NOT NULL DEFAULT uuid_generate_v4(),
@@ -73,7 +75,11 @@ CREATE TABLE IF NOT EXISTS function_invocations (
     status VARCHAR(50) NOT NULL,
     duration_ms INTEGER,
     error TEXT,
-    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    logs JSONB,
+    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    request_info JSONB,
+    result TEXT,
+    success BOOLEAN
 );
 \echo "Function invocations table created"
 

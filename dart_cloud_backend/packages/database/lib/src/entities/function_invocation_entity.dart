@@ -1,6 +1,20 @@
+import 'dart:convert';
+
 import '../entity.dart';
+import '../utils/secure_data_encoder.dart';
+import '../models/invocation_logs.dart';
 
 /// Function invocation entity representing the function_invocations table
+///
+/// Stores function execution data with request metadata (headers, query) and
+/// execution logs. Body is NOT stored for security reasons.
+///
+/// Fields:
+/// - [requestInfo]: Request metadata including headers, query, method, path (JSONB)
+/// - [result]: Base64 encoded function execution result
+/// - [success]: Boolean indicating if execution was successful
+/// - [error]: Base64 encoded error message
+/// - [logs]: Container logs and execution errors (JSONB)
 class FunctionInvocationEntity extends Entity {
   final int? id;
   final String? uuid;
@@ -11,6 +25,15 @@ class FunctionInvocationEntity extends Entity {
   final Map<String, dynamic>? logs;
   final DateTime? timestamp;
 
+  /// Request metadata including headers, query, method, path (stored as JSONB)
+  final Map<String, dynamic>? requestInfo;
+
+  /// Base64 encoded function result - protected for future encryption
+  final String? result;
+
+  /// Indicates if the function execution was successful
+  final bool? success;
+
   FunctionInvocationEntity({
     this.id,
     this.uuid,
@@ -20,6 +43,9 @@ class FunctionInvocationEntity extends Entity {
     this.error,
     this.logs,
     this.timestamp,
+    this.requestInfo,
+    this.result,
+    this.success,
   });
 
   @override
@@ -35,6 +61,9 @@ class FunctionInvocationEntity extends Entity {
       if (error != null) 'error': error,
       if (logs != null) 'logs': logs,
       if (timestamp != null) 'timestamp': timestamp,
+      if (requestInfo != null) 'request_info': requestInfo,
+      if (result != null) 'result': result,
+      if (success != null) 'success': success,
     };
   }
 
@@ -47,8 +76,11 @@ class FunctionInvocationEntity extends Entity {
       'status': status,
       if (durationMs != null) 'duration_ms': durationMs,
       if (error != null) 'error': error,
-      if (logs != null) 'logs': logs,
+      if (logs != null) 'logs': json.encode(logs),
       if (timestamp != null) 'timestamp': timestamp,
+      if (requestInfo != null) 'request_info': json.encode(requestInfo),
+      if (result != null) 'result': result,
+      if (success != null) 'success': success,
     };
   }
 
@@ -62,6 +94,9 @@ class FunctionInvocationEntity extends Entity {
       error: map['error'] as String?,
       logs: map['logs'] as Map<String, dynamic>?,
       timestamp: map['timestamp'] as DateTime?,
+      requestInfo: map['request_info'] as Map<String, dynamic>?,
+      result: map['result'] as String?,
+      success: map['success'] as bool?,
     );
   }
 
@@ -74,6 +109,9 @@ class FunctionInvocationEntity extends Entity {
     String? error,
     Map<String, dynamic>? logs,
     DateTime? timestamp,
+    Map<String, dynamic>? requestInfo,
+    String? result,
+    bool? success,
   }) {
     return FunctionInvocationEntity(
       id: id ?? this.id,
@@ -84,6 +122,79 @@ class FunctionInvocationEntity extends Entity {
       error: error ?? this.error,
       logs: logs ?? this.logs,
       timestamp: timestamp ?? this.timestamp,
+      requestInfo: requestInfo ?? this.requestInfo,
+      result: result ?? this.result,
+      success: success ?? this.success,
+    );
+  }
+
+  /// Decodes the result from Base64
+  /// Returns null if result is null
+  String? get decodedResult {
+    return SecureDataEncoder.decodeOrNull(result);
+  }
+
+  /// Decodes the error from Base64
+  /// Returns null if error is null
+  String? get decodedError {
+    return SecureDataEncoder.decodeOrNull(error);
+  }
+
+  /// Parses the logs field into a structured InvocationLogs object
+  /// Returns null if logs is null
+  InvocationLogs? get structuredLogs {
+    if (logs == null) return null;
+    return InvocationLogs.fromJson(logs!);
+  }
+
+  /// Gets container stdout from logs
+  String? get containerStdout => structuredLogs?.stdout;
+
+  /// Gets container stderr from logs
+  String? get containerStderr => structuredLogs?.stderr;
+
+  /// Gets container exit code from logs
+  int? get containerExitCode => structuredLogs?.exitCode;
+
+  /// Gets all execution errors from logs
+  List<ExecutionError> get executionErrors =>
+      structuredLogs?.executionErrors ?? [];
+
+  /// Checks if there were any errors during execution
+  bool get hasExecutionErrors => structuredLogs?.hasErrors ?? false;
+
+  /// Checks if execution timed out
+  bool get isTimeout => structuredLogs?.isTimeout ?? false;
+
+  /// Creates an invocation entity with encoded sensitive data
+  ///
+  /// Use this factory to ensure all sensitive data is properly encoded
+  /// before storage.
+  static FunctionInvocationEntity createWithEncodedData({
+    int? id,
+    String? uuid,
+    int? functionId,
+    required String status,
+    int? durationMs,
+    String? error,
+    Map<String, dynamic>? logs,
+    DateTime? timestamp,
+    Map<String, dynamic>? requestInfo,
+    String? resultData,
+    bool? success,
+  }) {
+    return FunctionInvocationEntity(
+      id: id,
+      uuid: uuid,
+      functionId: functionId,
+      status: status,
+      durationMs: durationMs,
+      error: SecureDataEncoder.encodeOrNull(error),
+      logs: logs,
+      timestamp: timestamp,
+      requestInfo: requestInfo,
+      result: SecureDataEncoder.encodeOrNull(resultData),
+      success: success,
     );
   }
 }
