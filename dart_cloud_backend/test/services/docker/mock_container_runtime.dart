@@ -239,6 +239,12 @@ class MockContainerRuntime extends ContainerRuntime {
   List<MethodCall> getCallsTo(String methodName) {
     return methodCalls.where((call) => call.name == methodName).toList();
   }
+
+  @override
+  Future<bool> imageExists(String imageTag) {
+    methodCalls.add(MethodCall('imageExists', {'imageTag': imageTag}));
+    return Future.value(true); // Default to true for testing
+  }
 }
 
 /// Represents a method call for verification
