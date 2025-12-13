@@ -1,5 +1,8 @@
 package main
 
+/*
+#include <stdlib.h>
+*/
 import "C"
 import (
 	"bytes"
@@ -39,7 +42,7 @@ func initBucket(endpoint *C.char, bucketName *C.char, keyId *C.char, secretAcces
 	secretKey := C.GoString(secretAccessKey)
 	sessionTokenStr := C.GoString(sessionToken)
 	accountIDStr := C.GoString(accountId)
-	
+
 	// Debug logging (remove in production)
 	fmt.Printf("Initializing S3 client:\n")
 	fmt.Printf("  Endpoint: %s\n", endpointStr)
@@ -60,10 +63,10 @@ func initBucket(endpoint *C.char, bucketName *C.char, keyId *C.char, secretAcces
 		if endpointStr != "" {
 			o.BaseEndpoint = aws.String(endpointStr)
 		}
-		
+
 		// Use path-style addressing (required for R2 and some S3-compatible services)
 		o.UsePathStyle = true
-		
+
 		// Set credentials
 		o.Credentials = aws.NewCredentialsCache(aws.CredentialsProviderFunc(func(ctx context.Context) (aws.Credentials, error) {
 			creds := aws.Credentials{
@@ -71,21 +74,21 @@ func initBucket(endpoint *C.char, bucketName *C.char, keyId *C.char, secretAcces
 				SecretAccessKey: secretKey,
 				Source:          "static",
 			}
-			
+
 			// Only set session token if provided
 			if sessionTokenStr != "" {
 				creds.SessionToken = sessionTokenStr
 			}
-			
+
 			// Only set account ID if provided
 			if accountIDStr != "" {
 				creds.AccountID = accountIDStr
 			}
-			
+
 			return creds, nil
 		}))
 	})
-	
+
 	s3Bucket = &S3Bucket{
 		BucketName: C.GoString(bucketName),
 		client:     client,
@@ -122,6 +125,27 @@ func upload(filePath *C.char, objectKey *C.char) *C.char {
 	}
 	defer s3Mu.Unlock()
 	return C.CString(C.GoString(objectKey))
+}
+
+//export checkKeyBucketExist
+func checkKeyBucketExist(objectKey *C.char) C.int {
+
+	s3Mu.Lock()
+	_, err := s3Bucket.client.HeadObject(context.TODO(), &s3.HeadObjectInput{
+		Bucket: aws.String(s3Bucket.BucketName),
+		Key:    aws.String(C.GoString(objectKey)),
+	})
+	defer s3Mu.Unlock()
+	if err == nil {
+		// No error means the HeadObject call succeeded, and the object exists.
+		return C.int(1)
+	}
+
+	if err != nil {
+		// The specific error for a non-existent object is "NotFound" (HTTP 404).
+		return C.int(0)
+	}
+	return C.int(0)
 }
 
 //export list
