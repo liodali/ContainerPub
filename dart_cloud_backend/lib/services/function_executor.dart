@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'dart:async';
+import 'package:dart_cloud_backend/handlers/function_handler.dart';
 import 'package:dart_cloud_backend/services/docker/docker_service.dart';
 import 'package:path/path.dart' as path;
 import 'package:dart_cloud_backend/configuration/config.dart';
@@ -69,17 +70,14 @@ class FunctionExecutor {
       };
 
       // Get active deployment image tag from database
-      final result = await Database.connection.execute(
-        '''
-        SELECT fd.image_tag
-        FROM functions f
-        JOIN function_deployments fd ON f.active_deployment_id = fd.id
-        WHERE f.uuid = \$1 AND fd.is_active = true
-        ''',
-        parameters: [functionUUId],
+      final deployment = await DatabaseManagers.functionDeployments.findOne(
+        where: {
+          'uuid': functionUUId,
+          'is_active': true,
+        },
       );
 
-      if (result.isEmpty) {
+      if (deployment == null) {
         return {
           'success': false,
           'error': 'No active deployment found for function',
@@ -87,10 +85,22 @@ class FunctionExecutor {
         };
       }
 
-      final imageTag = result.first[0] as String;
-
+      final imageTag = deployment.imageTag;
+      // Check if image exists before running
+      final imageExists = await DockerService.isContainerImageExist(
+        imageTag,
+      );
+      if (!imageExists) {
+        return {
+          'success': false,
+          'error':
+              'Function image does not exist. Please rollback to another previous version or redeploy the function.',
+          'result': null,
+        };
+      }
       // Run the function in a Docker container
       final timeoutMs = Config.functionTimeoutSeconds * 1000;
+
       final executionResult = await DockerService.runContainerStatic(
         imageTag: imageTag,
         input: httpRequest,
@@ -101,8 +111,17 @@ class FunctionExecutor {
       _scheduleContainerCleanup(functionUUId, imageTag);
 
       return executionResult;
-    } catch (e) {
-      return {'success': false, 'error': 'Execution error: $e', 'result': null};
+    } catch (e, trace) {
+      FunctionUtils.logFunction(
+        functionUUId,
+        'error',
+        'Function execution failed: $e,trace:$trace',
+      );
+      return {
+        'success': false,
+        'error': 'Function Execution Failed',
+        'result': null,
+      };
     }
   }
 

@@ -111,11 +111,12 @@ class DockerService {
   /// Throws: Exception if build fails or times out
   Future<String> buildImage(
     String functionId,
+    String functionName,
     String functionDir, {
     String entrypoint = 'bin/main.dart',
   }) async {
-    final imageTag = 'dart-function-$functionId:latest';
-    final buildStageTag = 'dart-function-build-$functionId';
+    final imageTag = '$functionName-$functionId:latest';
+    final buildStageTag = '$functionName-build-$functionId';
 
     // Check base image platform compatibility before building
     // This ensures dart:stable (or configured buildImage) matches host architecture
@@ -306,21 +307,29 @@ class DockerService {
   /// @deprecated Use instance method instead: `DockerService().buildImage(...)`
   static Future<String> buildImageStatic(
     String functionId,
+    String functionName,
     String functionDir,
-  ) => _instance.buildImage(functionId, functionDir);
+  ) => _instance.buildImage(
+    functionId,
+    functionName,
+    functionDir,
+  );
 
   /// Static method to build image with custom entrypoint (delegates to singleton)
   ///
   /// Parameters:
   /// - [functionId]: Unique identifier for the function
+  /// - [functionName]: Name of the function
   /// - [functionDir]: Path to directory containing function code
   /// - [entrypoint]: Path to main.dart relative to function dir (e.g., 'bin/main.dart')
   static Future<String> buildImageWithEntrypointStatic(
     String functionId,
+    String functionName,
     String functionDir,
     String entrypoint,
   ) => _instance.buildImage(
     functionId,
+    functionName,
     functionDir,
     entrypoint: entrypoint,
   );
@@ -334,6 +343,12 @@ class DockerService {
     required Map<String, dynamic> input,
     required int timeoutMs,
   }) async {
+    // Check if image exists before running
+    final imageExists = await _instance.isImageExist(imageTag);
+    if (!imageExists) {
+      throw Exception('Container image does not exist: $imageTag');
+    }
+
     final result = await _instance.runContainer(
       imageTag: imageTag,
       input: input,
@@ -341,6 +356,11 @@ class DockerService {
     );
     return result.toJson();
   }
+
+  static Future<bool> isContainerImageExist(String imageTag) =>
+      _instance.isImageExist(imageTag);
+
+  Future<bool> isImageExist(String imageTag) => _runtime.imageExists(imageTag);
 
   /// Static method to remove image (delegates to singleton)
   ///
