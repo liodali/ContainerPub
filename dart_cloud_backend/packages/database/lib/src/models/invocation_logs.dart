@@ -44,7 +44,7 @@ class InvocationLogs {
     }
 
     return InvocationLogs(
-      stdout: containerLogs['stdout'] as String?,
+      stdout: containerLogs['logs'] as String?,
       stderr: containerLogs['stderr'] as String?,
       exitCode: containerLogs['exit_code'] as int?,
       containerTimestamp: containerLogs['timestamp'] as String?,
