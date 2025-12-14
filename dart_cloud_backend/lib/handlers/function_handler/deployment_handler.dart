@@ -335,7 +335,7 @@ class DeploymentHandler {
       // Update function record with active deployment reference
       await Database.connection.execute(
         'UPDATE functions SET active_deployment_id = \$1, status = \$2 WHERE id = \$3',
-        parameters: [result!.id, 'active', functionId],
+        parameters: [result!.id, DeploymentStatus.active.name, functionId],
       );
 
       // Log successful deployment
@@ -344,6 +344,16 @@ class DeploymentHandler {
         'info',
         'Function deployed successfully (version $version)',
       );
+
+      // === CLEANUP LOCAL FUNCTION FOLDER ===
+      // Delete the local function folder after Docker image is built and uploaded to S3
+      await FunctionUtils.logFunction(
+        functionUUID,
+        'info',
+        'Cleaning up local function folder...',
+      );
+      await functionDir.delete(recursive: true);
+
 
       // Return success response with deployment details
       return Response(
