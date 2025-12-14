@@ -11,22 +11,39 @@ and the Flutter guide for
 [developing packages and plugins](https://flutter.dev/to/develop-packages). 
 -->
 
-TODO: Put a short description of the package here that helps potential users
-know whether this package might be useful for them.
 
 ## Features
 
-TODO: List what your package can do. Maybe include images, gifs, or videos.
+A simple logging utility for Dart cloud functions with support for error, debug, and info levels.
 
 ## Getting started
 
-TODO: List prerequisites and provide or point to information on how to
-start using the package.
+Add the package to your `pubspec.yaml`:
+```yaml
+dependencies:
+  dart_cloud_logger: ^0.1.0
+```
 
 ## Usage
 
-TODO: Include short and useful examples for package users. Add longer examples
-to `/example` folder. 
+```dart
+import 'package:dart_cloud_logger/dart_cloud_logger.dart';
+
+class MyLogger extends CloudDartFunctionLogger {
+  @override
+  void printLog(LoggerTypeAction logger, String message) {
+    // Implement your logging logic here
+    print('${logger.name.toUpperCase()}: $message');
+  }
+}
+
+void main() {
+  var logger = MyLogger();
+  logger.printLog(LoggerTypeAction.error, "This is an error message");
+  logger.printLog(LoggerTypeAction.debug, "This is a debug message");
+  logger.printLog(LoggerTypeAction.info, "This is an info message");
+}
+```
 
 ```dart
 const like = 'sample';
@@ -34,6 +51,6 @@ const like = 'sample';
 
 ## Additional information
 
-TODO: Tell users more about the package: where to find more information, how to 
-contribute to the package, how to file issues, what response they can expect 
-from the package authors, and more.
+This package is designed to be used in cloud function environments where structured logging is needed. It provides a simple interface for logging at different levels (error, debug, info) and can be easily extended to support other logging backends.
+
+For more information, visit the [GitHub repository](https://github.com/liodali/containerPub).

@@ -3,6 +3,16 @@
 /// More dartdocs go here.
 library;
 
-export 'src/dart_cloud_logger_base.dart';
+
+enum LoggerTypeAction {
+  error,
+  debug,
+  info;
+
+}
+
+abstract class CloudDartFunctionLogger {
+  void printLog(LoggerTypeAction logger,String message);
+}
 
 // TODO: Export any libraries intended for clients of this package.
