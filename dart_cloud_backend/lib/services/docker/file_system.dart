@@ -24,6 +24,9 @@ abstract class FileSystem {
   /// Delete a directory recursively
   Future<void> deleteDirectory(String dirPath);
 
+  /// Delete a directory recursively
+  Future<void> deleteFile(String filePath);
+
   /// Join path segments
   String joinPath(String part1, String part2);
 }
@@ -61,6 +64,9 @@ class RealFileSystem implements FileSystem {
   String joinPath(String part1, String part2) {
     return path.join(part1, part2);
   }
+
+  @override
+  Future<void> deleteFile(String filePath) => File(filePath).delete();
 }
 
 /// Helper class for managing request files

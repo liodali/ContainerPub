@@ -2,7 +2,6 @@ import 'dart:io';
 
 import 'package:dart_cloud_backend/services/docker/docker.dart';
 
-
 /// Mock implementation of FileSystem for testing
 ///
 /// Stores files in memory instead of writing to disk.
@@ -95,6 +94,11 @@ class MockFileSystem extends FileSystem {
   /// Get file content
   String? getFileContent(String filePath) {
     return files[filePath];
+  }
+
+  @override
+  Future<void> deleteFile(String filePath) async {
+    files.remove(filePath);
   }
 }
 
