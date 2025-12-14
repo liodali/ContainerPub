@@ -1,6 +1,6 @@
 name: dart_cloud_function
 description: Dart Cloud Function package for serverless functions in Dart
-version: 0.1.0
+version: 0.2.0
 repository: https://github.com/liodali/ContainerPub
 
 environment:
@@ -9,6 +9,7 @@ environment:
 # Add regular dependencies here.
 dependencies:
   path: ^1.9.0
+  dart_cloud_logger: ^0.2.1
 
 dev_dependencies:
   lints: ^6.0.0
