@@ -33,10 +33,14 @@ void main() {
         );
 
         // Act
-        final imageTag = await service.buildImage('test-func', '/path/to/func');
+        final imageTag = await service.buildImage(
+          'test-func',
+          'name-func',
+          '/path/to/func',
+        );
 
         // Assert
-        expect(imageTag, contains('dart-function-test-func'));
+        expect(imageTag, contains('name-func-test-func'));
         expect(mockRuntime.wasCalled('buildImage'), isTrue);
         expect(mockFs.wasFileWritten('/path/to/func/Dockerfile'), isTrue);
 
@@ -57,7 +61,7 @@ void main() {
 
         // Act & Assert
         expect(
-          () => service.buildImage('test-func', '/path/to/func'),
+          () => service.buildImage('test-func', 'name-func', '/path/to/func'),
           throwsException,
         );
       });
@@ -71,14 +75,14 @@ void main() {
         );
 
         // Act
-        await service.buildImage('test-func', '/path/to/func');
+        await service.buildImage('test-func', 'name-func', '/path/to/func');
 
         // Assert - removeImage should be called for intermediate image
         final removeImageCalls = mockRuntime.getCallsTo('removeImage');
         expect(removeImageCalls.length, greaterThanOrEqualTo(1));
         expect(
           removeImageCalls.first.arguments['imageTag'],
-          contains('dart-function-build-test-func'),
+          contains('name-func-build-test-func'),
         );
       });
     });
@@ -242,7 +246,7 @@ void main() {
       expect(dockerfile, contains('dart compile exe main.dart'));
       expect(dockerfile, contains('FROM alpine'));
       expect(dockerfile, contains('COPY --from=test-build'));
-      expect(dockerfile, contains('ENTRYPOINT'));
+      expect(dockerfile, contains('CMD'));
     });
 
     test('generates development Dockerfile', () {
