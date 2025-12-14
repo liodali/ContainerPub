@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:dart_cloud_backend/configuration/config.dart';
 
@@ -160,12 +161,22 @@ class DockerService {
   /// - [imageTag]: Container image to run
   /// - [input]: Function input data (body, query, headers)
   /// - [timeoutMs]: Maximum execution time in milliseconds
+  /// - [functionUUID]: Function UUID for result storage location
+  /// - [version]: Deployment version for result storage location
   ///
   /// Returns: ExecutionResult with success status, result data, and errors
+  ///
+  /// **Result Handling:**
+  /// - Function writes result to /result.json (mounted volume)
+  /// - Result file stored at: Config.functionsDir/functionUUID/version/result.json
+  /// - stdout/stderr are captured as logs only
+  /// - This separates function output from debug logs
   Future<ExecutionResult> runContainer({
     required String imageTag,
     required Map<String, dynamic> input,
     required int timeoutMs,
+    required String functionUUID,
+    required int version,
   }) async {
     final containerName = 'dart-function-${DateTime.now().millisecondsSinceEpoch}';
     String? tempDirPath;
@@ -179,10 +190,23 @@ class DockerService {
       final environment = _buildEnvironment(timeoutMs);
       final envConfigPath = await _createEnvConfigFile(tempDirPath, environment);
 
-      // Prepare volume mounts (request.json and .env.config at same level: /)
+      // Create result directory at deployment location: functionsDir/functionUUID/version/
+      final resultDir = _fileSystem.joinPath(
+        _fileSystem.joinPath(Config.functionsDir, functionUUID),
+        'v$version',
+      );
+      // Ensure result directory exists
+      await Directory(resultDir).create(recursive: true);
+
+      // Create result.json file (empty, will be written by function)
+      final resultFilePath = _fileSystem.joinPath(resultDir, 'result.json');
+      await _fileSystem.writeFile(resultFilePath, '');
+
+      // Prepare volume mounts (request.json, .env.config, and result.json)
       final volumeMounts = [
         '${requestInfo.filePath}:/request.json:ro',
         '$envConfigPath:/.env.config:ro',
+        '$resultFilePath:/result.json:rw', // Writable for function to write result
       ];
 
       // Run the container with env file mounted as volume
@@ -196,13 +220,13 @@ class DockerService {
         timeout: Duration(milliseconds: timeoutMs),
       );
 
-      // Capture container logs (stdout and stderr)
-      final containerLogs = {
-        'stdout': result.stdout,
+      // Capture container logs (stdout and stderr) - these are now pure logs
+      final containerLogs = <String, dynamic>{
         'stderr': result.stderr,
         'exit_code': result.exitCode,
         'timestamp': DateTime.now().toIso8601String(),
       };
+      containerLogs.addAll((result as ContainerProcessResult).stdout);
 
       // Handle timeout
       if (result.exitCode == -1) {
@@ -212,26 +236,48 @@ class DockerService {
           logs: containerLogs,
         );
       }
-
-      // Handle non-zero exit code
-      if (!result.isSuccess) {
+      // Read result from result.json (written by function)
+      Map<String, dynamic> parsedResult = Map.from(
+        jsonDecode(result.stdout['stdout']),
+      );
+      try {
+        final resultContent = await _fileSystem.readFile(resultFilePath);
+        if (resultContent.isNotEmpty) {
+          parsedResult = jsonDecode(resultContent);
+        }
+        await _fileSystem.deleteFile(resultFilePath);
+      } catch (e) {
+        // If result.json is empty or invalid, check if function failed
+        if (!result.isSuccess) {
+          return ExecutionResult(
+            success: false,
+            error: 'Function exited with code ${result.exitCode}: ${result.stderr}',
+            logs: containerLogs,
+          );
+        }
+        // Function succeeded but no result file - unexpected
         return ExecutionResult(
           success: false,
-          error: 'Function exited with code ${result.exitCode}: ${result.stderr}',
+          error: 'Function completed but result.json is empty or invalid: $e',
           logs: containerLogs,
         );
       }
 
-      // Parse output
-      final output = result.stdout.trim();
-      dynamic parsedResult;
-      try {
-        parsedResult = jsonDecode(output);
-      } catch (e) {
-        parsedResult = output;
+      // Handle non-zero exit code (function may have written error to result.json)
+      if (!result.isSuccess) {
+        return ExecutionResult(
+          success: false,
+          error: 'Function exited with code ${result.exitCode}',
+          result: parsedResult,
+          logs: containerLogs,
+        );
       }
 
-      return ExecutionResult(success: true, result: parsedResult, logs: containerLogs);
+      return ExecutionResult(
+        success: true,
+        result: parsedResult['body'],
+        logs: containerLogs,
+      );
     } catch (e) {
       return ExecutionResult(
         success: false,
@@ -342,6 +388,8 @@ class DockerService {
     required String imageTag,
     required Map<String, dynamic> input,
     required int timeoutMs,
+    required String functionUUID,
+    required int version,
   }) async {
     // Check if image exists before running
     final imageExists = await _instance.isImageExist(imageTag);
@@ -353,6 +401,8 @@ class DockerService {
       imageTag: imageTag,
       input: input,
       timeoutMs: timeoutMs,
+      functionUUID: functionUUID,
+      version: version,
     );
     return result.toJson();
   }

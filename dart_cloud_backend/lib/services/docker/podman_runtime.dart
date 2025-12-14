@@ -119,7 +119,7 @@ class PodmanRuntime implements ContainerRuntime {
       },
     );
 
-    return ProcessResult(
+    return ImageProcessResult(
       exitCode: exitCode,
       stdout: stdoutBuffer.toString(),
       stderr: stderrBuffer.toString(),
@@ -177,9 +177,10 @@ class PodmanRuntime implements ContainerRuntime {
     final stderrBuffer = StringBuffer();
 
     process.stdout.transform(utf8.decoder).listen((data) {
-      stderrBuffer.write(data);
       final lines = data.split("\n").where((e) => e.isNotEmpty).toList();
-      stdout.addAll({'stdout': lines.last, 'log': data});
+      final stdOutStr = lines.last;
+      lines.removeLast();
+      stdout.addAll({'stdout': stdOutStr, 'logs': jsonEncode(lines)});
     });
 
     process.stderr.transform(utf8.decoder).listen((data) {
@@ -194,9 +195,9 @@ class PodmanRuntime implements ContainerRuntime {
       },
     );
 
-    return ProcessResult(
+    return ContainerProcessResult(
       exitCode: exitCode,
-      stdout: jsonEncode(stdout),
+      stdout: stdout,
       stderr: stderrBuffer.toString(),
     );
   }
@@ -208,7 +209,7 @@ class PodmanRuntime implements ContainerRuntime {
     args.add(imageTag);
 
     final result = await Process.run(_executable, args);
-    return ProcessResult(
+    return ImageProcessResult(
       exitCode: result.exitCode,
       stdout: result.stdout.toString(),
       stderr: result.stderr.toString(),
@@ -218,7 +219,7 @@ class PodmanRuntime implements ContainerRuntime {
   @override
   Future<ProcessResult> killContainer(String containerName) async {
     final result = await Process.run(_executable, ['kill', containerName]);
-    return ProcessResult(
+    return ImageProcessResult(
       exitCode: result.exitCode,
       stdout: result.stdout.toString(),
       stderr: result.stderr.toString(),
