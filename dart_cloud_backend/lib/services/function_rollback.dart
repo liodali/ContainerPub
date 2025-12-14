@@ -15,12 +15,14 @@ class FunctionRollback {
   }
 
   static Future<bool> rollbackFunctionDeployment({
+    required int functionId,
     required String functionUUId,
     required String functionName,
     required int version,
     required String s3key,
   }) {
     return instance.rollbackDeployment(
+      functionId,
       functionUUId,
       functionName,
       version,
@@ -29,6 +31,7 @@ class FunctionRollback {
   }
 
   Future<bool> rollbackDeployment(
+    int functionId,
     String functionUUId,
     String functionName,
     int version,
@@ -46,7 +49,7 @@ class FunctionRollback {
       await FunctionUtils.logFunction(
         functionUUId,
         'error',
-        'Fail to download function: $result from s3 bucket',
+        'Fail to download function to rollback',
       );
       return false;
     }
@@ -55,7 +58,7 @@ class FunctionRollback {
     await FunctionUtils.logFunction(
       functionUUId,
       'info',
-      'Extracting Docker image...',
+      'Extracting function...',
     );
     await ArchiveUtility.extractZipFile(path, folderFunction);
     // === DOCKER IMAGE BUILD ===
@@ -63,9 +66,13 @@ class FunctionRollback {
     await FunctionUtils.logFunction(
       functionUUId,
       'info',
-      'Rolling back to version $version: Building Docker image',
+      'Rolling back to version $version: Building function',
     );
-    await DockerService.buildImageStatic(functionUUId, folderFunction);
+    await DockerService.buildImageStatic(
+      '$functionId-v$version',
+      functionName,
+      folderFunction,
+    );
 
     await FunctionUtils.logFunction(
       functionUUId,
