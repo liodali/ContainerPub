@@ -26,7 +26,7 @@ void main() {
     group('buildImage', () {
       test('generates Dockerfile and builds image successfully', () async {
         // Arrange
-        mockRuntime.buildImageResult = const ProcessResult(
+        mockRuntime.buildImageResult = const ImageProcessResult(
           exitCode: 0,
           stdout: 'Build successful',
           stderr: '',
@@ -53,7 +53,7 @@ void main() {
 
       test('throws exception on build failure', () async {
         // Arrange
-        mockRuntime.buildImageResult = const ProcessResult(
+        mockRuntime.buildImageResult = const ImageProcessResult(
           exitCode: 1,
           stdout: '',
           stderr: 'Build failed: missing dependency',
@@ -68,7 +68,7 @@ void main() {
 
       test('cleans up intermediate build image after successful build', () async {
         // Arrange
-        mockRuntime.buildImageResult = const ProcessResult(
+        mockRuntime.buildImageResult = const ImageProcessResult(
           exitCode: 0,
           stdout: 'Build successful',
           stderr: '',
@@ -90,9 +90,9 @@ void main() {
     group('runContainer', () {
       test('runs container and returns successful result', () async {
         // Arrange
-        mockRuntime.runContainerResult = const ProcessResult(
+        mockRuntime.runContainerResult = const ContainerProcessResult(
           exitCode: 0,
-          stdout: '{"message": "Hello, World!"}',
+          stdout: {'message': 'Hello, World!'},
           stderr: '',
         );
 
@@ -101,6 +101,8 @@ void main() {
           imageTag: 'test-image:latest',
           input: {'body': 'test'},
           timeoutMs: 5000,
+          functionUUID: 'test-uuid',
+          version: 1,
         );
 
         // Assert
@@ -112,9 +114,9 @@ void main() {
 
       test('returns error on container failure', () async {
         // Arrange
-        mockRuntime.runContainerResult = const ProcessResult(
+        mockRuntime.runContainerResult = const ContainerProcessResult(
           exitCode: 1,
-          stdout: '',
+          stdout: {},
           stderr: 'Container crashed',
         );
 
@@ -123,6 +125,8 @@ void main() {
           imageTag: 'test-image:latest',
           input: {'body': 'test'},
           timeoutMs: 5000,
+          functionUUID: 'test-uuid',
+          version: 1,
         );
 
         // Assert
@@ -132,9 +136,9 @@ void main() {
 
       test('returns timeout error when container times out', () async {
         // Arrange
-        mockRuntime.runContainerResult = const ProcessResult(
+        mockRuntime.runContainerResult = const ContainerProcessResult(
           exitCode: -1, // Timeout exit code
-          stdout: '',
+          stdout: {},
           stderr: '',
         );
 
@@ -143,6 +147,8 @@ void main() {
           imageTag: 'test-image:latest',
           input: {'body': 'test'},
           timeoutMs: 5000,
+          functionUUID: 'test-uuid',
+          version: 1,
         );
 
         // Assert
@@ -152,9 +158,9 @@ void main() {
 
       test('creates and cleans up request file', () async {
         // Arrange
-        mockRuntime.runContainerResult = const ProcessResult(
+        mockRuntime.runContainerResult = const ContainerProcessResult(
           exitCode: 0,
-          stdout: '{"result": "ok"}',
+          stdout: {'result': 'ok'},
           stderr: '',
         );
 
@@ -163,6 +169,8 @@ void main() {
           imageTag: 'test-image:latest',
           input: {'body': 'test data'},
           timeoutMs: 5000,
+          functionUUID: 'test-uuid',
+          version: 1,
         );
 
         // Assert - temp directory should be created and cleaned up
@@ -172,9 +180,9 @@ void main() {
 
       test('passes correct environment variables', () async {
         // Arrange
-        mockRuntime.runContainerResult = const ProcessResult(
+        mockRuntime.runContainerResult = const ContainerProcessResult(
           exitCode: 0,
-          stdout: '{}',
+          stdout: <String, dynamic>{},
           stderr: '',
         );
 
@@ -183,6 +191,8 @@ void main() {
           imageTag: 'test-image:latest',
           input: {'body': 'test'},
           timeoutMs: 10000,
+          functionUUID: 'test-uuid',
+          version: 1,
         );
 
         // Assert
