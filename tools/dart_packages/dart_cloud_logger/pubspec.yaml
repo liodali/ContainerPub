@@ -1,6 +1,6 @@
 name: dart_cloud_logger
 description: A simple logging utility for Dart cloud functions
-version: 0.2.0
+version: 0.2.1
 repository: https://github.com/liodali/ContainerPub
 
 environment:

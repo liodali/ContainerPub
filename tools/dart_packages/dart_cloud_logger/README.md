@@ -21,7 +21,7 @@ A simple logging utility for Dart cloud functions with support for error, debug,
 Add the package to your `pubspec.yaml`:
 ```yaml
 dependencies:
-  dart_cloud_logger: ^0.1.0
+  dart_cloud_logger: ^0.2.1
 ```
 
 ## Usage
@@ -31,9 +31,12 @@ import 'package:dart_cloud_logger/dart_cloud_logger.dart';
 
 class MyLogger extends CloudDartFunctionLogger {
   @override
-  void printLog(LoggerTypeAction logger, String message) {
+  void printLog(LoggerTypeAction logger, String message, {Map<String, dynamic>? metadata}) {
     // Implement your logging logic here
     print('${logger.name.toUpperCase()}: $message');
+    if (metadata != null) {
+      print('  Metadata: $metadata');
+    }
   }
 }
 
@@ -41,13 +44,10 @@ void main() {
   var logger = MyLogger();
   logger.printLog(LoggerTypeAction.error, "This is an error message");
   logger.printLog(LoggerTypeAction.debug, "This is a debug message");
-  logger.printLog(LoggerTypeAction.info, "This is an info message");
+  logger.printLog(LoggerTypeAction.info, "This is an info message", metadata: {"source": "example"});
 }
 ```
 
-```dart
-const like = 'sample';
-```
 
 ## Additional information
 

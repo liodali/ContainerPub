@@ -1,3 +1,6 @@
+## 0.2.1 : Minor documentation fixes and improvements.
+
+- Updated README with metadata usage example and improved documentation.
 
 ## 0.2.0
 
