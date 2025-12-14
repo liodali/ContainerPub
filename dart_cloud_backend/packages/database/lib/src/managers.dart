@@ -1,3 +1,4 @@
+import 'package:database/src/entities/logs_entity.dart';
 import 'package:database/src/entities/organization.dart';
 import 'package:database/src/entities/user_information.dart';
 import 'package:database/src/entities/organization_member.dart';
@@ -64,6 +65,12 @@ class DatabaseManagers
         tableName: 'function_invocations',
         fromMap: FunctionInvocationEntity.fromMap,
       );
+
+  /// Function log manager
+  static final logs = DatabaseManagerQuery<LogsEntity>(
+    tableName: 'logs',
+    fromMap: LogsEntity.fromMap,
+  );
 
   /// Singleton instance for relationship methods
   static final _instance = DatabaseManagers._();
