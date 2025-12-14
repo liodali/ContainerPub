@@ -31,28 +31,28 @@ import 'package:dart_cloud_backend/services/docker/docker.dart';
 /// ```
 class MockContainerRuntime extends ContainerRuntime {
   /// Result to return from buildImage
-  ProcessResult buildImageResult = const ProcessResult(
+  ProcessResult buildImageResult = const ImageProcessResult(
     exitCode: 0,
     stdout: 'Build successful',
     stderr: '',
   );
 
   /// Result to return from runContainer
-  ProcessResult runContainerResult = const ProcessResult(
+  ProcessResult runContainerResult = const ContainerProcessResult(
     exitCode: 0,
-    stdout: '{"result": "success"}',
+    stdout: {"result": "success"},
     stderr: '',
   );
 
   /// Result to return from removeImage
-  ProcessResult removeImageResult = const ProcessResult(
+  ProcessResult removeImageResult = const ImageProcessResult(
     exitCode: 0,
     stdout: 'Image removed',
     stderr: '',
   );
 
   /// Result to return from killContainer
-  ProcessResult killContainerResult = const ProcessResult(
+  ProcessResult killContainerResult = const ImageProcessResult(
     exitCode: 0,
     stdout: 'Container killed',
     stderr: '',
@@ -110,9 +110,11 @@ class MockContainerRuntime extends ContainerRuntime {
       throw buildImageException!;
     }
 
-    onStdout?.call(buildImageResult.stdout);
-    if (buildImageResult.stderr.isNotEmpty) {
-      onStderr?.call(buildImageResult.stderr);
+    if (buildImageResult is ImageProcessResult) {
+      onStdout?.call((buildImageResult as ImageProcessResult).stdout);
+      if (buildImageResult.stderr.isNotEmpty) {
+        onStderr?.call(buildImageResult.stderr);
+      }
     }
 
     return buildImageResult;
