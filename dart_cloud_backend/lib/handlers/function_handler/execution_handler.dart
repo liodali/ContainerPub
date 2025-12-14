@@ -207,8 +207,8 @@ class ExecutionHandler {
           headers: {'Content-Type': 'application/json'},
         );
       } else {
-        return Response.ok(
-          jsonEncode({
+        return Response.badRequest(
+          body: jsonEncode({
             'success': false,
             'error': executionResult['error'],
           }),
