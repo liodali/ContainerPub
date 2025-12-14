@@ -3,17 +3,17 @@
 // Cloud function files should not contain a main() function
 
 import 'package:dart_cloud_function/dart_cloud_function.dart';
+import 'package:dart_cloud_logger/dart_cloud_logger.dart';
 
 @cloudFunction
 class BadExampleWithMain extends CloudDartFunction {
   @override
   Future<CloudResponse> handle({
     required CloudRequest request,
+    required CloudDartFunctionLogger logger,
     Map<String, String>? env,
   }) async {
-    return CloudResponse.json({
-      'message': 'Has main function',
-    });
+    return CloudResponse.json({'message': 'Has main function'});
   }
 }
 
