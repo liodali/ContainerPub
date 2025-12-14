@@ -358,17 +358,20 @@ void main() async {
       env: null,//TODO: implement env
     );
 
-    // Write response to stdout as JSON
+    // Write response to /result.json (mounted volume)
+    // This separates the result from logs (stdout/stderr)
     final responseJson = {
       'statusCode': response.statusCode,
       'headers': response.headers,
       'body': response.body,
     };
 
+    final resultFile = File('/result.json');
+    await resultFile.writeAsString(jsonEncode(responseJson));
     stdout.writeln(jsonEncode(responseJson));
     exit(0);
   } catch (e, stackTrace) {
-    _writeError('Function execution failed: \$e\\n\$stackTrace');
+    await _writeError('Function execution failed: \$e\\n\$stackTrace');
     exit(1);
   }
 }
@@ -396,13 +399,14 @@ Map<String, String> _loadEnvironment() {
   return Map<String, String>.from(env.map);
 }
 
-void _writeError(String message) {
+Future<void> _writeError(String message) async {
   final errorResponse = {
     'statusCode': 500,
     'headers': {'content-type': 'application/json'},
     'body': {'error': message},
   };
-  stdout.writeln(jsonEncode(errorResponse));
+  final resultFile = File('/result.json');
+  await resultFile.writeAsString(jsonEncode(errorResponse));
 }
 $importOrEmbed
 ''';
