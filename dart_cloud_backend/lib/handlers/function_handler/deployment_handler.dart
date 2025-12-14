@@ -17,12 +17,7 @@ import 'package:dart_cloud_backend/services/function_main_injection.dart';
 import 'package:yaml/yaml.dart';
 import 'utils.dart';
 
-enum DeploymentStatus {
-  init,
-  building,
-  active,
-  disabled;
-}
+enum DeploymentStatus { init, building, active, disabled }
 
 /// Handles function deployment operations including:
 /// - Creating new functions
@@ -156,7 +151,12 @@ class DeploymentHandler {
         // Create function record in database with 'building' status
         final result = await Database.connection.execute(
           'INSERT INTO functions (uuid, user_id, name, status) VALUES (\$1, \$2, \$3, \$4)',
-          parameters: [functionUUID, userResult.id, functionName, 'building'],
+          parameters: [
+            functionUUID,
+            userResult.id,
+            functionName,
+            DeploymentStatus.building.name,
+          ],
         );
         functionId = result.first[0] as int;
 
@@ -294,6 +294,7 @@ class DeploymentHandler {
       // Image tag format: {registry}/dart-function-{id}-v{version}:latest
       final imageTag = await DockerService.buildImageWithEntrypointStatic(
         '$functionId-v$version',
+        functionName,
         functionDir.path,
         injectionResult.entrypoint,
       );
@@ -315,7 +316,7 @@ class DeploymentHandler {
         'version': version,
         'image_tag': imageTag,
         's3_key': s3KeyPrefix,
-        'status': 'active',
+        'status': DeploymentStatus.active.name,
         'is_active': true,
       });
       // final result = await Database.connection.execute(
