@@ -173,11 +173,13 @@ class PodmanRuntime implements ContainerRuntime {
 
     final process = await Process.start(_executable, args);
 
-    final stdoutBuffer = StringBuffer();
+    final stdout = <String, dynamic>{};
     final stderrBuffer = StringBuffer();
 
     process.stdout.transform(utf8.decoder).listen((data) {
-      stdoutBuffer.write(data);
+      stderrBuffer.write(data);
+      final lines = data.split("\n").where((e) => e.isNotEmpty).toList();
+      stdout.addAll({'stdout': lines.last, 'log': data});
     });
 
     process.stderr.transform(utf8.decoder).listen((data) {
@@ -194,7 +196,7 @@ class PodmanRuntime implements ContainerRuntime {
 
     return ProcessResult(
       exitCode: exitCode,
-      stdout: stdoutBuffer.toString(),
+      stdout: jsonEncode(stdout),
       stderr: stderrBuffer.toString(),
     );
   }
