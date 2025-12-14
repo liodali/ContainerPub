@@ -1,4 +1,3 @@
-
 ---
 
 # dart_cloud_function
@@ -7,12 +6,11 @@ Minimal foundation for serverless HTTP functions in Dart. Extend `CloudDartFunct
 
 **Note:** This package is still in development and subject to change. Not Fully opensource we will make opensource when our early access platform become available
 
-
 ## Install
 
 ```yaml
 dependencies:
-  dart_cloud_function: ^0.1.0
+  dart_cloud_function: ^0.2.0
 ```
 
 ```dart
@@ -29,8 +27,10 @@ class EchoFunction extends CloudDartFunction {
   @override
   Future<CloudResponse> handle({
     required CloudRequest request,
+    required CloudDartFunctionLogger logger,
     Map<String, String>? env,
   }) async {
+    logger.info('Handling request: ${request.path}');
     return CloudResponse.json({
       'method': request.method,
       'path': request.path,
@@ -46,29 +46,36 @@ class EchoFunction extends CloudDartFunction {
 When deploying with `dart_cloud_cli`, your function **must** follow these rules:
 
 ### ✓ Exactly One CloudDartFunction Class
+
 Your `main.dart` must contain exactly one class extending `CloudDartFunction`.
 
 ### ✓ @cloudFunction Annotation
+
 The class must be annotated with `@cloudFunction`.
 
 ### ✓ No main() Function
+
 Do not include a `main()` function. The platform handles invocation.
 
 ### Example - Valid ✅
+
 ```dart
 @cloudFunction
 class MyFunction extends CloudDartFunction {
   @override
   Future<CloudResponse> handle({
     required CloudRequest request,
+    required CloudDartFunctionLogger logger,
     Map<String, String>? env,
   }) async {
+    logger.info('Processing request');
     return CloudResponse.json({'message': 'Hello'});
   }
 }
 ```
 
 ### Example - Invalid ❌
+
 ```dart
 // Missing @cloudFunction annotation
 class MyFunction extends CloudDartFunction { ... }
@@ -86,7 +93,7 @@ void main() { }
 ## API Reference
 
 - `CloudDartFunction` (abstract)
-  - `Future<CloudResponse> handle({required CloudRequest request, Map<String, String>? env})`
+  - `Future<CloudResponse> handle({required CloudRequest request, required CloudDartFunctionLogger logger, Map<String, String>? env})`
 - `CloudRequest`
   - `String method`
   - `String path`
@@ -166,6 +173,7 @@ void main() { }
 ## Testing
 
 - Unit test your function classes by directly invoking `handle`:
+
   ```dart
   class TestFn extends CloudDartFunction {
     @override
@@ -174,6 +182,7 @@ void main() { }
 
   final res = await TestFn().handle(CloudRequest(method: 'GET', path: '/', headers: {}, query: {}));
   ```
+
 - See `test/dart_cloud_function_test.dart` for an example.
 
 ## Source Layout
