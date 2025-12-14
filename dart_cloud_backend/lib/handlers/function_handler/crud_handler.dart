@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'package:dart_cloud_backend/handlers/function_handler/utils.dart';
 import 'package:dart_cloud_backend/services/docker/docker.dart' show DockerService;
 import 'package:dart_cloud_backend/services/s3_service.dart' show S3Service;
 import 'package:shelf/shelf.dart';
@@ -33,13 +34,16 @@ class CrudHandler {
   static Future<Response> list(Request request) async {
     try {
       // Extract user ID from authenticated request
-      final userId = request.context['userId'] as String;
-
+      final userUUID = request.context['userId'] as String;
+      final userEntity = await DatabaseManagers.users.findByUuid(userUUID);
+      if (userEntity == null) {
+        return Response.notFound({'error': 'Functions not found'});
+      }
       // Query all functions for this user
       // Ordered by creation date descending (newest first)
       final result = await Database.connection.execute(
         'SELECT id, name, status, created_at FROM functions WHERE user_id = \$1 ORDER BY created_at DESC',
-        parameters: [userId],
+        parameters: [userEntity.id],
       );
 
       // Map database rows to JSON objects
@@ -57,7 +61,11 @@ class CrudHandler {
         jsonEncode(functions),
         headers: {'Content-Type': 'application/json'},
       );
-    } catch (e) {
+    } catch (e, trace) {
+      LogsUtils.log("unknown", "error", {
+        'err': "Failed to list functions: $e",
+        'trace': trace.toString(),
+      });
       // Handle database or other errors
       return Response.internalServerError(
         body: jsonEncode({'error': 'Failed to list functions: $e'}),
