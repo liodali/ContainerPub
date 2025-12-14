@@ -86,7 +86,7 @@ class ExecutionHandler {
       // Verify that function exists and belongs to requesting user
 
       final functionEntity = await DatabaseManagers.functions.findOne(
-        where: {'uuid': uuid,'status':'active'},
+        where: {'uuid': uuid, 'status': 'active'},
       );
 
       // final result = await Database.connection.execute(
@@ -112,7 +112,10 @@ class ExecutionHandler {
       // 2. Run Docker container with function code
       // 3. Wait for result with timeout
       // 4. Schedule container cleanup (10ms timer)
-      final executor = FunctionExecutor(functionEntity.uuid!);
+      final executor = FunctionExecutor(
+        functionId: functionEntity.id!,
+        functionUUId: functionEntity.uuid!,
+      );
       final executionResult = await executor.execute(body);
 
       // Calculate execution duration

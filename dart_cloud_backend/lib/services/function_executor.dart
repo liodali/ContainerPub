@@ -1,31 +1,33 @@
-import 'dart:io';
 import 'dart:async';
 import 'package:dart_cloud_backend/handlers/function_handler.dart';
 import 'package:dart_cloud_backend/services/docker/docker_service.dart';
-import 'package:path/path.dart' as path;
 import 'package:dart_cloud_backend/configuration/config.dart';
 import 'package:database/database.dart';
 
 class FunctionExecutor {
+  final int functionId;
   final String functionUUId;
   static int _activeExecutions = 0;
   static final Map<String, Timer> _containerCleanupTimers = {};
 
-  FunctionExecutor(this.functionUUId);
+  FunctionExecutor({
+    required this.functionId,
+    required this.functionUUId,
+  });
 
   /// Execute function with HTTP request structure
   /// Input should contain 'body' and 'query' fields
   Future<Map<String, dynamic>> execute(Map<String, dynamic> input) async {
-    final functionDir = path.join(Config.functionsDir, functionUUId);
-    final functionDirObj = Directory(functionDir);
+    // final functionDir = path.join(Config.functionsDir, functionUUId);
+    // final functionDirObj = Directory(functionDir);
 
-    if (!await functionDirObj.exists()) {
-      return {
-        'success': false,
-        'error': 'Function directory not found',
-        'result': null,
-      };
-    }
+    // if (!await functionDirObj.exists()) {
+    //   return {
+    //     'success': false,
+    //     'error': 'Function directory not found',
+    //     'result': null,
+    //   };
+    // }
 
     try {
       // Validate input structure - must have body and query
@@ -72,7 +74,7 @@ class FunctionExecutor {
       // Get active deployment image tag from database
       final deployment = await DatabaseManagers.functionDeployments.findOne(
         where: {
-          'uuid': functionUUId,
+          'function_id': functionId,
           'is_active': true,
         },
       );
