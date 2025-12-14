@@ -1,15 +1,37 @@
 import 'dart:async';
 
 /// Result of a process execution
-class ProcessResult {
+sealed class ProcessResult {
   final int exitCode;
-  final String stdout;
   final String stderr;
 
   const ProcessResult({
     required this.exitCode,
-    required this.stdout,
     required this.stderr,
+  });
+
+  bool get isSuccess => exitCode == 0;
+}
+
+class ImageProcessResult extends ProcessResult {
+  final String stdout;
+
+  const ImageProcessResult({
+    required this.stdout,
+    required super.exitCode,
+    required super.stderr,
+  });
+
+  bool get isSuccess => exitCode == 0;
+}
+
+class ContainerProcessResult extends ProcessResult {
+  final Map<String, dynamic> stdout;
+
+  const ContainerProcessResult({
+    required this.stdout,
+    required super.exitCode,
+    required super.stderr,
   });
 
   bool get isSuccess => exitCode == 0;

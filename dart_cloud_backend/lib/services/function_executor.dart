@@ -18,17 +18,6 @@ class FunctionExecutor {
   /// Execute function with HTTP request structure
   /// Input should contain 'body' and 'query' fields
   Future<Map<String, dynamic>> execute(Map<String, dynamic> input) async {
-    // final functionDir = path.join(Config.functionsDir, functionUUId);
-    // final functionDirObj = Directory(functionDir);
-
-    // if (!await functionDirObj.exists()) {
-    //   return {
-    //     'success': false,
-    //     'error': 'Function directory not found',
-    //     'result': null,
-    //   };
-    // }
-
     try {
       // Validate input structure - must have body and query
       if (!input.containsKey('body') && !input.containsKey('query')) {
@@ -51,12 +40,16 @@ class FunctionExecutor {
       _activeExecutions++;
 
       try {
-        return await _executeFunction(input);
+        return _executeFunction(input);
       } finally {
         _activeExecutions--;
       }
     } catch (e) {
-      return {'success': false, 'error': 'Execution error: $e', 'result': null};
+      return {
+        'success': false,
+        'error': 'Execution error: $e',
+        'result': null,
+      };
     }
   }
 
@@ -88,6 +81,7 @@ class FunctionExecutor {
       }
 
       final imageTag = deployment.imageTag;
+      final version = deployment.version;
       // Check if image exists before running
       final imageExists = await DockerService.isContainerImageExist(
         imageTag,
@@ -107,6 +101,8 @@ class FunctionExecutor {
         imageTag: imageTag,
         input: httpRequest,
         timeoutMs: timeoutMs,
+        functionUUID: functionUUId,
+        version: version,
       );
 
       // Schedule container cleanup after 10ms
