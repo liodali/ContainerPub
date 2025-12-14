@@ -1,6 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
-import 'package:dart_cloud_backend/handlers/function_handler/utils.dart';
+import 'package:dart_cloud_backend/handlers/function_handler/auth_utils.dart';
 import 'package:dart_cloud_backend/services/docker/docker.dart' show DockerService;
 import 'package:dart_cloud_backend/services/s3_service.dart' show S3Service;
 import 'package:shelf/shelf.dart';
@@ -33,17 +33,20 @@ class CrudHandler {
   /// ```
   static Future<Response> list(Request request) async {
     try {
-      // Extract user ID from authenticated request
-      final userUUID = request.context['userId'] as String;
-      final userEntity = await DatabaseManagers.users.findByUuid(userUUID);
-      if (userEntity == null) {
-        return Response.notFound({'error': 'Functions not found'});
+      // Extract and validate authenticated user
+      final authUser = await AuthUtils.getAuthenticatedUser(request);
+      if (authUser == null) {
+        return Response.notFound(
+          jsonEncode({'error': 'Unauthorized'}),
+          headers: {'Content-Type': 'application/json'},
+        );
       }
+
       // Query all functions for this user
       // Ordered by creation date descending (newest first)
       final result = await Database.connection.execute(
         'SELECT id, name, status, created_at FROM functions WHERE user_id = \$1 ORDER BY created_at DESC',
-        parameters: [userEntity.id],
+        parameters: [authUser.id],
       );
 
       // Map database rows to JSON objects
@@ -86,34 +89,42 @@ class CrudHandler {
   /// - 200: Function details
   /// - 404: Function not found or access denied
   /// - 500: Server error
-  static Future<Response> get(Request request, String id) async {
+  static Future<Response> get(Request request, String uuid) async {
     try {
-      // Extract user ID from authenticated request
-      final userId = request.context['userId'] as String;
+      // Extract and validate authenticated user
+      final authUser = await AuthUtils.getAuthenticatedUser(request);
+      if (authUser == null) {
+        return Response.notFound(
+          jsonEncode({'error': 'Unauthorized'}),
+          headers: {'Content-Type': 'application/json'},
+        );
+      }
 
       // Query function with ownership verification
       // Only returns result if function exists AND belongs to this user
-      final result = await Database.connection.execute(
-        'SELECT id, name, status, created_at FROM functions WHERE id = \$1 AND user_id = \$2',
-        parameters: [id, userId],
+      final functionEntity = await DatabaseManagers.functions.findOne(
+        where: {
+          FunctionEntityExtension.uuidNameField: uuid,
+          FunctionEntityExtension.userIdNameField: authUser.id,
+        },
       );
 
       // Check if function exists and user has access
-      if (result.isEmpty) {
+      if (functionEntity == null) {
         return Response.notFound(
           jsonEncode({'error': 'Function not found'}),
           headers: {'Content-Type': 'application/json'},
         );
       }
 
-      // Map database row to JSON object
-      final row = result.first;
+      // Map function entity to JSON object
+
       return Response.ok(
         jsonEncode({
-          'id': row[0],
-          'name': row[1],
-          'status': row[2],
-          'createdAt': (row[3] as DateTime).toIso8601String(),
+          'uuid': functionEntity.uuid,
+          'name': functionEntity.name,
+          'status': functionEntity.status,
+          'createdAt': functionEntity.createdAt?.toIso8601String(),
         }),
         headers: {'Content-Type': 'application/json'},
       );
@@ -129,39 +140,108 @@ class CrudHandler {
   /// Delete a function and all associated resources
   ///
   /// This operation:
-  /// 1. Verifies function ownership
-  /// 2. Deletes function directory (all versions)
-  /// 3. Deletes database records (cascades to deployments, logs, invocations)
+  /// 1. Validates delete confirmation flag and function name in request body
+  /// 2. Verifies function ownership by UUID and name match
+  /// 3. Deletes function directory (all versions)
+  /// 4. Deletes database records (cascades to deployments, logs, invocations)
   ///
   /// Note: S3 archives and Docker images are NOT automatically deleted.
   /// Consider implementing cleanup jobs for those resources.
   ///
   /// Parameters:
-  /// - [id]: Function UUID
+  /// - [uuid]: Function UUID (from URL path)
+  ///
+  /// Request Body:
+  /// ```json
+  /// {
+  ///   "name": "function-name",
+  ///   "delete": true
+  /// }
+  /// ```
   ///
   /// Response:
   /// - 200: Function deleted successfully
+  /// - 400: Missing or invalid delete confirmation or name
   /// - 404: Function not found or access denied
   /// - 500: Deletion failed
   static Future<Response> delete(Request request, String uuid) async {
     try {
-      // Extract user ID from authenticated request
-      final userId = request.context['userId'] as String;
-
-      // Verify function ownership before deletion
-      final result = await Database.connection.execute(
-        'SELECT id FROM functions WHERE uuid = \$1 AND user_id = \$2',
-        parameters: [uuid, userId],
-      );
-
-      // Check if function exists and user has access
-      if (result.isEmpty) {
-        return Response.notFound(
-          jsonEncode({'error': 'Function not found'}),
+      // Parse and validate request body
+      final body = await request.readAsString();
+      if (body.isEmpty) {
+        return Response(
+          400,
+          body: jsonEncode({
+            'error': 'Request body is required with delete confirmation',
+          }),
           headers: {'Content-Type': 'application/json'},
         );
       }
-      final id = result.first[0] as String;
+
+      final Map<String, dynamic> data;
+      try {
+        data = jsonDecode(body) as Map<String, dynamic>;
+      } catch (_) {
+        return Response(
+          400,
+          body: jsonEncode({'error': 'Invalid JSON body'}),
+          headers: {'Content-Type': 'application/json'},
+        );
+      }
+
+      // Validate function name in body
+      final functionName = data['name'] as String?;
+      if (functionName == null || functionName.isEmpty) {
+        return Response(
+          400,
+          body: jsonEncode({
+            'error': 'Function name required',
+            'message': 'Provide "name" field in request body',
+          }),
+          headers: {'Content-Type': 'application/json'},
+        );
+      }
+
+      // Validate delete confirmation flag
+      final deleteConfirmation = data['delete'];
+      if (deleteConfirmation != true) {
+        return Response(
+          400,
+          body: jsonEncode({
+            'error': 'Delete confirmation required',
+            'message': 'Set "delete": true in request body to confirm deletion',
+          }),
+          headers: {'Content-Type': 'application/json'},
+        );
+      }
+
+      // Extract and validate authenticated user
+      final authUser = await AuthUtils.getAuthenticatedUser(request);
+      if (authUser == null) {
+        return Response.notFound(
+          jsonEncode({'error': 'Unauthorized'}),
+          headers: {'Content-Type': 'application/json'},
+        );
+      }
+
+      // Verify function ownership before deletion using UUID and validate name matches
+      final functionEntityToDelete = await DatabaseManagers.functions.findOne(
+        where: {
+          FunctionEntityExtension.uuidNameField: uuid,
+          FunctionEntityExtension.userIdNameField: authUser.id,
+          FunctionEntityExtension.nameField: functionName,
+        },
+      );
+
+      // Check if function exists, user has access, and name matches
+      if (functionEntityToDelete == null) {
+        return Response.notFound(
+          jsonEncode({'error': 'Function not found or name mismatch'}),
+          headers: {'Content-Type': 'application/json'},
+        );
+      }
+
+      final id = functionEntityToDelete.id!;
       // Store deployment metadata in database
       final deploymentResult = await Database.connection.execute(
         'SELECT image_tag, s3_key from function_deployments where function_id = \$1',
@@ -170,7 +250,7 @@ class CrudHandler {
 
       // Delete function directory from filesystem
       // This removes all extracted function code for all versions
-      final functionDir = Directory(path.join(Config.functionsDir, id));
+      final functionDir = Directory(path.join(Config.functionsDir, '$id'));
       if (await functionDir.exists()) {
         await functionDir.delete(recursive: true);
       }
