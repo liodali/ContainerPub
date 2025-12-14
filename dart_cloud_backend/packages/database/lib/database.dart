@@ -28,6 +28,7 @@ export 'src/entities/function_invocation_entity.dart';
 export 'src/entities/user_information.dart';
 export 'src/entities/organization.dart';
 export 'src/entities/organization_member.dart';
+export 'src/entities/logs_entity.dart';
 
 // Relationship managers
 export 'src/relationship_manager.dart';
@@ -371,6 +372,35 @@ class Database {
         BEFORE UPDATE ON organizations
         FOR EACH ROW
         EXECUTE FUNCTION update_updated_at_column()
+    ''');
+
+    // Logs table
+    await _connection.execute('''
+      CREATE TABLE IF NOT EXISTS logs (
+        id SERIAL PRIMARY KEY,
+        uuid UUID UNIQUE NOT NULL DEFAULT uuid_generate_v4(),
+        level VARCHAR(20) NOT NULL,
+        message TEXT NOT NULL,
+        action VARCHAR(50) NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    ''');
+
+    // Create indexes for logs table
+    await _connection.execute('''
+      CREATE INDEX IF NOT EXISTS idx_logs_uuid ON logs(uuid)
+    ''');
+
+    await _connection.execute('''
+      CREATE INDEX IF NOT EXISTS idx_logs_action ON logs(action)
+    ''');
+
+    await _connection.execute('''
+      CREATE INDEX IF NOT EXISTS idx_logs_level ON logs(level)
+    ''');
+
+    await _connection.execute('''
+      CREATE INDEX IF NOT EXISTS idx_logs_created_at ON logs(created_at DESC)
     ''');
 
     print('✓ Database tables created/verified');

@@ -83,6 +83,17 @@ CREATE TABLE IF NOT EXISTS function_invocations (
 );
 \echo "Function invocations table created"
 
+-- Create logs table with serial ID (internal) and UUID (public)
+CREATE TABLE IF NOT EXISTS logs (
+    id SERIAL PRIMARY KEY,
+    uuid UUID UNIQUE NOT NULL DEFAULT uuid_generate_v4(),
+    level VARCHAR(20) NOT NULL,
+    message TEXT NOT NULL,
+    action VARCHAR(50) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+\echo "Logs table created"
+
 
 DO $$
 DECLARE
@@ -105,6 +116,7 @@ CREATE INDEX IF NOT EXISTS idx_functions_uuid ON functions(uuid);
 CREATE INDEX IF NOT EXISTS idx_function_deployments_uuid ON function_deployments(uuid);
 CREATE INDEX IF NOT EXISTS idx_function_logs_uuid ON function_logs(uuid);
 CREATE INDEX IF NOT EXISTS idx_function_invocations_uuid ON function_invocations(uuid);
+CREATE INDEX IF NOT EXISTS idx_logs_uuid ON logs(uuid);
 
 -- Email index for authentication
 CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
@@ -121,6 +133,9 @@ CREATE INDEX IF NOT EXISTS idx_function_invocations_function_id ON function_invo
 -- Timestamp indexes for time-based queries
 CREATE INDEX IF NOT EXISTS idx_function_logs_timestamp ON function_logs(timestamp DESC);
 CREATE INDEX IF NOT EXISTS idx_function_invocations_timestamp ON function_invocations(timestamp DESC);
+CREATE INDEX IF NOT EXISTS idx_logs_created_at ON logs(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_logs_action ON logs(action);
+CREATE INDEX IF NOT EXISTS idx_logs_level ON logs(level);
 
 -- Create updated_at trigger function
 CREATE OR REPLACE FUNCTION update_updated_at_column()
@@ -185,6 +200,7 @@ GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO dart_cloud;
 \echo '  ✓ function_deployments     (SERIAL + UUID, versioned deployments)'
 \echo '  ✓ function_logs            (SERIAL + UUID)'
 \echo '  ✓ function_invocations     (SERIAL + UUID)'
+\echo '  ✓ logs                     (SERIAL + UUID)'
 \echo ''
 \echo 'Created tables in functions_db:'
 \echo '  ✓ function_data            (SERIAL + UUID, per-function storage)'
