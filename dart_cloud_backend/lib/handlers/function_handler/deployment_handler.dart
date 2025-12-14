@@ -17,6 +17,13 @@ import 'package:dart_cloud_backend/services/function_main_injection.dart';
 import 'package:yaml/yaml.dart';
 import 'utils.dart';
 
+enum DeploymentStatus {
+  init,
+  building,
+  active,
+  disabled;
+}
+
 /// Handles function deployment operations including:
 /// - Creating new functions
 /// - Updating existing functions with versioning
