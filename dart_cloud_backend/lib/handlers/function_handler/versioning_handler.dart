@@ -1,7 +1,15 @@
 import 'dart:convert';
+import 'package:dart_cloud_backend/services/docker/docker.dart';
+import 'package:dart_cloud_backend/services/function_rollback.dart';
+import 'package:dart_cloud_backend/services/s3_service.dart';
 import 'package:shelf/shelf.dart';
 import 'package:database/database.dart';
 import 'utils.dart';
+
+enum VersioningResultAction {
+  rollbackFailed,
+  rollbackFunctionDone,
+}
 
 /// Handles function versioning and deployment history operations
 ///
@@ -153,10 +161,15 @@ class VersioningHandler {
   /// - 400: Invalid request (missing version)
   /// - 404: Function or version not found
   /// - 500: Rollback failed
-  static Future<Response> rollback(Request request, String id) async {
+  static Future<Response> rollback(Request request, String uuid) async {
     try {
       // Extract user ID from authenticated request
-      final userId = request.context['userId'] as String;
+      final userUuid = request.context['userId'] as String;
+      final user = await DatabaseManagers.users.findOne(
+        where: {'uuid': userUuid},
+        select: ['id'],
+      );
+      final userId = user!.id;
 
       // Parse request body to get target version
       final body = jsonDecode(await request.readAsString());
@@ -172,13 +185,17 @@ class VersioningHandler {
 
       // === VERIFY FUNCTION OWNERSHIP ===
       // Check that function exists and belongs to requesting user
-      final funcResult = await Database.connection.execute(
-        'SELECT id FROM functions WHERE id = \$1 AND user_id = \$2',
-        parameters: [id, userId],
+      final functionEntity = await DatabaseManagers.functions.findOne(
+        where: {'uuid': uuid, 'user_id': userId},
+        select: ['user_id', 'name', 'id'],
       );
+      // final funcResult = await Database.connection.execute(
+      //   'SELECT id FROM functions WHERE uuid = \$1 AND user_id = \$2',
+      //   parameters: [uuid, userId],
+      // );
 
       // Return 404 if function not found or access denied
-      if (funcResult.isEmpty) {
+      if (functionEntity == null) {
         return Response.notFound(
           jsonEncode({'error': 'Function not found'}),
           headers: {'Content-Type': 'application/json'},
@@ -187,28 +204,50 @@ class VersioningHandler {
 
       // === VERIFY TARGET DEPLOYMENT EXISTS ===
       // Check that the specified version exists for this function
-      final deploymentResult = await Database.connection.execute(
-        'SELECT id FROM function_deployments WHERE function_id = \$1 AND version = \$2',
-        parameters: [id, version],
+      final deploymentEntity = await DatabaseManagers.functionDeployments.findOne(
+        where: {'function_id': functionEntity.id, 'version': version},
+        select: ['id'],
       );
+      // final deploymentResult = await Database.connection.execute(
+      //   'SELECT id FROM function_deployments WHERE function_id = \$1 AND version = \$2',
+      //   parameters: [id, version],
+      // );
 
       // Return 404 if version doesn't exist
-      if (deploymentResult.isEmpty) {
+      if (deploymentEntity == null) {
         return Response.notFound(
-          jsonEncode({'error': 'Deployment version not found'}),
+          jsonEncode({
+            'error': 'We cannot rollback to version $version: deployment not found',
+          }),
           headers: {'Content-Type': 'application/json'},
         );
       }
-
       // Get deployment ID for target version
-      final deploymentId = deploymentResult.first[0] as String;
+      final deploymentId = deploymentEntity.id;
+
+      final result = await rollbackFunctionDeployment(
+        functionId: functionEntity.id!,
+        functionName: functionEntity.name,
+        functionUUId: functionEntity.uuid!,
+        version: version,
+        imageTag: deploymentEntity.imageTag,
+        s3Key: deploymentEntity.s3Key,
+      );
+      if (result != VersioningResultAction.rollbackFunctionDone) {
+        return Response.badRequest(
+          body: jsonEncode({
+            'error': 'Rollback failed',
+          }),
+          headers: {'Content-Type': 'application/json'},
+        );
+      }
 
       // === PERFORM ROLLBACK ===
       // Step 1: Deactivate current active deployment
       // This marks the old version as inactive
       await Database.connection.execute(
         'UPDATE function_deployments SET is_active = false WHERE function_id = \$1 AND is_active = true',
-        parameters: [id],
+        parameters: [functionEntity.id],
       );
 
       // Step 2: Activate target deployment
@@ -222,12 +261,12 @@ class VersioningHandler {
       // This ensures next invocation uses the rolled-back version
       await Database.connection.execute(
         'UPDATE functions SET active_deployment_id = \$1, status = \$2 WHERE id = \$3',
-        parameters: [deploymentId, 'active', id],
+        parameters: [deploymentId, 'active', functionEntity.id],
       );
 
       // Log rollback event for audit trail
       await FunctionUtils.logFunction(
-        id,
+        uuid,
         'info',
         'Rolled back to version $version',
       );
@@ -247,6 +286,39 @@ class VersioningHandler {
         body: jsonEncode({'error': 'Failed to rollback: $e'}),
         headers: {'Content-Type': 'application/json'},
       );
+    }
+  }
+
+  static Future<VersioningResultAction> rollbackFunctionDeployment({
+    required int functionId,
+    required String functionUUId,
+    required String functionName,
+    required int version,
+    required String imageTag,
+    required String s3Key,
+  }) async {
+    final isImageExist = await DockerService.isContainerImageExist(imageTag);
+    if (isImageExist) {
+      return VersioningResultAction.rollbackFunctionDone;
+    }
+    final exist = await S3Service.s3Client.isKeyBucketExist(s3Key);
+    if (!exist) {
+      return VersioningResultAction.rollbackFailed;
+    }
+
+    final result = await FunctionRollback.rollbackFunctionDeployment(
+      functionId: functionId,
+      functionUUId: functionUUId,
+      functionName: functionName,
+      version: version,
+      s3key: s3Key,
+    );
+
+    // Return the result based on the rollback outcome
+    if (result) {
+      return VersioningResultAction.rollbackFunctionDone;
+    } else {
+      return VersioningResultAction.rollbackFailed;
     }
   }
 }
