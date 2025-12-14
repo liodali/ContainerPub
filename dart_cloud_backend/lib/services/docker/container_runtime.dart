@@ -90,6 +90,9 @@ abstract class ContainerRuntime {
   /// Remove a container image
   Future<ProcessResult> removeImage(String imageTag, {bool force = true});
 
+  /// Check if image exists
+  Future<bool> imageExists(String imageTag);
+
   /// Get the platform of an existing image
   /// Returns null if image doesn't exist
   Future<String?> getImagePlatform(String imageTag);
