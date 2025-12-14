@@ -4,7 +4,7 @@ import 'package:dart_cloud_backend/services/function_rollback.dart';
 import 'package:dart_cloud_backend/services/s3_service.dart';
 import 'package:shelf/shelf.dart';
 import 'package:database/database.dart';
-import 'utils.dart';
+import 'auth_utils.dart';
 
 enum VersioningResultAction {
   rollbackFailed,

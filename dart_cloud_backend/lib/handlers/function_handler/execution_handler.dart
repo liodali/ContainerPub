@@ -3,7 +3,7 @@ import 'package:shelf/shelf.dart';
 import 'package:dart_cloud_backend/configuration/config.dart';
 import 'package:database/database.dart';
 import 'package:dart_cloud_backend/services/function_executor.dart';
-import 'utils.dart';
+import 'auth_utils.dart';
 
 /// Handles function execution (invocation) operations
 ///

@@ -1,5 +1,5 @@
 import 'package:dart_cloud_backend/configuration/config.dart';
-import 'package:dart_cloud_backend/handlers/function_handler/utils.dart'
+import 'package:dart_cloud_backend/handlers/function_handler/auth_utils.dart'
     show FunctionUtils;
 import 'package:dart_cloud_backend/services/docker/docker.dart';
 import 'package:dart_cloud_backend/services/s3_service.dart' show S3Service;

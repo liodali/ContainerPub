@@ -67,7 +67,7 @@ export 'function_handler/crud_handler.dart';
 export 'function_handler/execution_handler.dart';
 export 'function_handler/logs_handler.dart';
 export 'function_handler/versioning_handler.dart';
-export 'function_handler/utils.dart';
+export 'function_handler/auth_utils.dart';
 
 import 'package:shelf/shelf.dart';
 import 'function_handler/deployment_handler.dart';
@@ -104,6 +104,7 @@ class FunctionHandler {
 
   /// Delete a function and all associated resources
   /// Delegates to: CrudHandler.delete()
+  /// Requires function name and delete confirmation flag in body
   static Future<Response> delete(Request request, String id) {
     return CrudHandler.delete(request, id);
   }

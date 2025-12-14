@@ -15,9 +15,9 @@ import 'package:dart_cloud_backend/configuration/config.dart';
 import 'package:database/database.dart';
 import 'package:dart_cloud_backend/services/function_main_injection.dart';
 import 'package:yaml/yaml.dart';
-import 'utils.dart';
+import 'auth_utils.dart';
 
-enum DeploymentStatus { init, building, active, disabled }
+enum DeploymentStatus { init, building, active, disabled, deleted }
 
 /// Handles function deployment operations including:
 /// - Creating new functions
@@ -125,7 +125,7 @@ class DeploymentHandler {
       final userResult = await DatabaseManagers.users.findByUuid(userId);
       if (userResult == null) {
         return Response.badRequest(
-          body: jsonEncode({'error': 'User not found'}),
+          body: jsonEncode({'error': 'Unauthorized'}),
           headers: {'Content-Type': 'application/json'},
         );
       }
