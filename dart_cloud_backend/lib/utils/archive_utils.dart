@@ -102,3 +102,90 @@ extension ArchiveExtension on Archive {
     addFile(archiveFile);
   }
 }
+
+/// Utility class for archive operations
+class ArchiveUtility {
+  /// Extract a zip file from the given path to a specific destination directory
+  static Future<void> extractZipFile(String zipPath, String destinationPath) async {
+    try {
+      // Validate zip file exists
+      final zipFile = File(zipPath);
+      if (!await zipFile.exists()) {
+        throw FileSystemException('Zip file not found', zipPath);
+      }
+
+      // Read zip file bytes
+      final zipBytes = await zipFile.readAsBytes();
+
+      // Decode zip archive
+      final archive = ZipDecoder().decodeBytes(zipBytes);
+
+      // Create destination directory if it doesn't exist
+      final destinationDir = Directory(destinationPath);
+      if (!await destinationDir.exists()) {
+        await destinationDir.create(recursive: true);
+      }
+
+      // Extract all files from archive
+      for (final file in archive) {
+        final filePath = path.join(destinationPath, file.name);
+        final fileDir = Directory(path.dirname(filePath));
+
+        // Create parent directories if needed
+        if (!await fileDir.exists()) {
+          await fileDir.create(recursive: true);
+        }
+
+        // Write file if it's not a directory
+        if (!file.isFile) continue;
+
+        final outputFile = File(filePath);
+        await outputFile.writeAsBytes(file.content as List<int>);
+      }
+    } catch (e) {
+      throw Exception('Failed to extract zip file: $e');
+    }
+  }
+
+  /// Extract a zip file and return the list of extracted file paths
+  static Future<List<String>> extractZipFileWithPaths(
+    String zipPath,
+    String destinationPath,
+  ) async {
+    try {
+      final zipFile = File(zipPath);
+      if (!await zipFile.exists()) {
+        throw FileSystemException('Zip file not found', zipPath);
+      }
+
+      final zipBytes = await zipFile.readAsBytes();
+      final archive = ZipDecoder().decodeBytes(zipBytes);
+
+      final destinationDir = Directory(destinationPath);
+      if (!await destinationDir.exists()) {
+        await destinationDir.create(recursive: true);
+      }
+
+      final extractedPaths = <String>[];
+
+      for (final file in archive) {
+        final filePath = path.join(destinationPath, file.name);
+        final fileDir = Directory(path.dirname(filePath));
+
+        if (!await fileDir.exists()) {
+          await fileDir.create(recursive: true);
+        }
+
+        if (!file.isFile) continue;
+
+        final outputFile = File(filePath);
+        await outputFile.writeAsBytes(file.content as List<int>);
+        extractedPaths.add(filePath);
+      }
+
+      return extractedPaths;
+    } catch (e) {
+      throw Exception('Failed to extract zip file: $e');
+    }
+  }
+}
