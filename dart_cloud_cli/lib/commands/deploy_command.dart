@@ -201,13 +201,14 @@ class DeployCommand extends BaseCommand {
       await updatedConfig.save(functionDir.path);
       print('✓ Config cached in .dart_tool/function_config.json');
       print('  Hash: ${currentHash.substring(0, 16)}...');
+      archiveFile.deleteSync();
+      archiveFile = null;
+      exit(0);
     } catch (e) {
       print('✗ Deployment failed: $e');
-      exit(1);
-    } finally {
-      print('delete archive file');
       archiveFile?.deleteSync();
       archiveFile = null;
+      exit(1);
     }
   }
 }
