@@ -1,10 +1,18 @@
-/// Support for doing something awesome.
+/// Dart Cloud Logger - A structured logging utility for Dart cloud functions
 ///
-/// More dartdocs go here.
+/// Provides a base logger interface for cloud functions with three log levels:
+/// - error: Error messages
+/// - debug: Debug messages
+/// - info: Informational messages
+///
+/// Note: The actual CloudLogger implementation is embedded directly into
+/// the generated main.dart during function deployment.
 library;
 
+/// Log level action types
 enum LoggerTypeAction { error, debug, info }
 
+/// Abstract base class for cloud function loggers
 abstract class CloudDartFunctionLogger {
   void printLog(
     LoggerTypeAction level,
@@ -33,5 +41,3 @@ abstract class CloudDartFunctionLogger {
     printLog(LoggerTypeAction.info, message, metadata: metadata);
   }
 }
-
-// TODO: Export any libraries intended for clients of this package.
