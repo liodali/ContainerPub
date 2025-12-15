@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:math';
 
 import 'package:dart_cloud_function/dart_cloud_function.dart';
+import 'package:dart_cloud_logger/dart_cloud_logger.dart';
 
 extension ExtCloudRequest on CloudRequest {
   String str() {
@@ -14,9 +15,10 @@ class MyProcessor extends CloudDartFunction {
   @override
   Future<CloudResponse> handle({
     required CloudRequest request,
+    required CloudDartFunctionLogger logger,
     Map<String, String>? env,
   }) async {
-    print(request.str());
+    logger.info(request.str());
     // Read input from environment variable
     final input = request.body is String
         ? jsonDecode(request.body as String) as Map<String, dynamic>
@@ -26,7 +28,7 @@ class MyProcessor extends CloudDartFunction {
     final numbers = (input['numbers'] as List?)?.cast<num>() ?? [];
 
     if (numbers.isEmpty) {
-      print(jsonEncode({
+      logger.error(jsonEncode({
         'error': 'No numbers provided',
         'usage': 'Send {"numbers": [1, 2, 3, 4, 5]}'
       }));
@@ -44,6 +46,7 @@ class MyProcessor extends CloudDartFunction {
     final average = sum / numbers.length;
     final min = numbers.reduce((a, b) => a < b ? a : b);
     final max = numbers.reduce((a, b) => a > b ? a : b);
+    final sumLog = numbers.fold<num>(0, (a, b) => a + log(b));
 
     // Calculate standard deviation
     final variance =
@@ -55,6 +58,7 @@ class MyProcessor extends CloudDartFunction {
     final result = {
       'count': numbers.length,
       'sum': sum,
+      'log': sumLog,
       'average': average,
       'min': min,
       'max': max,
@@ -63,7 +67,7 @@ class MyProcessor extends CloudDartFunction {
     };
 
     // Output result as JSON
-    print(jsonEncode(result));
+    logger.info('Processed data: ${jsonEncode(result)}');
     return CloudResponse(
       body: jsonEncode(result),
       headers: {'Content-Type': 'application/json'},
