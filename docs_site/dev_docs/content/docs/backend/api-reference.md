@@ -151,6 +151,120 @@ Authorization: Bearer <access-token>
 - Tokens are permanently invalidated
 - Cannot be undone
 
+## API Keys
+
+API keys provide an additional layer of security for function invocations using HMAC-SHA256 signatures.
+
+<Info>
+For detailed documentation on API keys, see [API Keys & Signing](./api-keys.md).
+</Info>
+
+### POST /api/auth/apikey/generate
+
+Generate a new API key for a function.
+
+**Headers:**
+
+```dart
+Authorization: Bearer <access-token>
+Content-Type: application/json
+```
+
+**Request:**
+
+```dart
+{
+  "function_id": "function-uuid",
+  "validity": "1d",  // Options: 1h, 1d, 1w, 1m, forever
+  "name": "Optional key name"
+}
+```
+
+**Response:**
+
+```dart
+{
+  "message": "API key generated successfully",
+  "warning": "Store the private_key securely - it will not be shown again!",
+  "api_key": {
+    "uuid": "key-uuid",
+    "public_key": "base64-public-key",
+    "private_key": "base64-private-key",
+    "validity": "1d",
+    "expires_at": "2025-12-16T02:00:00Z",
+    "created_at": "2025-12-15T02:00:00Z"
+  }
+}
+```
+
+### GET /api/auth/apikey/:function_id
+
+Get API key info for a function.
+
+**Headers:**
+
+```dart
+Authorization: Bearer <access-token>
+```
+
+**Response:**
+
+```dart
+{
+  "has_api_key": true,
+  "api_key": {
+    "uuid": "key-uuid",
+    "public_key": "base64-public-key",
+    "validity": "1d",
+    "is_active": true,
+    "expires_at": "2025-12-16T02:00:00Z"
+  }
+}
+```
+
+### DELETE /api/auth/apikey/:api_key_uuid
+
+Revoke an API key.
+
+**Headers:**
+
+```dart
+Authorization: Bearer <access-token>
+```
+
+**Response:**
+
+```dart
+{
+  "message": "API key revoked successfully"
+}
+```
+
+### GET /api/auth/apikey/:function_id/list
+
+List all API keys for a function.
+
+**Headers:**
+
+```dart
+Authorization: Bearer <access-token>
+```
+
+**Response:**
+
+```dart
+{
+  "api_keys": [
+    {
+      "uuid": "key-uuid",
+      "validity": "1d",
+      "is_active": true,
+      "expires_at": "2025-12-16T02:00:00Z"
+    }
+  ]
+}
+```
+
 ## Token Security
 
 ### Token Storage

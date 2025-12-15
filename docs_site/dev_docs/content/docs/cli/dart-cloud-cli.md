@@ -217,6 +217,66 @@ Invoke a deployed function with optional data.
 dart_cloud invoke <function-id> [--data '{"key": "value"}']
 ```
 
+**With API Key Signature:**
+
+If your function has an API key configured, use the `--sign` flag to sign the request:
+
+```dart
+dart_cloud invoke <function-id> --data '{"key": "value"}' --sign
+```
+
+This will:
+
+1. Load the private key from `.dart_tool/api_key.secret`
+2. Create a timestamp and HMAC-SHA256 signature
+3. Include `X-Signature` and `X-Timestamp` headers in the request
+
+### apikey
+
+Manage API keys for function signing. API keys provide an additional layer of security using HMAC-SHA256 signatures.
+
+**Generate a new API key:**
+
+```dart
+# From function directory
+dart_cloud apikey generate --validity 1d
+
+# With custom name
+dart_cloud apikey generate --validity 1w --name "Production Key"
+
+# For specific function
+dart_cloud apikey generate --function-id <uuid> --validity 1m
+```
+
+**Validity options:** `1h` (1 hour), `1d` (1 day), `1w` (1 week), `1m` (1 month), `forever`
+
+**View API key info:**
+
+```dart
+dart_cloud apikey info
+dart_cloud apikey info --function-id <uuid>
+```
+
+**List all keys:**
+
+```dart
+dart_cloud apikey list
+dart_cloud apikey list --function-id <uuid>
+```
+
+**Revoke an API key:**
+
+```dart
+dart_cloud apikey revoke
+dart_cloud apikey revoke --key-id <api-key-uuid>
+```
+
+<Info>
+The private key is only shown once when generated. It's automatically saved to `.dart_tool/api_key.secret` and added to `.gitignore`.
+</Info>
+
+See [API Keys & Signing](../backend/api-keys.md) for detailed documentation.
+
 ### delete
 
 Delete a deployed function.
@@ -332,16 +392,35 @@ Each function directory contains a `.dart_tool/function_config.json` file:
 {
   "function_name": "my_function",
   "function_id": "abc123xyz789",
-  "created_at": "2025-11-16T23:34:00.000Z"
+  "created_at": "2025-11-16T23:34:00.000Z",
+  "function_path": "/path/to/function",
+  "last_deploy_hash": "abc123def456...",
+  "last_deployed_at": "2025-12-15T02:00:00.000Z",
+  "deploy_version": 3,
+  "api_key_uuid": "key-uuid-if-configured",
+  "api_key_public_key": "base64-public-key",
+  "api_key_validity": "1d",
+  "api_key_expires_at": "2025-12-16T02:00:00.000Z"
 }
 ```
 
 This file is:
 
 - **Created** by `dart_cloud init`
-- **Updated** automatically after `dart_cloud deploy`
+- **Updated** automatically after `dart_cloud deploy` and `dart_cloud apikey generate`
 - **Used** for caching function metadata locally
 - **Optional** but recommended for better developer experience
+
+### API Key Storage
+
+When you generate an API key, the private key is stored separately:
+
+- **Private Key**: `.dart_tool/api_key.secret` (auto-added to `.gitignore`)
+- **Public Key Info**: Stored in `function_config.json`
+
+<Warning>
+Never commit `.dart_tool/api_key.secret` to version control. The CLI automatically adds it to `.gitignore`.
+</Warning>
 
 ## Examples
 
@@ -442,5 +521,6 @@ Verify the backend server is running and accessible at the configured URL.
 ## See Also
 
 - [dart_cloud_function Package](./dart-cloud-function.md)
+- [API Keys & Signing](../backend/api-keys.md)
 - [Backend API Reference](../backend/api-reference.md)
 - [Backend Architecture](../backend/architecture.md)

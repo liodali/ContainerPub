@@ -23,7 +23,9 @@ The `dart_cloud_backend` is the core platform that:
 ### Core Documentation
 
 - [Authentication System](./authentication.md) - Complete authentication flow and token management
+- [API Keys & Signing](./api-keys.md) - Secure function invocations with HMAC signatures
 - [Architecture Overview](./architecture.md) - System design and components
+- [Function Execution](./function-execution.md) - How functions are executed
 - [API Reference](./api-reference.md) - Complete API endpoint documentation
 
 ## Key Features
@@ -54,8 +56,10 @@ The `dart_cloud_backend` is the core platform that:
 ### Security
 
 - **JWT Authentication** - Industry-standard token-based auth
+- **API Key Signing** - HMAC-SHA256 signatures for function invocations
 - **Token Encryption** - AES-256 encryption for stored tokens
 - **Container Sandboxing** - Isolated execution environments
+- **Replay Protection** - 5-minute timestamp window for signed requests
 - **Audit Logging** - Complete request and authentication logging
 
 ## Architecture Overview

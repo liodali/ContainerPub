@@ -57,6 +57,7 @@ Learn about database management, backup, and disaster recovery.
 
 - **🚀 Deploy Dart Functions** - Simple CLI for deploying functions
 - **🔒 Security First** - Client-side security analysis before deployment
+- **🔑 API Key Signing** - HMAC-SHA256 signatures for secure function invocations
 - **📊 Monitoring** - Built-in function execution monitoring
 - **🔄 Auto-scaling** - Automatic scaling and load balancing
 - **📝 Logging** - Comprehensive function logs and metrics
@@ -81,5 +82,5 @@ This documentation covers:
 
 ---
 
-**Last Updated**: November 2025  
-**Version**: 1.0.0
+**Last Updated**: December 2025  
+**Version**: 1.1.0
