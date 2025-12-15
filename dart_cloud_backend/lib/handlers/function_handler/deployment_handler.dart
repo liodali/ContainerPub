@@ -224,7 +224,16 @@ class DeploymentHandler {
         'Injecting DotEnv...',
       );
 
-      await _injectDoEnv(functionDir.path);
+      // await _injectDoEnv(functionDir.path);
+      await _injectDependencies(functionDir.path, {
+        'dotenv': '^4.2.0',
+        'dart_cloud_logger': '^0.2.1',
+      });
+      await FunctionUtils.logFunction(
+        functionUUID,
+        'info',
+        'Dependencies injected...',
+      );
 
       await FunctionUtils.logFunction(
         functionUUID,
@@ -354,7 +363,6 @@ class DeploymentHandler {
       );
       await functionDir.delete(recursive: true);
 
-
       // Return success response with deployment details
       return Response(
         isNewFunction ? 201 : 200, // 201 for new, 200 for update
@@ -396,6 +404,54 @@ class DeploymentHandler {
     } else {
       jsonYaml.remove("dev_dependencies");
     }
+    final Map<String, dynamic> jsonConvYamlTransformed = Map<String, dynamic>.from(
+      jsonYaml,
+    );
+    final newYamlContent = json2yaml(jsonConvYamlTransformed);
+
+    await pubspecFile.writeAsString(newYamlContent);
+  }
+
+  /// Inject a dependency into the dependencies section of pubspec.yaml
+  static Future<void> _injectDependency(
+    String functionPath,
+    String depName,
+    String version,
+  ) async {
+    final pubspecFile = File(path.join(functionPath, 'pubspec.yaml'));
+    if (!(await pubspecFile.exists())) {
+      return;
+    }
+
+    final content = await pubspecFile.readAsString();
+    var docPubspec = loadYaml(content);
+    final jsonYaml = json.decode(json.encode(docPubspec));
+    final dependencies = Map<String, dynamic>.from(jsonYaml["dependencies"]);
+    dependencies.putIfAbsent(depName, () => version);
+    jsonYaml["dependencies"] = dependencies;
+    final Map<String, dynamic> jsonConvYamlTransformed = Map<String, dynamic>.from(
+      jsonYaml,
+    );
+    final newYamlContent = json2yaml(jsonConvYamlTransformed);
+
+    await pubspecFile.writeAsString(newYamlContent);
+  }
+
+  static Future<void> _injectDependencies(
+    String functionPath,
+    Map<String, String> mapDependency,
+  ) async {
+    final pubspecFile = File(path.join(functionPath, 'pubspec.yaml'));
+    if (!(await pubspecFile.exists())) {
+      return;
+    }
+
+    final content = await pubspecFile.readAsString();
+    var docPubspec = loadYaml(content);
+    final jsonYaml = json.decode(json.encode(docPubspec));
+    final dependencies = Map<String, dynamic>.from(jsonYaml["dependencies"]);
+    dependencies.addAll(mapDependency);
+    jsonYaml["dependencies"] = dependencies;
     final Map<String, dynamic> jsonConvYamlTransformed = Map<String, dynamic>.from(
       jsonYaml,
     );
