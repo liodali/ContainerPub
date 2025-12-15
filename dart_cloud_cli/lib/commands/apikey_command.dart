@@ -3,6 +3,7 @@ import 'package:args/args.dart';
 import 'package:dart_cloud_cli/commands/base_command.dart' show BaseCommand;
 import 'package:dart_cloud_cli/api/api_client.dart';
 import 'package:dart_cloud_cli/common/function_config.dart';
+import 'package:dart_cloud_cli/common/api_key_validity.dart';
 import 'package:dart_cloud_cli/services/api_key_storage.dart';
 
 class ApiKeyCommand extends BaseCommand {
@@ -54,13 +55,13 @@ class ApiKeyCommand extends BaseCommand {
     print('Examples:');
     print('  dart_cloud apikey generate --validity 1d');
     print(
-        '  dart_cloud apikey generate --function-id <uuid> --validity 1w --name "Production Key"');
+      '  dart_cloud apikey generate --function-id <uuid> --validity 1w --name "Production Key"',
+    );
     print('  dart_cloud apikey info');
     print('  dart_cloud apikey revoke --key-id <uuid>');
     print('  dart_cloud apikey list');
     print('');
-    print(
-        'Validity options: 1h (1 hour), 1d (1 day), 1w (1 week), 1m (1 month), forever');
+    print('Validity options: ${ApiKeyValidity.validOptions.join(', ')}');
   }
 
   Future<void> _generateApiKey(List<String> args) async {
@@ -73,7 +74,7 @@ class ApiKeyCommand extends BaseCommand {
       ..addOption(
         'validity',
         abbr: 'v',
-        help: 'Key validity: 1h, 1d, 1w, 1m, or forever',
+        help: 'Key validity: ${ApiKeyValidity.validOptions.join(', ')}',
         defaultsTo: '1d',
       )
       ..addOption(
@@ -87,8 +88,10 @@ class ApiKeyCommand extends BaseCommand {
     final name = parsedArgs['name'] as String?;
 
     // Validate validity
-    if (!['1h', '1d', '1w', '1m', 'forever'].contains(validity)) {
-      print('Error: Invalid validity. Must be one of: 1h, 1d, 1w, 1m, forever');
+    if (!ApiKeyValidity.isValid(validity)) {
+      print(
+        'Error: Invalid validity. Must be one of: ${ApiKeyValidity.validOptions.join(', ')}',
+      );
       exit(1);
     }
 
@@ -103,9 +106,11 @@ class ApiKeyCommand extends BaseCommand {
 
       if (existingConfig?.functionId == null) {
         print(
-            'Error: No function ID provided and no function config found in current directory.');
+          'Error: No function ID provided and no function config found in current directory.',
+        );
         print(
-            'Either provide --function-id or run this command from a deployed function directory.');
+          'Either provide --function-id or run this command from a deployed function directory.',
+        );
         exit(1);
       }
 
@@ -135,13 +140,17 @@ class ApiKeyCommand extends BaseCommand {
       print('✓ API key generated successfully!');
       print('');
       print(
-          '╔════════════════════════════════════════════════════════════════════╗');
+        '╔════════════════════════════════════════════════════════════════════╗',
+      );
       print(
-          '║  ⚠️  IMPORTANT: Store the private key securely!                    ║');
+        '║  ⚠️  IMPORTANT: Store the private key securely!                    ║',
+      );
       print(
-          '║  It will NOT be shown again.                                       ║');
+        '║  It will NOT be shown again.                                       ║',
+      );
       print(
-          '╚════════════════════════════════════════════════════════════════════╝');
+        '╚════════════════════════════════════════════════════════════════════╝',
+      );
       print('');
       print('Key UUID: $keyUuid');
       print('Public Key: ${publicKey.substring(0, 20)}...');
@@ -177,7 +186,8 @@ class ApiKeyCommand extends BaseCommand {
         print('Location: ~/.dart_cloud/hive/');
         print('');
         print(
-            'Use "dart_cloud invoke --sign" to invoke the function with signature verification.');
+          'Use "dart_cloud invoke --sign" to invoke the function with signature verification.',
+        );
       } else {
         print('');
         print('The private key has been stored securely in Hive database');
@@ -230,7 +240,8 @@ class ApiKeyCommand extends BaseCommand {
       print('API Key Info:');
       print('  UUID: ${apiKey['uuid']}');
       print(
-          '  Public Key: ${(apiKey['public_key'] as String).substring(0, 20)}...');
+        '  Public Key: ${(apiKey['public_key'] as String).substring(0, 20)}...',
+      );
       print('  Validity: ${apiKey['validity']}');
       print('  Active: ${apiKey['is_active']}');
       if (apiKey['expires_at'] != null) {
@@ -266,7 +277,8 @@ class ApiKeyCommand extends BaseCommand {
 
       if (existingConfig?.apiKeyUuid == null) {
         print(
-            'Error: No key ID provided and no API key found in current directory config.');
+          'Error: No key ID provided and no API key found in current directory config.',
+        );
         print('Use --key-id to specify the API key UUID to revoke.');
         exit(1);
       }

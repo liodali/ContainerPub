@@ -25,9 +25,33 @@ class ApiClient {
     }
   }
 
+  /// Initialize a new function on the backend
+  ///
+  /// Creates a function record with status 'init' and returns the UUID
+  static Future<Map<String, dynamic>> initFunction(String functionName) async {
+    final response = await http.post(
+      Uri.parse('${Config.serverUrl}/api/functions/init'),
+      headers: {
+        'Authorization': 'Bearer ${Config.token}',
+        'Content-Type': 'application/json',
+      },
+      body: jsonEncode({'name': functionName}),
+    );
+
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      return jsonDecode(response.body) as Map<String, dynamic>;
+    } else {
+      throw Exception('Initialization failed: ${response.body}');
+    }
+  }
+
+  /// Deploy a function using its UUID
+  ///
+  /// [functionUuid]: The UUID of the function (from init)
+  /// [archive]: The archive file containing the function code
   static Future<Map<String, dynamic>> deployFunction(
     File archive,
-    String functionName,
+    String functionUuid,
   ) async {
     final request = http.MultipartRequest(
       'POST',
@@ -35,7 +59,7 @@ class ApiClient {
     );
 
     request.headers['Authorization'] = 'Bearer ${Config.token}';
-    request.fields['name'] = functionName;
+    request.fields['function_id'] = functionUuid;
     request.headers['Content-Type'] = 'multipart/form-data';
     request.files
         .add(await http.MultipartFile.fromPath('archive', archive.path));

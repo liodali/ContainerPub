@@ -83,17 +83,30 @@ class DeployCommand extends BaseCommand {
         pubspec['name'] as String? ?? path.basename(functionDir.path);
     print('Preparing to deploy function: $functionName');
 
+    // Load existing config to get function ID
+    final existingConfig = await FunctionConfig.load(functionDir.path);
+
+    // Check if function is initialized (has function ID)
+    if (existingConfig?.functionId == null) {
+      print('');
+      print('✗ Function not initialized.');
+      print(
+        '  Please run "dart_cloud init" first to initialize your function.',
+      );
+      exit(1);
+    }
+
+    final functionId = existingConfig!.functionId!;
+    print('Function ID: $functionId');
+
     // Generate hash of current function code
     print('Generating function hash...');
     final hasher = FunctionHasher(functionDir.path);
     final currentHash = await hasher.generateHash();
     print('Current hash: ${currentHash.substring(0, 16)}...');
 
-    // Load existing config and check hash
-    final existingConfig = await FunctionConfig.load(functionDir.path);
-    if (!forceDeployment &&
-        existingConfig != null &&
-        existingConfig.hasUnchangedCode(currentHash)) {
+    // Check hash for unchanged code
+    if (!forceDeployment && existingConfig.hasUnchangedCode(currentHash)) {
       print('\n✓ No changes detected since last deployment.');
       print('  Last deployed: ${existingConfig.lastDeployedAt ?? 'unknown'}');
       print('  Version: ${existingConfig.deployVersion ?? 1}');
@@ -102,7 +115,7 @@ class DeployCommand extends BaseCommand {
       return;
     }
 
-    final newVersion = existingConfig?.nextVersion ?? 1;
+    final newVersion = existingConfig.nextVersion;
     print('Deploying version: $newVersion');
 
     File? archiveFile;
@@ -172,13 +185,12 @@ class DeployCommand extends BaseCommand {
         'Included: lib/*.dart, bin/*.dart, pubspec.yaml, pubspec.lock, .env (if present)',
       );
 
-      // Deploy
+      // Deploy using function UUID
       print('Deploying function...');
       final response = await ApiClient.deployFunction(
         archiveFile,
-        functionName,
+        functionId,
       );
-      final functionId = response['id'] as String;
 
       print('✓ Function deployed successfully!');
       print('  Function ID: $functionId');
@@ -188,11 +200,8 @@ class DeployCommand extends BaseCommand {
         '  Endpoint: ${Config.serverUrl}/api/functions/$functionId/invoke',
       );
 
-      // Save function ID, path, hash, and version to config
-      final configToUpdate =
-          existingConfig ?? FunctionConfig(functionName: functionName);
-      final updatedConfig = configToUpdate.copyWith(
-        functionId: functionId,
+      // Update config with hash and version
+      final updatedConfig = existingConfig.copyWith(
         functionPath: functionDir.path,
         lastDeployHash: currentHash,
         lastDeployedAt: DateTime.now().toIso8601String(),
