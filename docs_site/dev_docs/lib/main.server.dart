@@ -49,7 +49,7 @@ void main() async {
         CodeBlock(
           defaultLanguage: 'dart',
         ),
-       
+
         // Adds zooming and caption support to images.
         Image(zoom: true),
       ],
@@ -101,6 +101,7 @@ void main() async {
                 links: [
                   SidebarLink(text: "Backend Overview", href: '/docs/backend'),
                   SidebarLink(text: "Authentication", href: '/docs/backend/authentication'),
+                  SidebarLink(text: "API Keys & Signing", href: '/docs/backend/api-keys'),
                   SidebarLink(text: "Architecture", href: '/docs/backend/architecture'),
                   SidebarLink(text: "Function Execution", href: '/docs/backend/function-execution'),
                   SidebarLink(text: "API Reference", href: '/docs/backend/api-reference'),
