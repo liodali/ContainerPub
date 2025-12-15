@@ -131,8 +131,7 @@ class ApiKeyCommand extends BaseCommand {
       );
 
       final apiKey = response['api_key'] as Map<String, dynamic>;
-      final privateKey = apiKey['private_key'] as String;
-      final publicKey = apiKey['public_key'] as String;
+      final secretKey = apiKey['secret_key'] as String;
       final keyUuid = apiKey['uuid'] as String;
       final expiresAt = apiKey['expires_at'] as String?;
 
@@ -143,7 +142,7 @@ class ApiKeyCommand extends BaseCommand {
         '╔════════════════════════════════════════════════════════════════════╗',
       );
       print(
-        '║  ⚠️  IMPORTANT: Store the private key securely!                    ║',
+        '║  ⚠️  IMPORTANT: Store the secret key securely!                     ║',
       );
       print(
         '║  It will NOT be shown again.                                       ║',
@@ -153,27 +152,25 @@ class ApiKeyCommand extends BaseCommand {
       );
       print('');
       print('Key UUID: $keyUuid');
-      print('Public Key: ${publicKey.substring(0, 20)}...');
-      print('Private Key: $privateKey');
+      print('Secret Key: $secretKey');
       print('Validity: $validity');
       if (expiresAt != null) print('Expires At: $expiresAt');
       print('');
 
       // Save to Hive storage
       try {
-        await ApiKeyStorage.storeApiKey(functionId, privateKey);
-        print('✓ Private key stored securely in Hive database');
+        await ApiKeyStorage.storeApiKey(functionId, secretKey);
+        print('✓ Secret key stored securely in Hive database');
       } catch (e) {
-        print('✗ Warning: Failed to store private key in Hive: $e');
+        print('✗ Warning: Failed to store secret key in Hive: $e');
       }
 
-      // Update function config with public key info
+      // Update function config with API key info (no secret key stored here)
       if (functionPath != null) {
         final existingConfig = await FunctionConfig.load(functionPath);
         if (existingConfig != null) {
           final updatedConfig = existingConfig.copyWith(
             apiKeyUuid: keyUuid,
-            apiKeyPublicKey: publicKey,
             apiKeyValidity: validity,
             apiKeyExpiresAt: expiresAt,
           );
@@ -182,7 +179,7 @@ class ApiKeyCommand extends BaseCommand {
         }
 
         print('');
-        print('The private key has been stored securely in Hive database');
+        print('The secret key has been stored securely in Hive database');
         print('Location: ~/.dart_cloud/hive/');
         print('');
         print(
@@ -190,7 +187,7 @@ class ApiKeyCommand extends BaseCommand {
         );
       } else {
         print('');
-        print('The private key has been stored securely in Hive database');
+        print('The secret key has been stored securely in Hive database');
         print('Location: ~/.dart_cloud/hive/');
       }
     } catch (e) {

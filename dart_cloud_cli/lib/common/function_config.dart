@@ -11,7 +11,6 @@ class FunctionConfig {
   final String? lastDeployedAt;
   final int? deployVersion;
   final String? apiKeyUuid;
-  final String? apiKeyPublicKey;
   final String? apiKeyValidity;
   final String? apiKeyExpiresAt;
 
@@ -24,7 +23,6 @@ class FunctionConfig {
     this.lastDeployedAt,
     this.deployVersion,
     this.apiKeyUuid,
-    this.apiKeyPublicKey,
     this.apiKeyValidity,
     this.apiKeyExpiresAt,
   });
@@ -39,7 +37,6 @@ class FunctionConfig {
       if (lastDeployedAt != null) 'last_deployed_at': lastDeployedAt,
       if (deployVersion != null) 'deploy_version': deployVersion,
       if (apiKeyUuid != null) 'api_key_uuid': apiKeyUuid,
-      if (apiKeyPublicKey != null) 'api_key_public_key': apiKeyPublicKey,
       if (apiKeyValidity != null) 'api_key_validity': apiKeyValidity,
       if (apiKeyExpiresAt != null) 'api_key_expires_at': apiKeyExpiresAt,
     };
@@ -55,7 +52,6 @@ class FunctionConfig {
       lastDeployedAt: json['last_deployed_at'] as String?,
       deployVersion: json['deploy_version'] as int?,
       apiKeyUuid: json['api_key_uuid'] as String?,
-      apiKeyPublicKey: json['api_key_public_key'] as String?,
       apiKeyValidity: json['api_key_validity'] as String?,
       apiKeyExpiresAt: json['api_key_expires_at'] as String?,
     );
@@ -110,7 +106,6 @@ class FunctionConfig {
     String? lastDeployedAt,
     int? deployVersion,
     String? apiKeyUuid,
-    String? apiKeyPublicKey,
     String? apiKeyValidity,
     String? apiKeyExpiresAt,
   }) {
@@ -123,7 +118,6 @@ class FunctionConfig {
       lastDeployedAt: lastDeployedAt ?? this.lastDeployedAt,
       deployVersion: deployVersion ?? this.deployVersion,
       apiKeyUuid: apiKeyUuid ?? this.apiKeyUuid,
-      apiKeyPublicKey: apiKeyPublicKey ?? this.apiKeyPublicKey,
       apiKeyValidity: apiKeyValidity ?? this.apiKeyValidity,
       apiKeyExpiresAt: apiKeyExpiresAt ?? this.apiKeyExpiresAt,
     );
@@ -138,7 +132,7 @@ class FunctionConfig {
   int get nextVersion => (deployVersion ?? 0) + 1;
 
   /// Check if function has an API key configured
-  bool get hasApiKey => apiKeyUuid != null && apiKeyPublicKey != null;
+  bool get hasApiKey => apiKeyUuid != null;
 
   /// Load the private API key from .dart_tool/api_key.secret
   /// This file is stored separately and should be gitignored

@@ -163,18 +163,17 @@ class InitCommand extends BaseCommand {
           name: 'init-generated',
         );
 
-        final keyUuid = apiKeyResponse['uuid'] as String;
-        final publicKey = apiKeyResponse['public_key'] as String;
-        final privateKey = apiKeyResponse['private_key'] as String;
-        final expiresAt = apiKeyResponse['expires_at'] as String?;
+        final apiKey = apiKeyResponse['api_key'] as Map<String, dynamic>;
+        final keyUuid = apiKey['uuid'] as String;
+        final secretKey = apiKey['secret_key'] as String;
+        final expiresAt = apiKey['expires_at'] as String?;
 
-        // Store private key in Hive
-        await ApiKeyStorage.storeApiKey(functionId, privateKey);
+        // Store secret key in Hive
+        await ApiKeyStorage.storeApiKey(functionId, secretKey);
 
-        // Update function config with API key info
+        // Update function config with API key info (no secret key stored here)
         final updatedConfig = functionConfig.copyWith(
           apiKeyUuid: keyUuid,
-          apiKeyPublicKey: publicKey,
           apiKeyValidity: validity,
           apiKeyExpiresAt: expiresAt,
         );
@@ -191,19 +190,18 @@ class InitCommand extends BaseCommand {
           '║                                                                    ║',
         );
         print(
-          '║  ⚠️  SAVE THIS PRIVATE KEY - IT WILL NOT BE SHOWN AGAIN!           ║',
+          '║  ⚠️  SAVE THIS SECRET KEY - IT WILL NOT BE SHOWN AGAIN!            ║',
         );
         print(
           '╚════════════════════════════════════════════════════════════════════╝',
         );
         print('');
         print('Key UUID: $keyUuid');
-        print('Public Key: ${publicKey.substring(0, 20)}...');
-        print('Private Key: $privateKey');
+        print('Secret Key: $secretKey');
         print('Validity: $validity');
         if (expiresAt != null) print('Expires At: $expiresAt');
         print('');
-        print('✓ Private key stored securely in Hive database');
+        print('✓ Secret key stored securely in Hive database');
         print('  Location: ~/.containerpub/api_keys/');
       }
 

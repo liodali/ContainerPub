@@ -47,26 +47,26 @@ class InvokeCommand extends BaseCommand {
     String? signature;
     int? timestamp;
 
-    // Try to sign the request if --sign flag is used or if we have a private key
+    // Try to sign the request if --sign flag is used
     if (useSignature) {
-      String? privateKey;
+      String? secretKey;
 
       // First, try to get from Hive storage using function ID
       try {
-        privateKey = await ApiKeyStorage.getApiKey(functionId);
+        secretKey = await ApiKeyStorage.getApiKey(functionId);
       } catch (e) {
         print('Warning: Failed to retrieve API key from Hive: $e');
       }
 
       // Fallback: try to load from function config directory
-      if (privateKey == null) {
+      if (secretKey == null) {
         final currentDir = Directory.current;
-        privateKey = await FunctionConfig.loadPrivateKey(currentDir.path);
+        secretKey = await FunctionConfig.loadPrivateKey(currentDir.path);
       }
 
-      if (privateKey == null) {
+      if (secretKey == null) {
         print(
-          'Warning: --sign flag used but no private key found',
+          'Warning: --sign flag used but no secret key found',
         );
         print(
           'Generate an API key first with: dart_cloud apikey generate',
@@ -75,7 +75,7 @@ class InvokeCommand extends BaseCommand {
         // Create signature
         timestamp = DateTime.now().millisecondsSinceEpoch ~/ 1000;
         final payload = data != null ? jsonEncode(data) : '';
-        signature = _createSignature(privateKey, payload, timestamp);
+        signature = _createSignature(secretKey, payload, timestamp);
         print('✓ Request signed with API key');
       }
     }
@@ -100,9 +100,9 @@ class InvokeCommand extends BaseCommand {
   }
 
   /// Create a signature for the payload using HMAC-SHA256
-  String _createSignature(String privateKey, String payload, int timestamp) {
+  String _createSignature(String secretKey, String payload, int timestamp) {
     final dataToSign = '$timestamp:$payload';
-    final hmac = Hmac(sha256, utf8.encode(privateKey));
+    final hmac = Hmac(sha256, utf8.encode(secretKey));
     final digest = hmac.convert(utf8.encode(dataToSign));
     return base64Encode(digest.bytes);
   }
