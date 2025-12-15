@@ -292,6 +292,7 @@ import '$importPath';
 import 'dart:io';
 import 'dart:convert';
 import 'package:dart_cloud_function/dart_cloud_function.dart';
+import 'package:dart_cloud_logger/dart_cloud_logger.dart';
 import 'package:dotenv/dotenv.dart' as dotenv;
 ''';
 
@@ -327,7 +328,12 @@ $imports
 /// 2. Load .env.secret (for secrets, will be injected in future)
 /// 3. Merge with system environment as fallback
 void main() async {
+  // Create logger for container execution (writes to /logs.json)
+  final logger = CloudLogger.forContainer();
+  
   try {
+    logger.info('Function execution started');
+    
     // Load environment from .env.config and .env.secret files using DotEnv
     // These files are injected by the container runtime as volumes
     final env = _loadEnvironment();
@@ -335,11 +341,12 @@ void main() async {
     // Read request from /request.json (mounted by container runtime)
     final requestFile = File('/request.json');
     if (!await requestFile.exists()) {
-      _writeError('request.json not found');
+      logger.error('request.json not found');
+      await _flushLogsAndWriteError(logger, 'request.json not found');
       exit(1);
     }
 
-    final requestJson = jsonDecode(await requestFile.readAsString());
+    final requestJson = jsonDecode(await requestFile.readAsString());    
     // Parse CloudRequest from JSON
     final request = CloudRequest(
       method: requestJson['method'] as String? ?? 'POST',
@@ -352,11 +359,14 @@ void main() async {
     // Instantiate the cloud function
     final function = $className();
 
-    // Execute the function
+    // Execute the function with logger
     final response = await function.handle(
       request: request,
-      env: null,//TODO: implement env
+      logger: logger,
+      env: env,
     );
+
+    logger.info('Function execution completed', metadata: {'statusCode': response.statusCode});
 
     // Write response to /result.json (mounted volume)
     // This separates the result from logs (stdout/stderr)
@@ -368,12 +378,23 @@ void main() async {
 
     final resultFile = File('/result.json');
     await resultFile.writeAsString(jsonEncode(responseJson));
+    
+    // Flush logs to /logs.json before exit
+    await logger.flush();
+    
     stdout.writeln(jsonEncode(responseJson));
     exit(0);
   } catch (e, stackTrace) {
-    await _writeError('Function execution failed: \$e\\n\$stackTrace');
+    logger.error('Function execution failed: \$e', metadata: {'stackTrace': '\$stackTrace'});
+    await _flushLogsAndWriteError(logger, 'Function execution failed: \$e\\n\$stackTrace');
     exit(1);
   }
+}
+
+/// Flush logs and write error response
+Future<void> _flushLogsAndWriteError(CloudLogger logger, String message) async {
+  await logger.flush();
+  await _writeError(message);
 }
 
 /// Load environment variables from .env files using DotEnv package
@@ -408,6 +429,82 @@ Future<void> _writeError(String message) async {
   final resultFile = File('/result.json');
   await resultFile.writeAsString(jsonEncode(errorResponse));
 }
+
+// ============================================================================
+// CloudLogger - Embedded logging utility for cloud functions
+// ============================================================================
+
+/// Log entry with timestamp and optional metadata
+class _LogEntry {
+  final String message;
+  final DateTime timestamp;
+  final Map<String, dynamic>? metadata;
+  final LoggerTypeAction level;
+
+  _LogEntry({
+    required this.message,
+    required this.timestamp,
+    required this.level,
+    this.metadata,
+  });
+
+  Map<String, dynamic> toJson() => {
+        'message': message,
+        'timestamp': timestamp.toIso8601String(),
+        if (metadata != null && metadata!.isNotEmpty) 'metadata': metadata,
+      };
+}
+
+/// Cloud logger that writes logs to a JSON file
+/// Logs are structured into three sections: error, debug, info
+class CloudLogger extends CloudDartFunctionLogger {
+  final String _logFilePath;
+  final List<_LogEntry> _errors = [];
+  final List<_LogEntry> _debugLogs = [];
+  final List<_LogEntry> _infoLogs = [];
+
+  CloudLogger({String logFilePath = '/logs.json'}) : _logFilePath = logFilePath;
+
+  factory CloudLogger.forContainer() => CloudLogger(logFilePath: '/logs.json');
+
+  @override
+  void printLog(LoggerTypeAction level, String message, {Map<String, dynamic>? metadata}) {
+    final entry = _LogEntry(
+      message: message,
+      timestamp: DateTime.now(),
+      level: level,
+      metadata: metadata,
+    );
+    switch (level) {
+      case LoggerTypeAction.error:
+        _errors.add(entry);
+        break;
+      case LoggerTypeAction.debug:
+        _debugLogs.add(entry);
+        break;
+      case LoggerTypeAction.info:
+        _infoLogs.add(entry);
+        break;
+    }
+  }
+
+  Map<String, dynamic> toJson() => {
+        'error': _errors.map((e) => e.toJson()).toList(),
+        'debug': _debugLogs.map((e) => e.toJson()).toList(),
+        'info': _infoLogs.map((e) => e.toJson()).toList(),
+      };
+
+  Future<void> flush() async {
+    final file = File(_logFilePath);
+    await file.writeAsString(jsonEncode(toJson()));
+  }
+
+  void flushSync() {
+    final file = File(_logFilePath);
+    file.writeAsStringSync(jsonEncode(toJson()));
+  }
+}
+
 $importOrEmbed
 ''';
   }
