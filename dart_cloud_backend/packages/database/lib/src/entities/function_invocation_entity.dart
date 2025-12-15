@@ -166,6 +166,25 @@ class FunctionInvocationEntity extends Entity {
   /// Checks if execution timed out
   bool get isTimeout => structuredLogs?.isTimeout ?? false;
 
+  /// Gets structured function logs from CloudLogger
+  /// Returns null if no function logs are present
+  FunctionLogs? get functionLogs => structuredLogs?.functionLogs;
+
+  /// Gets function error logs
+  List<FunctionLogEntry> get functionErrors => functionLogs?.errors ?? [];
+
+  /// Gets function debug logs
+  List<FunctionLogEntry> get functionDebugLogs => functionLogs?.debug ?? [];
+
+  /// Gets function info logs
+  List<FunctionLogEntry> get functionInfoLogs => functionLogs?.info ?? [];
+
+  /// Checks if there are any function error logs
+  bool get hasFunctionErrors => functionLogs?.hasErrors ?? false;
+
+  /// Gets total count of function logs (error + debug + info)
+  int get functionLogCount => functionLogs?.totalCount ?? 0;
+
   /// Creates an invocation entity with encoded sensitive data
   ///
   /// Use this factory to ensure all sensitive data is properly encoded
