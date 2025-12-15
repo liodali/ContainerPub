@@ -391,31 +391,8 @@ class DeploymentHandler {
     await pubspecFile.writeAsString(newYamlContent);
   }
 
-  /// Inject a dependency into the dependencies section of pubspec.yaml
-  static Future<void> _injectDependency(
-    String functionPath,
-    String depName,
-    String version,
-  ) async {
-    final pubspecFile = File(path.join(functionPath, 'pubspec.yaml'));
-    if (!(await pubspecFile.exists())) {
-      return;
-    }
 
-    final content = await pubspecFile.readAsString();
-    var docPubspec = loadYaml(content);
-    final jsonYaml = json.decode(json.encode(docPubspec));
-    final dependencies = Map<String, dynamic>.from(jsonYaml["dependencies"]);
-    dependencies.putIfAbsent(depName, () => version);
-    jsonYaml["dependencies"] = dependencies;
-    final Map<String, dynamic> jsonConvYamlTransformed = Map<String, dynamic>.from(
-      jsonYaml,
-    );
-    final newYamlContent = json2yaml(jsonConvYamlTransformed);
-
-    await pubspecFile.writeAsString(newYamlContent);
-  }
-
+  // Inject dependencies into pubspec.yaml
   static Future<void> _injectDependencies(
     String functionPath,
     Map<String, String> mapDependency,

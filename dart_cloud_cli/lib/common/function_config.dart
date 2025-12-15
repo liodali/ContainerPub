@@ -162,7 +162,9 @@ class FunctionConfig {
   /// Save the private API key to .dart_tool/api_key.secret
   /// This file should be gitignored
   static Future<void> savePrivateKey(
-      String directoryPath, String privateKey) async {
+    String directoryPath,
+    String privateKey,
+  ) async {
     try {
       final dartToolDir = Directory(path.join(directoryPath, '.dart_tool'));
       if (!dartToolDir.existsSync()) {
