@@ -243,7 +243,7 @@ class ApiKeyPair {
   Map<String, dynamic> toJson() {
     return {
       'uuid': uuid,
-      'public_key': publicKey,
+      'public_key': publicKey.substring(0, 20),
       'private_key': privateKey, // Only included at creation!
       'validity': validity.value,
       if (expiresAt != null) 'expires_at': expiresAt!.toIso8601String(),

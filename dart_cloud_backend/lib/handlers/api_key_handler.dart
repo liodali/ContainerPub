@@ -26,38 +26,19 @@ class ApiKeyHandler {
 
       // Validate validity
       final validity = ApiKeyValidity.fromString(validityStr);
+      final userId = request.context['userId'] as String?;
 
       // Verify function exists
       final function = await DatabaseManagers.functions.findOne(
-        where: {'uuid': functionId},
+        where: {
+          FunctionEntityExtension.uuidNameField: functionId,
+          FunctionEntityExtension.userIdNameField: userId,
+        },
       );
 
       if (function == null) {
         return Response.notFound(
           jsonEncode({'error': 'Function not found'}),
-          headers: {'Content-Type': 'application/json'},
-        );
-      }
-
-      // Get user ID from request context (set by auth middleware)
-      final userId = request.context['userId'] as String?;
-      if (userId == null) {
-        return Response.forbidden(
-          jsonEncode({'error': 'Authentication required'}),
-          headers: {'Content-Type': 'application/json'},
-        );
-      }
-
-      // Verify user owns the function
-      final user = await DatabaseManagers.users.findOne(
-        where: {'uuid': userId},
-      );
-
-      if (user == null || function.userId != user.id) {
-        return Response.forbidden(
-          jsonEncode({
-            'error': 'You do not have permission to generate API keys for this function',
-          }),
           headers: {'Content-Type': 'application/json'},
         );
       }
