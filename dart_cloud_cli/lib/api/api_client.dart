@@ -89,19 +89,30 @@ class ApiClient {
 
   static Future<Map<String, dynamic>> invokeFunction(
     String functionId,
-    Map<String, dynamic>? data,
-  ) async {
+    Map<String, dynamic>? data, {
+    String? signature,
+    int? timestamp,
+  }) async {
     final body = data != null
         ? {
             'body': data,
           }
         : null;
+
+    final headers = <String, String>{
+      'Authorization': 'Bearer ${Config.token}',
+      'Content-Type': 'application/json',
+    };
+
+    // Add signature headers if provided
+    if (signature != null && timestamp != null) {
+      headers['X-Signature'] = signature;
+      headers['X-Timestamp'] = timestamp.toString();
+    }
+
     final response = await http.post(
       Uri.parse('${Config.serverUrl}/api/functions/$functionId/invoke'),
-      headers: {
-        'Authorization': 'Bearer ${Config.token}',
-        'Content-Type': 'application/json',
-      },
+      headers: headers,
       body: jsonEncode(body ?? {}),
     );
 
@@ -109,6 +120,74 @@ class ApiClient {
       return jsonDecode(response.body) as Map<String, dynamic>;
     } else {
       throw Exception('Failed to invoke function: ${response.body}');
+    }
+  }
+
+  /// Generate a new API key for a function
+  static Future<Map<String, dynamic>> generateApiKey({
+    required String functionId,
+    required String validity,
+    String? name,
+  }) async {
+    final body = {
+      'function_id': functionId,
+      'validity': validity,
+      if (name != null) 'name': name,
+    };
+
+    final response = await http.post(
+      Uri.parse('${Config.serverUrl}/api/auth/apikey/generate'),
+      headers: {
+        'Authorization': 'Bearer ${Config.token}',
+        'Content-Type': 'application/json',
+      },
+      body: jsonEncode(body),
+    );
+
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body) as Map<String, dynamic>;
+    } else {
+      throw Exception('Failed to generate API key: ${response.body}');
+    }
+  }
+
+  /// Get API key info for a function
+  static Future<Map<String, dynamic>> getApiKeyInfo(String functionId) async {
+    final response = await http.get(
+      Uri.parse('${Config.serverUrl}/api/auth/apikey/$functionId'),
+      headers: {'Authorization': 'Bearer ${Config.token}'},
+    );
+
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body) as Map<String, dynamic>;
+    } else {
+      throw Exception('Failed to get API key info: ${response.body}');
+    }
+  }
+
+  /// Revoke an API key
+  static Future<void> revokeApiKey(String apiKeyUuid) async {
+    final response = await http.delete(
+      Uri.parse('${Config.serverUrl}/api/auth/apikey/$apiKeyUuid'),
+      headers: {'Authorization': 'Bearer ${Config.token}'},
+    );
+
+    if (response.statusCode != 200 && response.statusCode != 204) {
+      throw Exception('Failed to revoke API key: ${response.body}');
+    }
+  }
+
+  /// List all API keys for a function
+  static Future<Map<String, dynamic>> listApiKeys(String functionId) async {
+    final response = await http.get(
+      Uri.parse('${Config.serverUrl}/api/auth/apikey/$functionId/list'),
+      headers: {'Authorization': 'Bearer ${Config.token}'},
+    );
+
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body) as Map<String, dynamic>;
+    } else {
+      throw Exception('Failed to list API keys: ${response.body}');
     }
   }
 }

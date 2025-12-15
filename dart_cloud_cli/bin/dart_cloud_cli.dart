@@ -10,6 +10,7 @@ import 'package:dart_cloud_cli/commands/logout_command.dart';
 import 'package:dart_cloud_cli/commands/invoke_command.dart';
 import 'package:dart_cloud_cli/commands/init_command.dart';
 import 'package:dart_cloud_cli/commands/status_command.dart';
+import 'package:dart_cloud_cli/commands/apikey_command.dart';
 import 'package:dart_cloud_cli/services/cache.dart' show AuthCache;
 
 void main(List<String> arguments) async {
@@ -47,7 +48,8 @@ void main(List<String> arguments) async {
     ..addCommand('list')
     ..addCommand('logs')
     ..addCommand('delete')
-    ..addCommand('invoke', invokeArgs);
+    ..addCommand('invoke', invokeArgs)
+    ..addCommand('apikey');
 
   if (arguments.isEmpty) {
     printUsage();
@@ -84,6 +86,9 @@ void main(List<String> arguments) async {
         break;
       case 'invoke':
         await InvokeCommand().execute(commandArgs);
+        break;
+      case 'apikey':
+        await ApiKeyCommand().execute(commandArgs);
         break;
       case 'help':
       case '--help':
@@ -124,6 +129,7 @@ Available commands:
   logs <id>          View logs for a specific function
   invoke <id>        Invoke a deployed function
   delete <id>        Delete a deployed function
+  apikey             Manage API keys for function signing
   help               Show this help message
   version            Show version information
 
@@ -138,6 +144,9 @@ Examples:
   dart_cloud_cli logs my-function-id
   dart_cloud_cli invoke my-function-id --data '{"key": "value"}'
   dart_cloud_cli delete my-function-id
+  dart_cloud_cli apikey generate --validity 1d
+  dart_cloud_cli apikey info
+  dart_cloud_cli apikey revoke
 
 For more information, visit: https://github.com/yourusername/ContainerPub
 ''');

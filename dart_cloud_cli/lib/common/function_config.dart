@@ -10,6 +10,10 @@ class FunctionConfig {
   final String? lastDeployHash;
   final String? lastDeployedAt;
   final int? deployVersion;
+  final String? apiKeyUuid;
+  final String? apiKeyPublicKey;
+  final String? apiKeyValidity;
+  final String? apiKeyExpiresAt;
 
   FunctionConfig({
     required this.functionName,
@@ -19,6 +23,10 @@ class FunctionConfig {
     this.lastDeployHash,
     this.lastDeployedAt,
     this.deployVersion,
+    this.apiKeyUuid,
+    this.apiKeyPublicKey,
+    this.apiKeyValidity,
+    this.apiKeyExpiresAt,
   });
 
   Map<String, dynamic> toJson() {
@@ -30,6 +38,10 @@ class FunctionConfig {
       if (lastDeployHash != null) 'last_deploy_hash': lastDeployHash,
       if (lastDeployedAt != null) 'last_deployed_at': lastDeployedAt,
       if (deployVersion != null) 'deploy_version': deployVersion,
+      if (apiKeyUuid != null) 'api_key_uuid': apiKeyUuid,
+      if (apiKeyPublicKey != null) 'api_key_public_key': apiKeyPublicKey,
+      if (apiKeyValidity != null) 'api_key_validity': apiKeyValidity,
+      if (apiKeyExpiresAt != null) 'api_key_expires_at': apiKeyExpiresAt,
     };
   }
 
@@ -42,6 +54,10 @@ class FunctionConfig {
       lastDeployHash: json['last_deploy_hash'] as String?,
       lastDeployedAt: json['last_deployed_at'] as String?,
       deployVersion: json['deploy_version'] as int?,
+      apiKeyUuid: json['api_key_uuid'] as String?,
+      apiKeyPublicKey: json['api_key_public_key'] as String?,
+      apiKeyValidity: json['api_key_validity'] as String?,
+      apiKeyExpiresAt: json['api_key_expires_at'] as String?,
     );
   }
 
@@ -93,6 +109,10 @@ class FunctionConfig {
     String? lastDeployHash,
     String? lastDeployedAt,
     int? deployVersion,
+    String? apiKeyUuid,
+    String? apiKeyPublicKey,
+    String? apiKeyValidity,
+    String? apiKeyExpiresAt,
   }) {
     return FunctionConfig(
       functionName: functionName,
@@ -102,6 +122,10 @@ class FunctionConfig {
       lastDeployHash: lastDeployHash ?? this.lastDeployHash,
       lastDeployedAt: lastDeployedAt ?? this.lastDeployedAt,
       deployVersion: deployVersion ?? this.deployVersion,
+      apiKeyUuid: apiKeyUuid ?? this.apiKeyUuid,
+      apiKeyPublicKey: apiKeyPublicKey ?? this.apiKeyPublicKey,
+      apiKeyValidity: apiKeyValidity ?? this.apiKeyValidity,
+      apiKeyExpiresAt: apiKeyExpiresAt ?? this.apiKeyExpiresAt,
     );
   }
 
@@ -112,4 +136,78 @@ class FunctionConfig {
 
   /// Get the next deploy version
   int get nextVersion => (deployVersion ?? 0) + 1;
+
+  /// Check if function has an API key configured
+  bool get hasApiKey => apiKeyUuid != null && apiKeyPublicKey != null;
+
+  /// Load the private API key from .dart_tool/api_key.secret
+  /// This file is stored separately and should be gitignored
+  static Future<String?> loadPrivateKey(String directoryPath) async {
+    try {
+      final keyFile = File(
+        path.join(directoryPath, '.dart_tool', 'api_key.secret'),
+      );
+
+      if (!keyFile.existsSync()) {
+        return null;
+      }
+
+      return keyFile.readAsStringSync().trim();
+    } catch (e) {
+      print('Warning: Failed to load private key: $e');
+      return null;
+    }
+  }
+
+  /// Save the private API key to .dart_tool/api_key.secret
+  /// This file should be gitignored
+  static Future<void> savePrivateKey(
+      String directoryPath, String privateKey) async {
+    try {
+      final dartToolDir = Directory(path.join(directoryPath, '.dart_tool'));
+      if (!dartToolDir.existsSync()) {
+        dartToolDir.createSync(recursive: true);
+      }
+
+      final keyFile = File(
+        path.join(dartToolDir.path, 'api_key.secret'),
+      );
+
+      keyFile.writeAsStringSync(privateKey, flush: true);
+
+      // Ensure .gitignore includes the secret file
+      final gitignoreFile = File(path.join(directoryPath, '.gitignore'));
+      if (gitignoreFile.existsSync()) {
+        final content = gitignoreFile.readAsStringSync();
+        if (!content.contains('.dart_tool/api_key.secret')) {
+          gitignoreFile.writeAsStringSync(
+            '$content\n# API key secret - DO NOT COMMIT\n.dart_tool/api_key.secret\n',
+            flush: true,
+          );
+        }
+      } else {
+        gitignoreFile.writeAsStringSync(
+          '# API key secret - DO NOT COMMIT\n.dart_tool/api_key.secret\n',
+          flush: true,
+        );
+      }
+    } catch (e) {
+      print('Warning: Failed to save private key: $e');
+    }
+  }
+
+  /// Delete the private API key file
+  static Future<void> deletePrivateKey(String directoryPath) async {
+    try {
+      final keyFile = File(
+        path.join(directoryPath, '.dart_tool', 'api_key.secret'),
+      );
+
+      if (keyFile.existsSync()) {
+        keyFile.deleteSync();
+      }
+    } catch (e) {
+      print('Warning: Failed to delete private key: $e');
+    }
+  }
 }
