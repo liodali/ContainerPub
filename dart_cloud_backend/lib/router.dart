@@ -18,6 +18,11 @@ Router createRouter() {
 
   // Function routes (protected)
   router.post(
+    '/api/functions/init',
+    Pipeline().addMiddleware(authMiddleware).addHandler(FunctionHandler.init),
+  );
+
+  router.post(
     '/api/functions/deploy',
     Pipeline().addMiddleware(authMiddleware).addHandler(FunctionHandler.deploy),
   );

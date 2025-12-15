@@ -67,6 +67,7 @@ export 'function_handler/crud_handler.dart';
 export 'function_handler/execution_handler.dart';
 export 'function_handler/logs_handler.dart';
 export 'function_handler/versioning_handler.dart';
+export 'function_handler/init_handler.dart';
 export 'function_handler/auth_utils.dart';
 
 import 'package:shelf/shelf.dart';
@@ -75,6 +76,7 @@ import 'function_handler/crud_handler.dart';
 import 'function_handler/execution_handler.dart';
 import 'function_handler/logs_handler.dart';
 import 'function_handler/versioning_handler.dart';
+import 'function_handler/init_handler.dart';
 
 /// Main FunctionHandler class that delegates to specialized handlers
 ///
@@ -82,6 +84,13 @@ import 'function_handler/versioning_handler.dart';
 /// delegating the actual work to specialized handler classes. This keeps
 /// the routing layer simple while maintaining good code organization.
 class FunctionHandler {
+  // === INITIALIZATION OPERATIONS ===
+  /// Initialize a new function (creates UUID and record with 'init' status)
+  /// Delegates to: InitHandler.init()
+  static Future<Response> init(Request request) {
+    return InitHandler.init(request);
+  }
+
   // === DEPLOYMENT OPERATIONS ===
   /// Deploy a new function or update an existing one
   /// Delegates to: DeploymentHandler.deploy()
