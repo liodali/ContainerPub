@@ -2,6 +2,7 @@ import 'package:database/src/entities/logs_entity.dart';
 import 'package:database/src/entities/organization.dart';
 import 'package:database/src/entities/user_information.dart';
 import 'package:database/src/entities/organization_member.dart';
+import 'package:database/src/entities/api_key_entity.dart';
 
 import 'database_manager_query.dart';
 import 'relationship_manager.dart';
@@ -70,6 +71,12 @@ class DatabaseManagers
   static final logs = DatabaseManagerQuery<LogsEntity>(
     tableName: 'logs',
     fromMap: LogsEntity.fromMap,
+  );
+
+  /// API key manager
+  static final apiKeys = DatabaseManagerQuery<ApiKeyEntity>(
+    tableName: 'api_keys',
+    fromMap: ApiKeyEntity.fromMap,
   );
 
   /// Singleton instance for relationship methods
