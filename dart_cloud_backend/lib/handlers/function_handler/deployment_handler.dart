@@ -149,16 +149,21 @@ class DeploymentHandler {
         functionUUID = _uuid.v4();
 
         // Create function record in database with 'building' status
-        final result = await Database.connection.execute(
-          'INSERT INTO functions (uuid, user_id, name, status) VALUES (\$1, \$2, \$3, \$4)',
-          parameters: [
-            functionUUID,
-            userResult.id,
-            functionName,
-            DeploymentStatus.building.name,
-          ],
+        final result = await DatabaseManagers.functions.insert(
+          FunctionEntity(
+            name: functionName,
+            uuid: functionUUID,
+            userId: userResult.id,
+            status: DeploymentStatus.building.name,
+          ).toDBMap(),
         );
-        functionId = result.first[0] as int;
+        if (result == null) {
+          return Response.internalServerError(
+            body: jsonEncode({'error': 'Failed to create function'}),
+            headers: {'Content-Type': 'application/json'},
+          );
+        }
+        functionId = result.id!;
 
         // Log function creation
         await FunctionUtils.logFunction(
@@ -460,26 +465,6 @@ class DeploymentHandler {
     await pubspecFile.writeAsString(newYamlContent);
   }
 
-  /// Remove dart_cloud_cli from dev_dependencies in pubspec.yaml
-  static Future<void> _injectDoEnv(String functionPath) async {
-    final pubspecFile = File(path.join(functionPath, 'pubspec.yaml'));
-    if (!(await pubspecFile.exists())) {
-      return;
-    }
-
-    final content = await pubspecFile.readAsString();
-    var docPubspec = loadYaml(content);
-    final jsonYaml = json.decode(json.encode(docPubspec));
-    final dependencies = Map<String, dynamic>.from(jsonYaml["dependencies"]);
-    dependencies.putIfAbsent('dotenv', () => '^4.2.0');
-    jsonYaml["dependencies"] = dependencies;
-    final Map<String, dynamic> jsonConvYamlTransformed = Map<String, dynamic>.from(
-      jsonYaml,
-    );
-    final newYamlContent = json2yaml(jsonConvYamlTransformed);
-
-    await pubspecFile.writeAsString(newYamlContent);
-  }
 
   /// Upload entire function folder to S3
   static Future<void> _uploadFunctionFolderToS3({
