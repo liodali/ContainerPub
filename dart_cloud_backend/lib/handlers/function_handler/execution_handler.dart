@@ -52,54 +52,70 @@ class ExecutionHandler {
   /// - 500: Execution failed
   static Future<Response> invoke(Request request, String uuid) async {
     try {
-      // Extract user ID from authenticated request
-      // final userId = request.context['userId'] as String;
+      // === GET DATA FROM MIDDLEWARE CONTEXT ===
+      // The signature middleware has already:
+      // 1. Verified the function exists
+      // 2. Checked for API key and verified signature if required
+      // 3. Parsed the request body
+      final functionEntity = request.context['functionEntity'] as FunctionEntity?;
+      final parsedBody = request.context['parsedBody'] as Map<String, dynamic>?;
+      final rawBody = request.context['rawBody'] as String?;
+      final signatureVerified = request.context['signatureVerified'] as bool? ?? false;
 
-      // === REQUEST SIZE VALIDATION ===
-      // Read entire request body to check size before processing
-      // This prevents large payloads from consuming excessive resources
-      final bodyString = await request.readAsString();
-
-      // Calculate request size in bytes
-      final maxSizeBytes = Config.functionMaxRequestSizeMb * 1024 * 1024;
-      final requestSizeBytes = bodyString.length;
-
-      // Reject requests exceeding size limit
-      if (requestSizeBytes > maxSizeBytes) {
-        return Response(
-          413, // HTTP 413: Payload Too Large
-          body: jsonEncode({
-            'error':
-                'Request size exceeds maximum allowed size of ${Config.functionMaxRequestSizeMb}MB',
-            'requestSizeMb': (requestSizeBytes / 1024 / 1024).toStringAsFixed(2),
-            'maxSizeMb': Config.functionMaxRequestSizeMb,
-          }),
-          headers: {'Content-Type': 'application/json'},
+      // If middleware didn't provide function entity, fetch it (fallback)
+      FunctionEntity? funcEntity = functionEntity;
+      if (funcEntity == null) {
+        funcEntity = await DatabaseManagers.functions.findOne(
+          where: {'uuid': uuid, 'status': 'active'},
         );
+
+        if (funcEntity == null) {
+          return Response.notFound(
+            jsonEncode({'error': 'Function not found'}),
+            headers: {'Content-Type': 'application/json'},
+          );
+        }
       }
 
-      // Parse JSON body after size validation
-      final body = jsonDecode(bodyString) as Map<String, dynamic>;
-      body['raw'] = bodyString;
+      // Get body from context or read from request
+      Map<String, dynamic> body;
+      String bodyString;
 
-      // === FUNCTION OWNERSHIP VERIFICATION ===
-      // Verify that function exists and belongs to requesting user
+      if (parsedBody != null && rawBody != null) {
+        // Body already parsed by middleware
+        body = parsedBody;
+        bodyString = rawBody;
+      } else {
+        // Fallback: read body from request
+        bodyString = await request.readAsString();
 
-      final functionEntity = await DatabaseManagers.functions.findOne(
-        where: {'uuid': uuid, 'status': 'active'},
-      );
+        // === REQUEST SIZE VALIDATION ===
+        final maxSizeBytes = Config.functionMaxRequestSizeMb * 1024 * 1024;
+        final requestSizeBytes = bodyString.length;
 
-      // final result = await Database.connection.execute(
-      //   'SELECT id, name FROM functions WHERE uuid = \$1 AND user_id = \$2',
-      //   parameters: [uuid, userId],
-      // );
+        if (requestSizeBytes > maxSizeBytes) {
+          return Response(
+            413,
+            body: jsonEncode({
+              'error':
+                  'Request size exceeds maximum allowed size of ${Config.functionMaxRequestSizeMb}MB',
+              'requestSizeMb': (requestSizeBytes / 1024 / 1024).toStringAsFixed(2),
+              'maxSizeMb': Config.functionMaxRequestSizeMb,
+            }),
+            headers: {'Content-Type': 'application/json'},
+          );
+        }
 
-      // Check if function exists and user has access
-      if (functionEntity == null) {
-        return Response.notFound(
-          jsonEncode({'error': 'Function not found'}),
-          headers: {'Content-Type': 'application/json'},
-        );
+        body = bodyString.isNotEmpty
+            ? jsonDecode(bodyString) as Map<String, dynamic>
+            : <String, dynamic>{};
+        body['raw'] = bodyString;
+      }
+
+      // Add signature info to body for logging if verified
+      if (signatureVerified) {
+        body['signature_verified'] = true;
+        body['signature_timestamp'] = request.context['signatureTimestamp'];
       }
 
       // === FUNCTION EXECUTION ===
@@ -113,8 +129,8 @@ class ExecutionHandler {
       // 3. Wait for result with timeout
       // 4. Schedule container cleanup (10ms timer)
       final executor = FunctionExecutor(
-        functionId: functionEntity.id!,
-        functionUUId: functionEntity.uuid!,
+        functionId: funcEntity.id!,
+        functionUUId: funcEntity.uuid!,
       );
       final executionResult = await executor.execute(body);
 
@@ -175,7 +191,7 @@ class ExecutionHandler {
 
       // Store invocation with request info (no body for security)
       final entity = FunctionInvocationEntity(
-        functionId: functionEntity.id,
+        functionId: funcEntity.id,
         status: isSuccess ? 'success' : 'error',
         durationMs: duration,
         error: SecureDataEncoder.encodeOrNull(errorMessage),
