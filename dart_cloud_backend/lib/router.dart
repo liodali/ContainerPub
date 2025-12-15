@@ -2,7 +2,9 @@ import 'package:shelf/shelf.dart';
 import 'package:shelf_router/shelf_router.dart';
 import 'package:dart_cloud_backend/handlers/auth_handler.dart';
 import 'package:dart_cloud_backend/handlers/function_handler.dart';
+import 'package:dart_cloud_backend/handlers/api_key_handler.dart';
 import 'package:dart_cloud_backend/middleware/auth_middleware.dart';
+import 'package:dart_cloud_backend/middleware/signature_middleware.dart';
 
 Router createRouter() {
   final router = Router();
@@ -54,7 +56,7 @@ Router createRouter() {
   router.post(
     '/api/functions/<id>/invoke',
     Pipeline()
-        .addMiddleware(authMiddleware)
+        .addMiddleware(signatureMiddleware)
         .addHandler((req) => FunctionHandler.invoke(req, req.params['id']!)),
   );
 
@@ -87,6 +89,36 @@ extension ExtAuthRouter on Router {
     post('/api/auth/register', AuthHandler.register);
     post('/api/auth/logout', AuthHandler.logout);
     post('/api/auth/refresh', AuthHandler.refreshToken);
+
+    // API Key routes (protected)
+    post(
+      '/api/auth/apikey/generate',
+      Pipeline().addMiddleware(authMiddleware).addHandler(ApiKeyHandler.generateApiKey),
+    );
+    get(
+      '/api/auth/apikey/<function_id>',
+      Pipeline()
+          .addMiddleware(authMiddleware)
+          .addHandler(
+            (req) => ApiKeyHandler.getApiKeyInfo(req, req.params['function_id']!),
+          ),
+    );
+    delete(
+      '/api/auth/apikey/<api_key_uuid>',
+      Pipeline()
+          .addMiddleware(authMiddleware)
+          .addHandler(
+            (req) => ApiKeyHandler.revokeApiKey(req, req.params['api_key_uuid']!),
+          ),
+    );
+    get(
+      '/api/auth/apikey/<function_id>/list',
+      Pipeline()
+          .addMiddleware(authMiddleware)
+          .addHandler(
+            (req) => ApiKeyHandler.listApiKeys(req, req.params['function_id']!),
+          ),
+    );
   }
 }
 
