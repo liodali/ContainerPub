@@ -47,13 +47,31 @@ cd my-function
 dart create -t console-simple .
 ```
 
-### 3. Initialize Function Config
+### 3. Initialize Function
 
 ```dart
 dart_cloud init
 ```
 
-This creates a `.dart_tool/function_config.json` file that stores your function metadata and ID for caching.
+This:
+
+1. Validates function structure (pubspec.yaml, entry point)
+2. Creates function on backend with status `init` and generates UUID
+3. Stores UUID in `.dart_tool/function_config.json`
+4. Returns the function UUID for deployment
+
+You can also generate an API key during initialization:
+
+```dart
+# Generate API key valid for 1 day
+dart_cloud init --apikey 1d
+
+# Generate API key with forever validity
+dart_cloud init --apikey
+
+# Revoke existing key and generate new one
+dart_cloud init --apikey 1w --revoke
+```
 
 ### 4. Add dart_cloud_function Dependency
 
@@ -167,10 +185,26 @@ dart_cloud logout
 Deploy a Dart function from a directory.
 
 ```dart
-dart_cloud deploy <path-to-function>
+dart_cloud deploy [--force|-f]
 ```
 
-After successful deployment, the function ID is automatically cached in `.dart_tool/function_config.json` for future reference.
+**Requirements:**
+
+- Function must be initialized first (run `dart_cloud init`)
+- Function directory must contain `pubspec.yaml`
+- Function must have entry point (`main.dart` or `bin/main.dart`)
+
+**Options:**
+
+- `--force, -f` - Force deployment even if no changes detected
+
+**What it does:**
+
+1. Validates function is initialized (has UUID in config)
+2. Validates function structure and code
+3. Creates archive of function code
+4. Uploads to backend with function UUID
+5. Backend changes status from `init` → `building` → `active`
 
 **Validation Phases:**
 
@@ -190,8 +224,8 @@ After successful deployment, the function ID is automatically cached in `.dart_t
 
 **Post-Deployment:**
 
-- Function ID is stored in `.dart_tool/function_config.json`
-- Can be used for subsequent updates or local invocations
+- Function deployment hash is stored in `.dart_tool/function_config.json`
+- Deployment version is tracked for updates
 
 ### list
 
@@ -209,13 +243,89 @@ View logs for a specific function.
 dart_cloud logs <function-id>
 ```
 
-### invoke
+### apikey
 
-Invoke a deployed function with optional data.
+Manage API keys for function signing and secure invocation.
 
 ```dart
-dart_cloud invoke <function-id> [--data '{"key": "value"}']
+dart_cloud apikey <subcommand> [options]
 ```
+
+**Subcommands:**
+
+#### generate
+
+Generate a new API key for a function.
+
+```dart
+dart_cloud apikey generate [--function-id <uuid>] [--validity <duration>] [--name <name>]
+```
+
+**Options:**
+
+- `--function-id, -f` - Function UUID (uses current directory config if not provided)
+- `--validity, -v` - Key validity: `1h`, `1d`, `1w`, `1m`, or `forever` (default: `1d`)
+- `--name, -n` - Optional friendly name for the key
+
+**Validity Options:**
+
+- `1h` - 1 hour
+- `1d` - 1 day (default)
+- `1w` - 1 week
+- `1m` - 1 month
+- `forever` - Never expires
+
+**Examples:**
+
+```dart
+dart_cloud apikey generate --validity 1d
+dart_cloud apikey generate --function-id <uuid> --validity 1w --name "Production Key"
+```
+
+**What it does:**
+
+1. Generates a public/private key pair
+2. Stores public key on backend
+3. Returns private key (only shown once!)
+4. Stores private key in Hive database (`~/.containerpub/api_keys/`)
+5. Updates function config with API key metadata
+
+#### info
+
+Get API key info for a function.
+
+```dart
+dart_cloud apikey info [--function-id <uuid>]
+```
+
+#### revoke
+
+Revoke an API key.
+
+```dart
+dart_cloud apikey revoke [--key-id <uuid>] [--revoke]
+```
+
+#### list
+
+List all API keys for a function.
+
+```dart
+dart_cloud apikey list [--function-id <uuid>]
+```
+
+### invoke
+
+Invoke a deployed function with optional data and optional signature.
+
+```dart
+dart_cloud invoke <function-id> [--data '{"key": "value"}'] [--sign]
+```
+
+**Options:**
+
+- `--data` - JSON data to pass to the function
+- `--sign` - Sign the request with stored API key
 
 **With API Key Signature:**
 
@@ -227,9 +337,10 @@ dart_cloud invoke <function-id> --data '{"key": "value"}' --sign
 
 This will:
 
-1. Load the private key from `.dart_tool/api_key.secret`
+1. Load the private key from Hive database
 2. Create a timestamp and HMAC-SHA256 signature
-3. Include `X-Signature` and `X-Timestamp` headers in the request
+3. Send request with `X-Signature` and `X-Timestamp` headers
+4. Include `X-Signature` and `X-Timestamp` headers in the request
 
 ### apikey
 

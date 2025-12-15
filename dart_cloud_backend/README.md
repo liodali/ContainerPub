@@ -467,14 +467,42 @@ Content-Type: application/json
 
 All function endpoints require the `Authorization: Bearer <token>` header.
 
+#### Initialize Function
+
+Creates a new function with status `init` and generates a UUID. This must be called before deployment.
+
+```http
+POST /api/functions/init
+Authorization: Bearer <token>
+Content-Type: application/json
+
+{
+  "name": "my-function"
+}
+```
+
+**Response:**
+
+```json
+{
+  "message": "Function initialized successfully",
+  "id": "uuid-string",
+  "name": "my-function",
+  "status": "init",
+  "created_at": "2024-01-15T10:30:00Z"
+}
+```
+
 #### Deploy Function
+
+Deploys code to an initialized function. Changes status from `init` → `building` → `active`.
 
 ```http
 POST /api/functions/deploy
 Authorization: Bearer <token>
 Content-Type: multipart/form-data
 
-name: my-function
+function_id: <uuid-from-init>
 archive: <function.tar.gz>
 ```
 
@@ -539,6 +567,70 @@ Content-Type: application/json
 
 ```http
 DELETE /api/functions/{id}
+Authorization: Bearer <token>
+```
+
+### API Keys (Requires Authentication)
+
+Manage API keys for function signing and secure invocation.
+
+#### Generate API Key
+
+```http
+POST /api/auth/apikey/generate
+Authorization: Bearer <token>
+Content-Type: application/json
+
+{
+  "function_id": "uuid-string",
+  "validity": "1d",
+  "name": "optional-key-name"
+}
+```
+
+**Validity Options:**
+
+- `1h` - 1 hour
+- `1d` - 1 day
+- `1w` - 1 week
+- `1m` - 1 month
+- `forever` - Never expires
+
+**Response:**
+
+```json
+{
+  "message": "API key generated successfully",
+  "warning": "Store the private_key securely - it will not be shown again!",
+  "api_key": {
+    "uuid": "key-uuid",
+    "public_key": "base64-encoded-public-key",
+    "private_key": "base64-encoded-private-key",
+    "validity": "1d",
+    "expires_at": "2024-01-16T10:30:00Z",
+    "created_at": "2024-01-15T10:30:00Z"
+  }
+}
+```
+
+#### Get API Key Info
+
+```http
+GET /api/auth/apikey/{function_id}
+Authorization: Bearer <token>
+```
+
+#### Revoke API Key
+
+```http
+DELETE /api/auth/apikey/{api_key_uuid}
+Authorization: Bearer <token>
+```
+
+#### List API Keys
+
+```http
+GET /api/auth/apikey/{function_id}/list
 Authorization: Bearer <token>
 ```
 
