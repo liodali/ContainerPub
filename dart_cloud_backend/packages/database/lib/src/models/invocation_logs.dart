@@ -1,11 +1,82 @@
 import 'dart:convert';
 
+/// Log entry with timestamp and optional metadata
+class FunctionLogEntry {
+  final String message;
+  final String timestamp;
+  final Map<String, dynamic>? metadata;
+
+  const FunctionLogEntry({
+    required this.message,
+    required this.timestamp,
+    this.metadata,
+  });
+
+  Map<String, dynamic> toJson() => {
+    'message': message,
+    'timestamp': timestamp,
+    if (metadata != null && metadata!.isNotEmpty) 'metadata': metadata,
+  };
+
+  factory FunctionLogEntry.fromJson(Map<String, dynamic> json) =>
+      FunctionLogEntry(
+        message: json['message'] as String? ?? '',
+        timestamp: json['timestamp'] as String? ?? '',
+        metadata: json['metadata'] as Map<String, dynamic>?,
+      );
+}
+
+/// Structured function logs with error, debug, and info sections
+///
+/// This mirrors the output format of CloudLogger from dart_cloud_logger package
+class FunctionLogs {
+  final List<FunctionLogEntry> errors;
+  final List<FunctionLogEntry> debug;
+  final List<FunctionLogEntry> info;
+
+  const FunctionLogs({
+    this.errors = const [],
+    this.debug = const [],
+    this.info = const [],
+  });
+
+  Map<String, dynamic> toJson() => {
+    'error': errors.map((e) => e.toJson()).toList(),
+    'debug': debug.map((e) => e.toJson()).toList(),
+    'info': info.map((e) => e.toJson()).toList(),
+  };
+
+  factory FunctionLogs.fromJson(Map<String, dynamic> json) => FunctionLogs(
+    errors:
+        (json['error'] as List<dynamic>?)
+            ?.map((e) => FunctionLogEntry.fromJson(e as Map<String, dynamic>))
+            .toList() ??
+        [],
+    debug:
+        (json['debug'] as List<dynamic>?)
+            ?.map((e) => FunctionLogEntry.fromJson(e as Map<String, dynamic>))
+            .toList() ??
+        [],
+    info:
+        (json['info'] as List<dynamic>?)
+            ?.map((e) => FunctionLogEntry.fromJson(e as Map<String, dynamic>))
+            .toList() ??
+        [],
+  );
+
+  bool get isEmpty => errors.isEmpty && debug.isEmpty && info.isEmpty;
+  bool get isNotEmpty => !isEmpty;
+  int get totalCount => errors.length + debug.length + info.length;
+  bool get hasErrors => errors.isNotEmpty;
+}
+
 /// Structured logs model for function invocations
 ///
 /// Captures container execution logs and errors in a structured format:
 /// - [containerLogs]: Raw output from the container (stdout, stderr, exit_code)
 /// - [executionErrors]: Errors that occurred during execution pipeline
 /// - [metadata]: Additional execution metadata (timing, memory, etc.)
+/// - [functionLogs]: Structured logs from CloudLogger (error, debug, info sections)
 class InvocationLogs {
   /// Container stdout output (from executed function)
   final String? stdout;
@@ -26,6 +97,10 @@ class InvocationLogs {
   /// Execution metadata
   final ExecutionMetadata? metadata;
 
+  /// Structured function logs from CloudLogger
+  /// Contains error, debug, and info sections with timestamps
+  final FunctionLogs? functionLogs;
+
   const InvocationLogs({
     this.stdout,
     this.stderr,
@@ -33,6 +108,7 @@ class InvocationLogs {
     this.containerTimestamp,
     this.executionErrors = const [],
     this.metadata,
+    this.functionLogs,
   });
 
   /// Create from container execution result logs
@@ -43,11 +119,20 @@ class InvocationLogs {
       return const InvocationLogs();
     }
 
+    // Parse function logs from container logs if present
+    FunctionLogs? funcLogs;
+    final functionLogsJson =
+        containerLogs['function_logs'] as Map<String, dynamic>?;
+    if (functionLogsJson != null) {
+      funcLogs = FunctionLogs.fromJson(functionLogsJson);
+    }
+
     return InvocationLogs(
       stdout: containerLogs['logs'] as String?,
       stderr: containerLogs['stderr'] as String?,
       exitCode: containerLogs['exit_code'] as int?,
       containerTimestamp: containerLogs['timestamp'] as String?,
+      functionLogs: funcLogs,
     );
   }
 
@@ -60,6 +145,7 @@ class InvocationLogs {
       containerTimestamp: containerTimestamp,
       executionErrors: [...executionErrors, error],
       metadata: metadata,
+      functionLogs: functionLogs,
     );
   }
 
@@ -72,6 +158,7 @@ class InvocationLogs {
       containerTimestamp: containerTimestamp,
       executionErrors: [...executionErrors, ...errors],
       metadata: metadata,
+      functionLogs: functionLogs,
     );
   }
 
@@ -84,6 +171,7 @@ class InvocationLogs {
       containerTimestamp: containerTimestamp,
       executionErrors: executionErrors,
       metadata: meta,
+      functionLogs: functionLogs,
     );
   }
 
@@ -99,6 +187,7 @@ class InvocationLogs {
       if (executionErrors.isNotEmpty)
         'errors': executionErrors.map((e) => e.toJson()).toList(),
       if (metadata != null) 'metadata': metadata!.toJson(),
+      if (functionLogs != null) 'function_logs': functionLogs!.toJson(),
     };
   }
 
@@ -107,6 +196,7 @@ class InvocationLogs {
     final container = json['container'] as Map<String, dynamic>? ?? {};
     final errorsJson = json['errors'] as List<dynamic>? ?? [];
     final metadataJson = json['metadata'] as Map<String, dynamic>?;
+    final functionLogsJson = json['function_logs'] as Map<String, dynamic>?;
 
     return InvocationLogs(
       stdout: container['stdout'] as String?,
@@ -119,12 +209,17 @@ class InvocationLogs {
       metadata: metadataJson != null
           ? ExecutionMetadata.fromJson(metadataJson)
           : null,
+      functionLogs: functionLogsJson != null
+          ? FunctionLogs.fromJson(functionLogsJson)
+          : null,
     );
   }
 
-  /// Check if there are any errors (container or execution)
+  /// Check if there are any errors (container or execution or function logs)
   bool get hasErrors =>
-      (stderr != null && stderr!.isNotEmpty) || executionErrors.isNotEmpty;
+      (stderr != null && stderr!.isNotEmpty) ||
+      executionErrors.isNotEmpty ||
+      (functionLogs?.hasErrors ?? false);
 
   /// Check if container timed out
   bool get isTimeout => exitCode == -1;
@@ -137,6 +232,12 @@ class InvocationLogs {
     }
     for (final error in executionErrors) {
       messages.add('${error.phase}: ${error.message}');
+    }
+    // Include function log errors
+    if (functionLogs != null) {
+      for (final error in functionLogs!.errors) {
+        messages.add('Function error: ${error.message}');
+      }
     }
     return messages;
   }
