@@ -4,6 +4,7 @@ import 'package:crypto/crypto.dart';
 import 'package:dart_cloud_cli/api/api_client.dart';
 import 'package:dart_cloud_cli/commands/base_command.dart' show BaseCommand;
 import 'package:dart_cloud_cli/common/function_config.dart';
+import 'package:dart_cloud_cli/services/api_key_storage.dart';
 
 class InvokeCommand extends BaseCommand {
   Future<void> execute(List<String> args) async {
@@ -48,13 +49,28 @@ class InvokeCommand extends BaseCommand {
 
     // Try to sign the request if --sign flag is used or if we have a private key
     if (useSignature) {
-      final currentDir = Directory.current;
-      final privateKey = await FunctionConfig.loadPrivateKey(currentDir.path);
+      String? privateKey;
+
+      // First, try to get from Hive storage using function ID
+      try {
+        privateKey = await ApiKeyStorage.getApiKey(functionId);
+      } catch (e) {
+        print('Warning: Failed to retrieve API key from Hive: $e');
+      }
+
+      // Fallback: try to load from function config directory
+      if (privateKey == null) {
+        final currentDir = Directory.current;
+        privateKey = await FunctionConfig.loadPrivateKey(currentDir.path);
+      }
 
       if (privateKey == null) {
         print(
-            'Warning: --sign flag used but no private key found in .dart_tool/api_key.secret');
-        print('Generate an API key first with: dart_cloud apikey generate');
+          'Warning: --sign flag used but no private key found',
+        );
+        print(
+          'Generate an API key first with: dart_cloud apikey generate',
+        );
       } else {
         // Create signature
         timestamp = DateTime.now().millisecondsSinceEpoch ~/ 1000;

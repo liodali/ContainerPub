@@ -3,6 +3,7 @@ import 'package:args/args.dart';
 import 'package:dart_cloud_cli/commands/base_command.dart' show BaseCommand;
 import 'package:dart_cloud_cli/api/api_client.dart';
 import 'package:dart_cloud_cli/common/function_config.dart';
+import 'package:dart_cloud_cli/services/api_key_storage.dart';
 
 class ApiKeyCommand extends BaseCommand {
   Future<void> execute(List<String> args) async {
@@ -149,13 +150,16 @@ class ApiKeyCommand extends BaseCommand {
       if (expiresAt != null) print('Expires At: $expiresAt');
       print('');
 
-      // Save to function config if we have a path
-      if (functionPath != null) {
-        // Save private key to separate file
-        await FunctionConfig.savePrivateKey(functionPath, privateKey);
-        print('✓ Private key saved to .dart_tool/api_key.secret');
+      // Save to Hive storage
+      try {
+        await ApiKeyStorage.storeApiKey(functionId, privateKey);
+        print('✓ Private key stored securely in Hive database');
+      } catch (e) {
+        print('✗ Warning: Failed to store private key in Hive: $e');
+      }
 
-        // Update function config with public key info
+      // Update function config with public key info
+      if (functionPath != null) {
         final existingConfig = await FunctionConfig.load(functionPath);
         if (existingConfig != null) {
           final updatedConfig = existingConfig.copyWith(
@@ -169,16 +173,15 @@ class ApiKeyCommand extends BaseCommand {
         }
 
         print('');
-        print('The private key has been stored in .dart_tool/api_key.secret');
-        print('This file is automatically added to .gitignore');
+        print('The private key has been stored securely in Hive database');
+        print('Location: ~/.dart_cloud/hive/');
         print('');
         print(
-            'Use "dart_cloud invoke" to invoke the function with signature verification.');
+            'Use "dart_cloud invoke --sign" to invoke the function with signature verification.');
       } else {
         print('');
-        print(
-            '⚠️  No function directory detected. Please save the private key manually.');
-        print('Store it in your function\'s .dart_tool/api_key.secret file.');
+        print('The private key has been stored securely in Hive database');
+        print('Location: ~/.dart_cloud/hive/');
       }
     } catch (e) {
       print('✗ Failed to generate API key: $e');
@@ -276,13 +279,19 @@ class ApiKeyCommand extends BaseCommand {
       await ApiClient.revokeApiKey(keyId);
       print('✓ API key revoked successfully.');
 
-      // Clean up local files if in function directory
+      // Clean up from Hive storage and function config
       final currentDir = Directory.current;
       final existingConfig = await FunctionConfig.load(currentDir.path);
 
-      if (existingConfig?.apiKeyUuid == keyId) {
-        // Delete private key file
-        await FunctionConfig.deletePrivateKey(currentDir.path);
+      if (existingConfig?.apiKeyUuid == keyId &&
+          existingConfig?.functionId != null) {
+        // Delete from Hive storage
+        try {
+          await ApiKeyStorage.deleteApiKey(existingConfig!.functionId!);
+          print('✓ Private key removed from Hive storage');
+        } catch (e) {
+          print('✗ Warning: Failed to remove private key from Hive: $e');
+        }
 
         // Update config to remove API key info
         final updatedConfig = FunctionConfig(
@@ -295,7 +304,7 @@ class ApiKeyCommand extends BaseCommand {
           deployVersion: existingConfig.deployVersion,
         );
         await updatedConfig.save(currentDir.path);
-        print('✓ Local API key files cleaned up.');
+        print('✓ Function config updated.');
       }
     } catch (e) {
       print('✗ Failed to revoke API key: $e');
