@@ -98,20 +98,20 @@ void main() {
       });
     });
 
-    group('createSignatureWithPrivateKey - Signature Generation', () {
+    group('createSignatureWithSecretKey - Signature Generation', () {
       test('creates consistent signature for same input', () {
-        final privateKey = 'test-private-key';
+        final secretKey = 'test-secret-key';
         final payload = '{"test": "data"}';
         final timestamp = 1234567890;
 
-        final signature1 = ApiKeyService.createSignatureWithPrivateKey(
-          privateKey: privateKey,
+        final signature1 = ApiKeyService.createSignatureWithSecretKey(
+          secretKey: secretKey,
           payload: payload,
           timestamp: timestamp,
         );
 
-        final signature2 = ApiKeyService.createSignatureWithPrivateKey(
-          privateKey: privateKey,
+        final signature2 = ApiKeyService.createSignatureWithSecretKey(
+          secretKey: secretKey,
           payload: payload,
           timestamp: timestamp,
         );
@@ -120,17 +120,17 @@ void main() {
       });
 
       test('creates different signature for different payload', () {
-        final privateKey = 'test-private-key';
+        final secretKey = 'test-secret-key';
         final timestamp = 1234567890;
 
-        final signature1 = ApiKeyService.createSignatureWithPrivateKey(
-          privateKey: privateKey,
+        final signature1 = ApiKeyService.createSignatureWithSecretKey(
+          secretKey: secretKey,
           payload: '{"test": "data1"}',
           timestamp: timestamp,
         );
 
-        final signature2 = ApiKeyService.createSignatureWithPrivateKey(
-          privateKey: privateKey,
+        final signature2 = ApiKeyService.createSignatureWithSecretKey(
+          secretKey: secretKey,
           payload: '{"test": "data2"}',
           timestamp: timestamp,
         );
@@ -139,17 +139,17 @@ void main() {
       });
 
       test('creates different signature for different timestamp', () {
-        final privateKey = 'test-private-key';
+        final secretKey = 'test-secret-key';
         final payload = '{"test": "data"}';
 
-        final signature1 = ApiKeyService.createSignatureWithPrivateKey(
-          privateKey: privateKey,
+        final signature1 = ApiKeyService.createSignatureWithSecretKey(
+          secretKey: secretKey,
           payload: payload,
           timestamp: 1234567890,
         );
 
-        final signature2 = ApiKeyService.createSignatureWithPrivateKey(
-          privateKey: privateKey,
+        final signature2 = ApiKeyService.createSignatureWithSecretKey(
+          secretKey: secretKey,
           payload: payload,
           timestamp: 1234567891,
         );
@@ -157,18 +157,18 @@ void main() {
         expect(signature1, isNot(equals(signature2)));
       });
 
-      test('creates different signature for different private key', () {
+      test('creates different signature for different secret key', () {
         final payload = '{"test": "data"}';
         final timestamp = 1234567890;
 
-        final signature1 = ApiKeyService.createSignatureWithPrivateKey(
-          privateKey: 'private-key-1',
+        final signature1 = ApiKeyService.createSignatureWithSecretKey(
+          secretKey: 'secret-key-1',
           payload: payload,
           timestamp: timestamp,
         );
 
-        final signature2 = ApiKeyService.createSignatureWithPrivateKey(
-          privateKey: 'private-key-2',
+        final signature2 = ApiKeyService.createSignatureWithSecretKey(
+          secretKey: 'secret-key-2',
           payload: payload,
           timestamp: timestamp,
         );
@@ -177,12 +177,12 @@ void main() {
       });
 
       test('returns base64 encoded signature', () {
-        final privateKey = 'test-private-key';
+        final secretKey = 'test-secret-key';
         final payload = '{"test": "data"}';
         final timestamp = 1234567890;
 
-        final signature = ApiKeyService.createSignatureWithPrivateKey(
-          privateKey: privateKey,
+        final signature = ApiKeyService.createSignatureWithSecretKey(
+          secretKey: secretKey,
           payload: payload,
           timestamp: timestamp,
         );
@@ -220,119 +220,110 @@ void main() {
       });
     });
 
-    group('ApiKeyPair', () {
-      test('toJson includes public key (truncated)', () {
-        final pair = ApiKeyPair(
+    group('ApiKeyResult', () {
+      test('toJson includes secret key', () {
+        final result = ApiKeyResult(
           uuid: 'test-uuid',
-          publicKey: 'this-is-a-very-long-public-key-that-should-be-truncated',
-          privateKey: 'test-private-key',
+          secretKey: 'test-secret-key',
           validity: ApiKeyValidity.oneDay,
           expiresAt: DateTime.now().add(Duration(days: 1)),
           name: 'test-key',
           createdAt: DateTime.now(),
         );
 
-        final json = pair.toJson();
+        final json = result.toJson();
 
-        expect(json['public_key'], isNotNull);
-        expect(json['public_key'], equals('this-is-a-very-'));
-        expect(json['public_key'].length, 15);
+        expect(json['secret_key'], 'test-secret-key');
       });
 
-      test('toJson includes private key', () {
-        final pair = ApiKeyPair(
+      test('toJson does not include public key', () {
+        final result = ApiKeyResult(
           uuid: 'test-uuid',
-          publicKey: 'test-public-key',
-          privateKey: 'test-private-key',
+          secretKey: 'test-secret-key',
           validity: ApiKeyValidity.oneDay,
           expiresAt: DateTime.now().add(Duration(days: 1)),
           name: 'test-key',
           createdAt: DateTime.now(),
         );
 
-        final json = pair.toJson();
+        final json = result.toJson();
 
-        expect(json['private_key'], 'test-private-key');
+        expect(json.containsKey('public_key'), false);
       });
 
       test('toJson includes validity', () {
-        final pair = ApiKeyPair(
+        final result = ApiKeyResult(
           uuid: 'test-uuid',
-          publicKey: 'test-public-key',
-          privateKey: 'test-private-key',
+          secretKey: 'test-secret-key',
           validity: ApiKeyValidity.oneDay,
           expiresAt: DateTime.now().add(Duration(days: 1)),
           name: 'test-key',
           createdAt: DateTime.now(),
         );
 
-        final json = pair.toJson();
+        final json = result.toJson();
 
         expect(json['validity'], equals('1d'));
       });
 
       test('toJson includes expires_at when present', () {
         final expiresAt = DateTime.now().add(Duration(days: 1));
-        final pair = ApiKeyPair(
+        final result = ApiKeyResult(
           uuid: 'test-uuid',
-          publicKey: 'test-public-key',
-          privateKey: 'test-private-key',
+          secretKey: 'test-secret-key',
           validity: ApiKeyValidity.oneDay,
           expiresAt: expiresAt,
           name: 'test-key',
           createdAt: DateTime.now(),
         );
 
-        final json = pair.toJson();
+        final json = result.toJson();
 
         expect(json['expires_at'], isNotNull);
         expect(json['expires_at'], equals(expiresAt.toIso8601String()));
       });
 
       test('toJson excludes expires_at when null', () {
-        final pair = ApiKeyPair(
+        final result = ApiKeyResult(
           uuid: 'test-uuid',
-          publicKey: 'test-public-key',
-          privateKey: 'test-private-key',
+          secretKey: 'test-secret-key',
           validity: ApiKeyValidity.forever,
           expiresAt: null,
           name: 'test-key',
           createdAt: DateTime.now(),
         );
 
-        final json = pair.toJson();
+        final json = result.toJson();
 
         expect(json.containsKey('expires_at'), false);
       });
 
       test('toJson includes name when present', () {
-        final pair = ApiKeyPair(
+        final result = ApiKeyResult(
           uuid: 'test-uuid',
-          publicKey: 'test-public-key',
-          privateKey: 'test-private-key',
+          secretKey: 'test-secret-key',
           validity: ApiKeyValidity.oneDay,
           expiresAt: DateTime.now().add(Duration(days: 1)),
           name: 'production-key',
           createdAt: DateTime.now(),
         );
 
-        final json = pair.toJson();
+        final json = result.toJson();
 
         expect(json['name'], equals('production-key'));
       });
 
       test('toJson excludes name when null', () {
-        final pair = ApiKeyPair(
+        final result = ApiKeyResult(
           uuid: 'test-uuid',
-          publicKey: 'test-public-key',
-          privateKey: 'test-private-key',
+          secretKey: 'test-secret-key',
           validity: ApiKeyValidity.oneDay,
           expiresAt: DateTime.now().add(Duration(days: 1)),
           name: null,
           createdAt: DateTime.now(),
         );
 
-        final json = pair.toJson();
+        final json = result.toJson();
 
         expect(json.containsKey('name'), false);
       });
@@ -343,7 +334,7 @@ void main() {
         final entity = ApiKeyEntity(
           uuid: 'test-uuid',
           functionUuid: 'test-function-uuid',
-          publicKey: 'test-public-key',
+          publicKey: 'test-secret-key', // DB field name kept for compatibility
           privateKeyHash: 'test-hash',
           validity: '1d',
           expiresAt: DateTime.now().add(Duration(days: 1)),
@@ -355,18 +346,16 @@ void main() {
         final info = ApiKeyInfo.fromEntity(entity);
 
         expect(info.uuid, equals('test-uuid'));
-        expect(info.publicKey, equals('test-public-key'));
         expect(info.validity, equals('1d'));
         expect(info.isActive, true);
         expect(info.name, equals('test-key'));
       });
 
-      test('toJson includes all fields', () {
+      test('toJson does not include secret key (security)', () {
         final expiresAt = DateTime.now().add(Duration(days: 1));
         final createdAt = DateTime.now();
         final info = ApiKeyInfo(
           uuid: 'test-uuid',
-          publicKey: 'test-public-key',
           validity: '1d',
           expiresAt: expiresAt,
           isActive: true,
@@ -377,7 +366,8 @@ void main() {
         final json = info.toJson();
 
         expect(json['uuid'], equals('test-uuid'));
-        expect(json['public_key'], equals('test-public-key'));
+        expect(json.containsKey('public_key'), false);
+        expect(json.containsKey('secret_key'), false);
         expect(json['validity'], equals('1d'));
         expect(json['is_active'], true);
         expect(json['name'], equals('test-key'));
@@ -388,7 +378,6 @@ void main() {
       test('toJson excludes null fields', () {
         final info = ApiKeyInfo(
           uuid: 'test-uuid',
-          publicKey: 'test-public-key',
           validity: '1d',
           expiresAt: null,
           isActive: true,

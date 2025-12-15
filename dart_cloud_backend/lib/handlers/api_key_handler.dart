@@ -53,7 +53,7 @@ class ApiKeyHandler {
       return Response.ok(
         jsonEncode({
           'message': 'API key generated successfully',
-          'warning': 'Store the private_key securely - it will not be shown again!',
+          'warning': 'Store the secret_key securely - it will not be shown again!',
           'api_key': apiKeyPair.toJson(),
         }),
         headers: {'Content-Type': 'application/json'},

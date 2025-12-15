@@ -5,23 +5,23 @@ import 'package:crypto/crypto.dart';
 import 'package:database/database.dart';
 
 /// Service for generating and managing API keys for function signing
+/// Uses HMAC-SHA256 with a shared secret key for signing and verification
 class ApiKeyService {
   static final ApiKeyService _instance = ApiKeyService._();
   static ApiKeyService get instance => _instance;
 
   ApiKeyService._();
 
-  /// Generate a new API key pair for a function
-  /// Returns both public and private keys - private key is only returned once
-  Future<ApiKeyPair> generateApiKey({
+  /// Generate a new API key for a function
+  /// Returns the secret key - only returned once, developer must store it securely
+  Future<ApiKeyResult> generateApiKey({
     required String functionUuid,
     required ApiKeyValidity validity,
     String? name,
   }) async {
-    // Generate cryptographically secure random keys
-    final privateKey = _generateSecureKey(64); // 512-bit private key
-    final publicKey = _derivePublicKey(privateKey);
-    final privateKeyHash = _hashKey(privateKey);
+    // Generate cryptographically secure secret key
+    final secretKey = _generateSecureKey(64); // 512-bit secret key
+    final secretKeyHash = _hashKey(secretKey);
 
     // Calculate expiration date
     final now = DateTime.now();
@@ -30,12 +30,13 @@ class ApiKeyService {
     // Deactivate any existing active keys for this function
     await _deactivateExistingKeys(functionUuid);
 
-    // Store the API key in database
+    // Store the API key in database (we store the secret key for verification)
     final apiKeyEntity = await DatabaseManagers.apiKeys.insert(
       ApiKeyEntity(
         functionUuid: functionUuid,
-        publicKey: publicKey,
-        privateKeyHash: privateKeyHash,
+        publicKey:
+            secretKey, // Store secret key (named publicKey in DB for compatibility)
+        privateKeyHash: secretKeyHash,
         validity: validity.value,
         expiresAt: expiresAt,
         isActive: true,
@@ -48,10 +49,9 @@ class ApiKeyService {
       throw Exception('Failed to create API key');
     }
 
-    return ApiKeyPair(
+    return ApiKeyResult(
       uuid: apiKeyEntity.uuid!,
-      publicKey: publicKey,
-      privateKey: privateKey, // Only returned once!
+      secretKey: secretKey, // Only returned once! Developer must store this.
       validity: validity,
       expiresAt: expiresAt,
       name: name,
@@ -79,7 +79,7 @@ class ApiKeyService {
     }
   }
 
-  /// Get the active API key for a function (public key only)
+  /// Get the active API key for a function
   Future<ApiKeyEntity?> getActiveApiKey(String functionUuid) async {
     final keys = await DatabaseManagers.apiKeys.findAll(
       where: {
@@ -118,7 +118,7 @@ class ApiKeyService {
     return results.isNotEmpty;
   }
 
-  /// Verify a signature against the stored public key
+  /// Verify a signature against the stored secret key
   /// Returns true if signature is valid
   Future<bool> verifySignature({
     required String functionUuid,
@@ -137,35 +137,26 @@ class ApiKeyService {
       return false; // Timestamp too old or too far in future
     }
 
-    // Verify the signature
-    final expectedSignature = _createSignature(
-      apiKey.publicKey,
-      payload,
-      timestamp,
+    // Verify the signature using the same secret key
+    // apiKey.publicKey contains the secret key (DB field name kept for compatibility)
+    final expectedSignature = createSignatureWithSecretKey(
+      secretKey: apiKey.publicKey,
+      payload: payload,
+      timestamp: timestamp,
     );
 
     return _secureCompare(signature, expectedSignature);
   }
 
-  /// Create a signature for a payload (used by CLI)
-  /// This is the algorithm that CLI will use with the private key
-  static String createSignatureWithPrivateKey({
-    required String privateKey,
+  /// Create a signature for a payload using the secret key
+  /// Used by both CLI (signing) and backend (verification)
+  static String createSignatureWithSecretKey({
+    required String secretKey,
     required String payload,
     required int timestamp,
   }) {
     final dataToSign = '$timestamp:$payload';
-    final hmac = Hmac(sha256, utf8.encode(privateKey));
-    final digest = hmac.convert(utf8.encode(dataToSign));
-    return base64Encode(digest.bytes);
-  }
-
-  /// Create signature using public key (for verification)
-  String _createSignature(String publicKey, String payload, int timestamp) {
-    // The public key is derived from private key, so we use it to verify
-    // by recreating the expected signature
-    final dataToSign = '$timestamp:$payload';
-    final hmac = Hmac(sha256, utf8.encode(publicKey));
+    final hmac = Hmac(sha256, utf8.encode(secretKey));
     final digest = hmac.convert(utf8.encode(dataToSign));
     return base64Encode(digest.bytes);
   }
@@ -180,14 +171,7 @@ class ApiKeyService {
     return base64Encode(bytes);
   }
 
-  /// Derive public key from private key using HMAC
-  String _derivePublicKey(String privateKey) {
-    final hmac = Hmac(sha256, utf8.encode('containerpub-api-key-derivation'));
-    final digest = hmac.convert(utf8.encode(privateKey));
-    return base64Encode(digest.bytes);
-  }
-
-  /// Hash the private key for storage (for revocation verification)
+  /// Hash the secret key for storage (for revocation verification)
   String _hashKey(String key) {
     final digest = sha256.convert(utf8.encode(key));
     return digest.toString();
@@ -219,21 +203,19 @@ class ApiKeyService {
   }
 }
 
-/// Represents a generated API key pair
-/// Private key is only available at creation time
-class ApiKeyPair {
+/// Represents a generated API key result
+/// Secret key is only available at creation time - developer must store it
+class ApiKeyResult {
   final String uuid;
-  final String publicKey;
-  final String privateKey;
+  final String secretKey;
   final ApiKeyValidity validity;
   final DateTime? expiresAt;
   final String? name;
   final DateTime createdAt;
 
-  ApiKeyPair({
+  ApiKeyResult({
     required this.uuid,
-    required this.publicKey,
-    required this.privateKey,
+    required this.secretKey,
     required this.validity,
     this.expiresAt,
     this.name,
@@ -243,8 +225,7 @@ class ApiKeyPair {
   Map<String, dynamic> toJson() {
     return {
       'uuid': uuid,
-      'public_key': publicKey.substring(0, 20),
-      'private_key': privateKey, // Only included at creation!
+      'secret_key': secretKey, // Only returned once! Developer must store this.
       'validity': validity.value,
       if (expiresAt != null) 'expires_at': expiresAt!.toIso8601String(),
       if (name != null) 'name': name,
@@ -253,10 +234,9 @@ class ApiKeyPair {
   }
 }
 
-/// DTO for API key info (without private key)
+/// DTO for API key info (without secret key - never expose the secret)
 class ApiKeyInfo {
   final String uuid;
-  final String publicKey;
   final String validity;
   final DateTime? expiresAt;
   final bool isActive;
@@ -265,7 +245,6 @@ class ApiKeyInfo {
 
   ApiKeyInfo({
     required this.uuid,
-    required this.publicKey,
     required this.validity,
     this.expiresAt,
     required this.isActive,
@@ -276,7 +255,6 @@ class ApiKeyInfo {
   factory ApiKeyInfo.fromEntity(ApiKeyEntity entity) {
     return ApiKeyInfo(
       uuid: entity.uuid!,
-      publicKey: entity.publicKey,
       validity: entity.validity,
       expiresAt: entity.expiresAt,
       isActive: entity.isActive,
@@ -288,7 +266,6 @@ class ApiKeyInfo {
   Map<String, dynamic> toJson() {
     return {
       'uuid': uuid,
-      'public_key': publicKey,
       'validity': validity,
       if (expiresAt != null) 'expires_at': expiresAt!.toIso8601String(),
       'is_active': isActive,
