@@ -202,11 +202,16 @@ class DockerService {
       final resultFilePath = _fileSystem.joinPath(resultDir, 'result.json');
       await _fileSystem.writeFile(resultFilePath, '');
 
-      // Prepare volume mounts (request.json, .env.config, and result.json)
+      // Create logs.json file (empty, will be written by function logger)
+      final logsFilePath = _fileSystem.joinPath(resultDir, 'logs.json');
+      await _fileSystem.writeFile(logsFilePath, '');
+
+      // Prepare volume mounts (request.json, .env.config, result.json, and logs.json)
       final volumeMounts = [
         '${requestInfo.filePath}:/request.json:ro',
         '$envConfigPath:/.env.config:ro',
         '$resultFilePath:/result.json:rw', // Writable for function to write result
+        '$logsFilePath:/logs.json:rw', // Writable for function to write logs
       ];
 
       // Run the container with env file mounted as volume
@@ -227,6 +232,24 @@ class DockerService {
         'timestamp': DateTime.now().toIso8601String(),
       };
       containerLogs.addAll((result as ContainerProcessResult).stdout);
+
+      // Read function logs from logs.json (written by CloudLogger)
+      Map<String, dynamic>? functionLogs;
+      try {
+        final logsContent = await _fileSystem.readFile(logsFilePath);
+        if (logsContent.isNotEmpty) {
+          functionLogs = jsonDecode(logsContent);
+        }
+        await _fileSystem.deleteFile(logsFilePath);
+      } catch (e) {
+        // logs.json may be empty or invalid - not critical
+        print('Warning: Could not read function logs: $e');
+      }
+
+      // Add function logs to container logs
+      if (functionLogs != null) {
+        containerLogs['function_logs'] = functionLogs;
+      }
 
       // Handle timeout
       if (result.exitCode == -1) {
