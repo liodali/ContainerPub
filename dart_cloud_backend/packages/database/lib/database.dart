@@ -29,6 +29,7 @@ export 'src/entities/user_information.dart';
 export 'src/entities/organization.dart';
 export 'src/entities/organization_member.dart';
 export 'src/entities/logs_entity.dart';
+export 'src/entities/api_key_entity.dart';
 
 // Relationship managers
 export 'src/relationship_manager.dart';
@@ -401,6 +402,40 @@ class Database {
 
     await _connection.execute('''
       CREATE INDEX IF NOT EXISTS idx_logs_created_at ON logs(created_at DESC)
+    ''');
+
+    // API Keys table for function signing
+    await _connection.execute('''
+      CREATE TABLE IF NOT EXISTS api_keys (
+        id SERIAL PRIMARY KEY,
+        uuid UUID UNIQUE NOT NULL DEFAULT uuid_generate_v4(),
+        function_uuid UUID NOT NULL REFERENCES functions(uuid) ON DELETE CASCADE,
+        public_key TEXT NOT NULL,
+        private_key_hash VARCHAR(255),
+        validity VARCHAR(20) NOT NULL CHECK (validity IN ('1h', '1d', '1w', '1m', 'forever')),
+        expires_at TIMESTAMP WITH TIME ZONE,
+        is_active BOOLEAN DEFAULT true,
+        name VARCHAR(255),
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+        revoked_at TIMESTAMP WITH TIME ZONE
+      )
+    ''');
+
+    // Create indexes for api_keys table
+    await _connection.execute('''
+      CREATE INDEX IF NOT EXISTS idx_api_keys_uuid ON api_keys(uuid)
+    ''');
+
+    await _connection.execute('''
+      CREATE INDEX IF NOT EXISTS idx_api_keys_function_uuid ON api_keys(function_uuid)
+    ''');
+
+    await _connection.execute('''
+      CREATE INDEX IF NOT EXISTS idx_api_keys_is_active ON api_keys(is_active)
+    ''');
+
+    await _connection.execute('''
+      CREATE INDEX IF NOT EXISTS idx_api_keys_expires_at ON api_keys(expires_at)
     ''');
 
     print('✓ Database tables created/verified');
