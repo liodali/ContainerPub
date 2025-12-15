@@ -65,58 +65,36 @@ class DeploymentHandler {
         );
       }
 
-      // Parse multipart request to extract function name and archive file
-      String? functionName;
+      // Parse multipart request to extract function UUID and archive file
+      String? functionUuidFromRequest;
       File? archiveFile;
       final multipart = request.multipart()!;
 
       await for (final part in multipart.parts) {
         final header = part.headers;
         final contentDisposition = header['content-disposition'];
-        // Extract function name from 'name' field
-        if (contentDisposition?.retrieveFieldName() == 'name') {
-          // Extract function name
-          // final fieldBytes =
-          // await part.fold<List<int>>(
-          //   [],
-          //   (prev, element) => prev..addAll(element),
-          // );
-          functionName = await part.readString(); //utf8.decode(fieldBytes);
+        // Extract function UUID from 'function_id' field
+        if (contentDisposition?.retrieveFieldName() == 'function_id') {
+          functionUuidFromRequest = await part.readString();
         } else
         // Extract archive file from 'archive' field
         if (contentDisposition?.retrieveFieldName() == 'archive') {
-          // Create temporary directory for uploaded file
-          // final tempDir = Directory.systemTemp.createTempSync(
-          //   'dart_cloud_upload_${DateTime.now().millisecondsSinceEpoch}_',
-          // );
-
           final tempFile = File(
             path.join(
               functDir.path,
-              '${functionName}.tar.gz',
+              '${functionUuidFromRequest ?? 'function'}.tar.gz',
             ),
           );
-          // Stream uploaded file to temporary location
-          // final sink = tempFile.openWrite();
-          // await part.pipe(sink);
-          // await sink.close();
           final bytes = await part.readBytes();
-          // final zipper = ZipDecoder().decodeBytes(bytes);
-          // final bytes = await part.fold<List<int>>(
-          //   [],
-          //   (prev, element) => prev..addAll(element),
-          // );
-
           await tempFile.writeAsBytes(bytes);
-
           archiveFile = tempFile;
         }
       }
 
       // Validate that both required fields are present
-      if (functionName == null || archiveFile == null) {
+      if (functionUuidFromRequest == null || archiveFile == null) {
         return Response.badRequest(
-          body: jsonEncode({'error': 'Missing function name or archive'}),
+          body: jsonEncode({'error': 'Missing function_id or archive'}),
           headers: {'Content-Type': 'application/json'},
         );
       }
@@ -130,53 +108,49 @@ class DeploymentHandler {
         );
       }
 
-      // Check if function with this name already exists for this user
+      // Find function by UUID
       final functionEntity = await DatabaseManagers.functions.findOne(
         where: {
+          FunctionEntityExtension.uuidNameField: functionUuidFromRequest,
           FunctionEntityExtension.userIdNameField: userResult.id,
-          FunctionEntityExtension.nameField: functionName,
         },
       );
 
-      String functionUUID;
-      int functionId;
-      int version = 1;
-      bool isNewFunction = functionEntity == null;
-
-      if (isNewFunction) {
-        // === NEW FUNCTION WORKFLOW ===
-        // Generate unique ID for new function
-        functionUUID = _uuid.v4();
-
-        // Create function record in database with 'building' status
-        final result = await DatabaseManagers.functions.insert(
-          FunctionEntity(
-            name: functionName,
-            uuid: functionUUID,
-            userId: userResult.id,
-            status: DeploymentStatus.building.name,
-          ).toDBMap(),
+      // Function must exist (created via init endpoint)
+      if (functionEntity == null) {
+        return Response.badRequest(
+          body: jsonEncode({
+            'error': 'Function not found',
+            'message': 'Please run "dart_cloud init" first to initialize your function.',
+          }),
+          headers: {'Content-Type': 'application/json'},
         );
-        if (result == null) {
-          return Response.internalServerError(
-            body: jsonEncode({'error': 'Failed to create function'}),
-            headers: {'Content-Type': 'application/json'},
-          );
-        }
-        functionId = result.id!;
+      }
 
-        // Log function creation
+      final functionUUID = functionEntity.uuid!;
+      final functionId = functionEntity.id!;
+      final functionName = functionEntity.name;
+      int version = 1;
+
+      // Check if this is first deployment (status is 'init') or update
+      final isFirstDeployment = functionEntity.status == DeploymentStatus.init.name;
+
+      if (isFirstDeployment) {
+        // === FIRST DEPLOYMENT (from init status) ===
+        // Update function status to 'building'
+        await Database.connection.execute(
+          'UPDATE functions SET status = \$1 WHERE id = \$2',
+          parameters: [DeploymentStatus.building.name, functionId],
+        );
+
+        // Log first deployment
         await FunctionUtils.logFunction(
           functionUUID,
           'info',
-          'Creating new function: $functionName',
+          'First deployment of function: $functionName',
         );
       } else {
         // === UPDATE EXISTING FUNCTION WORKFLOW ===
-        // Get existing function ID
-        functionId = functionEntity.id!;
-        functionUUID = functionEntity.uuid!;
-
         // Get the latest version number for this function
         final versionResult = await Database.connection.execute(
           'SELECT COALESCE(MAX(version), 0) FROM function_deployments WHERE function_id = \$1',
@@ -194,7 +168,7 @@ class DeploymentHandler {
         // Update function status to 'building' during deployment
         await Database.connection.execute(
           'UPDATE functions SET status = \$1 WHERE id = \$2',
-          parameters: ['building', functionId],
+          parameters: [DeploymentStatus.building.name, functionId],
         );
 
         // Log function update
@@ -370,14 +344,14 @@ class DeploymentHandler {
 
       // Return success response with deployment details
       return Response(
-        isNewFunction ? 201 : 200, // 201 for new, 200 for update
+        isFirstDeployment ? 201 : 200, // 201 for first deploy, 200 for update
         body: jsonEncode({
           'id': functionUUID,
           'name': functionName,
           'version': version,
           'deploymentId': deploymentUUId,
           'status': 'active',
-          'isNewFunction': isNewFunction,
+          'isFirstDeployment': isFirstDeployment,
           'createdAt': DateTime.now().toIso8601String(),
         }),
         headers: {'Content-Type': 'application/json'},
@@ -464,7 +438,6 @@ class DeploymentHandler {
 
     await pubspecFile.writeAsString(newYamlContent);
   }
-
 
   /// Upload entire function folder to S3
   static Future<void> _uploadFunctionFolderToS3({
