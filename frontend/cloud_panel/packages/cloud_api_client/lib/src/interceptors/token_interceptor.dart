@@ -26,10 +26,6 @@ class TokenAuthInterceptor extends QueuedInterceptor {
   // A queue of requests waiting for the new token
   final _waitingRequests = <_RequestJob>[];
 
-  // A simple class to hold the request and its handler
-  // (You might define this outside or as a private inner class)
-
-  // ... implementation of onRequest, onError, and _retry ...
   @override
   void onRequest(
       RequestOptions options, RequestInterceptorHandler handler) async {
@@ -68,15 +64,22 @@ class TokenAuthInterceptor extends QueuedInterceptor {
           await _retryAllWaitingRequests(newAccessToken);
         } catch (e) {
           // Refresh failed (e.g., token expired, invalid, or network error)
-          _handleRefreshFailure();
+          _handleRefreshFailure(e);
         } finally {
           _isRefreshing = false;
           // The queue should now be cleared by either success or failure
         }
       }
       // 4. Tell the original error handler to wait for the completer's result.
-      // The request won't complete until we call completer.complete() or completer.completeError() later.
-      return handler.resolve(await completer.future);
+      try {
+        final response = await completer.future;
+        return handler.resolve(response);
+      } catch (e) {
+        if (e is DioException) {
+          return handler.reject(e);
+        }
+        return handler.reject(DioException(requestOptions: options, error: e));
+      }
     } else {
       // Not a 401, or no refresh token, or refresh route failed (handled by _handleRefreshFailure)
       super.onError(err, handler);
@@ -102,23 +105,32 @@ class TokenAuthInterceptor extends QueuedInterceptor {
     }
   }
 
-  void _handleRefreshFailure() {
+  void _handleRefreshFailure(Object error) {
     _refreshRetryCount++;
+
+    // Fail all pending requests
+    for (var job in _waitingRequests) {
+      if (!job.completer.isCompleted) {
+        job.completer.completeError(error);
+      }
+    }
+    _waitingRequests.clear();
 
     if (_refreshRetryCount >= _maxRefreshRetries) {
       // ⚠️ CRITICAL STEP: Logout the user
       _tokenService.logout();
       _refreshRetryCount = 0;
-      // Notify the UI/App to navigate to the login screen
-      // (You'll need a way to communicate this event from the interceptor)
-
-      // You could also re-throw a specific exception here to let the original caller handle the logout/error.
     }
   }
 
   Future<void> _retryAllWaitingRequests(String newAccessToken) async {
     _refreshRetryCount = 0;
-    await Future.forEach(_waitingRequests, (job) async {
+    // We iterate a copy because we clear the list at the end
+    // (though Future.forEach iterates the iterable, it's safer to not modify while iterating if strictly standard, but _waitingRequests is List)
+    final requestsToRetry = List<_RequestJob>.from(_waitingRequests);
+    _waitingRequests.clear();
+
+    await Future.forEach(requestsToRetry, (job) async {
       try {
         job.options.headers["Authorization"] = "Bearer $newAccessToken";
         final response = await _refreshDio.fetch(job.options);
@@ -127,7 +139,6 @@ class TokenAuthInterceptor extends QueuedInterceptor {
         job.completer.completeError(e, trace);
       }
     });
-    _waitingRequests.clear(); // Clear the queue after retrying
   }
 }
 

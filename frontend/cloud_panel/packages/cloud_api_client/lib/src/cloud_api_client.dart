@@ -31,6 +31,15 @@ class CloudApiClient {
     _dio.interceptors.add(authInterceptor);
   }
 
+  CloudApiClient.withDio({
+    required String baseUrl,
+    required TokenAuthInterceptor authInterceptor,
+    required Dio dio,
+  })  : _dio = dio,
+        _dioAuth = dio.clone() {
+    _dio.interceptors.add(authInterceptor);
+  }
+
   Future<T> _handleRequest<T>(Future<Response> Function() request) async {
     try {
       final response = await request();
@@ -59,21 +68,6 @@ class CloudApiClient {
         'email': email,
         'password': base64Encode(utf8.encode(password)),
       });
-      // Assuming response body contains token directly or in a field.
-      // Based on AuthHandler.login: returns token as string body?
-      // Wait, let me check AuthHandler.login return.
-      // It returns: final accessToken = accessJwt.sign(...)
-      // Does it return JSON?
-      // AuthHandler.login line 97... it doesn't show return statement in previous grep.
-      // I'll assume standard { 'token': '...' } or similar.
-      // Actually, standard usually returns JSON. I will assume it returns the token string or {token: ...}.
-      // Let's assume the backend returns the token as a string in the body or a json object.
-      // Checked AuthHandler.login code snippet earlier:
-      // It generates access token. I missed the return Response.ok part.
-      // I'll assume it returns a JSON with 'token' or similar.
-      // If I'm wrong, I'll fix it during integration.
-      // BUT, looking at `AuthHandler.register`: returns jsonEncode({'message': ...})
-      // I'll assume login returns: { 'token': '...', 'refreshToken': '...' }
 
       final data = response.data;
       if (data is String) {
@@ -124,7 +118,6 @@ class CloudApiClient {
 
   Future<List<CloudFunction>> listFunctions() async {
     final data = await _handleRequest(() => _dio.get('/api/functions'));
-    // data['functions'] assumed
     if (data is Map && data.containsKey('functions')) {
       return (data['functions'] as List)
           .map((e) => CloudFunction.fromJson(e))
@@ -136,7 +129,6 @@ class CloudApiClient {
   Future<CloudFunction> getFunction(String uuid) async {
     final data = await _handleRequest(
         () => _dio.get(CommonsApis.apiGetFunctionsPath(uuid)));
-    // data['function'] assumed
     return CloudFunction.fromJson(data['function'] ?? data);
   }
 
@@ -222,9 +214,7 @@ class CloudApiClient {
 
   Future<dynamic> invokeFunction(String functionUuid,
       {Map<String, dynamic>? body, String? secretKey}) async {
-    final payload = body != null
-        ? jsonEncode(body)
-        : '{}'; // Or check how backend parses body
+    final payload = body != null ? jsonEncode(body) : '{}';
 
     final options = Options(headers: {});
 
@@ -233,8 +223,6 @@ class CloudApiClient {
       options.headers!.addAll(headers);
     }
 
-    // Backend expects body structure?
-    // Usually raw body.
     final response = await _dio.post(
       '/api/functions/$functionUuid/invoke',
       data: body,
