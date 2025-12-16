@@ -24,7 +24,8 @@ class TokenAuthInterceptor extends QueuedInterceptor {
 
   // A flag to ensure only one refresh request is active at a time
   bool _isRefreshing = false;
-
+// Ensure refresh token is called only once
+  Future<void>? _refreshTokenFuture;
   // A queue of requests waiting for the new token
   final _waitingRequests = <_RequestJob>[];
 
@@ -60,7 +61,12 @@ class TokenAuthInterceptor extends QueuedInterceptor {
       if (!_isRefreshing) {
         _isRefreshing = true;
         try {
-          final newAccessToken = await _performTokenRefresh(refreshToken);
+          _refreshTokenFuture ??= _performTokenRefresh(refreshToken);
+          await _refreshTokenFuture!;
+          final newAccessToken = await _tokenService.token;
+          if (newAccessToken == null) {
+            return super.onError(err, handler);
+          }
 
           // Refresh was successful, retry all queued requests
           await _retryAllWaitingRequests(newAccessToken);
@@ -75,8 +81,10 @@ class TokenAuthInterceptor extends QueuedInterceptor {
       // 4. Tell the original error handler to wait for the completer's result.
       try {
         final response = await completer.future;
+        _refreshTokenFuture = null;
         return handler.resolve(response);
       } catch (e) {
+        _refreshTokenFuture = null;
         if (e is DioException) {
           return handler.reject(e);
         }
@@ -84,11 +92,12 @@ class TokenAuthInterceptor extends QueuedInterceptor {
       }
     } else {
       // Not a 401, or no refresh token, or refresh route failed (handled by _handleRefreshFailure)
+      _refreshTokenFuture = null;
       super.onError(err, handler);
     }
   }
 
-  Future<String> _performTokenRefresh(String refreshToken) async {
+  Future<void> _performTokenRefresh(String refreshToken) async {
     // Use a separate Dio instance (`_refreshDio`) to ensure it doesn't
     // get caught in its own interceptor loop.
     final response = await _apiClient.refreshToken(
@@ -100,7 +109,6 @@ class TokenAuthInterceptor extends QueuedInterceptor {
       final newAccessToken = response.token;
       final newRefreshToken = response.refreshToken;
       await _tokenService.loginSuccess(newAccessToken, newRefreshToken);
-      return newAccessToken;
     } else {
       // If refresh endpoint returns a non-200 code
       throw AuthException('Failed to refresh token');
