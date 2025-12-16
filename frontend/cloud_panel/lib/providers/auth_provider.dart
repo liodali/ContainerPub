@@ -4,21 +4,14 @@ import 'package:flutter/widgets.dart' show debugPrint;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 class AuthState {
-  final bool isAuthenticated;
-  final String? token;
-
-  AuthState({
-    this.isAuthenticated = false,
-    this.token,
-  });
+  final bool? isAuthenticated;
+  AuthState({this.isAuthenticated});
 
   AuthState copyWith({
     bool? isAuthenticated,
-    String? token,
   }) {
     return AuthState(
-      isAuthenticated: isAuthenticated ?? this.isAuthenticated,
-      token: token ?? this.token,
+      isAuthenticated: isAuthenticated,
     );
   }
 }
@@ -26,17 +19,17 @@ class AuthState {
 class AuthNotifier extends Notifier<AuthState> {
   @override
   AuthState build() {
-    return _loadToken();
+    _loadToken();
+    return AuthState();
   }
 
-  AuthState _loadToken() {
+  Future<void> _loadToken() async {
     try {
-      final token = ref.read(tokenServiceProvider).token;
+      final token = await ref.read(tokenServiceProvider).token;
 
       if (token != null) {
-        return AuthState(
+        state = state.copyWith(
           isAuthenticated: true,
-          token: token,
         );
       }
     } catch (e, trace) {
@@ -44,7 +37,9 @@ class AuthNotifier extends Notifier<AuthState> {
       debugPrint('Error loading token: $e');
       debugPrint('Error loading token: $trace');
     }
-    return AuthState();
+    state = state.copyWith(
+      isAuthenticated: false,
+    );
   }
 
   Future<void> login(
@@ -53,13 +48,11 @@ class AuthNotifier extends Notifier<AuthState> {
     Function(Object e)? onError,
   }) async {
     try {
-      final authData = await ref
-          .read(apiAuthClientProvider)
-          .login(email, password);
-      await ref
-          .read(tokenServiceProvider)
-          .loginSuccess(authData.token, authData.refreshToken);
-      state = state.copyWith(isAuthenticated: true, token: authData.token);
+      await ref.read(authServiceProvider).login(email, password);
+
+      state = state.copyWith(
+        isAuthenticated: true,
+      );
     } catch (e, trace) {
       // Ignore error for now
       debugPrint('Error loading token: $e');
@@ -67,22 +60,30 @@ class AuthNotifier extends Notifier<AuthState> {
       onError?.call(e);
       state = state.copyWith(
         isAuthenticated: false,
-        token: null,
       );
     }
   }
 
   Future<void> logout() async {
     await ref.read(tokenServiceProvider).logout();
-    state = state.copyWith(isAuthenticated: false, token: null);
+    state = state.copyWith(
+      isAuthenticated: false,
+    );
   }
 }
 
+final authServiceProvider = Provider<AuthService>(
+  (ref) => AuthService(
+    ref.read(apiAuthClientProvider),
+    ref.read(tokenServiceProvider),
+  ),
+);
 final apiAuthClientProvider = Provider<CloudApiAuthClient>(
   (ref) => CloudApiAuthClient(
     dio: ref.read(dioProvider).clone(),
   ),
 );
+
 final tokenInterceptorProvider = Provider<TokenAuthInterceptor>(
   (ref) => TokenAuthInterceptor(
     tokenService: ref.read(tokenServiceProvider),

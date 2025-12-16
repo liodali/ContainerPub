@@ -26,6 +26,10 @@ class AuthService {
     await tokenService.loginSuccess(response.token, response.refreshToken);
   }
 
+  Future<void> register(String username, String password) async {
+    await cloudApiClient.register(username, password);
+  }
+
   Future<void> logout() async {
     await tokenService.logout();
   }

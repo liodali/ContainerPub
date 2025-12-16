@@ -1,10 +1,11 @@
+import 'package:cloud_panel/providers/api_client_provider.dart';
+import 'package:cloud_panel/providers/functions_provider.dart';
+import 'package:cloud_panel/router.dart';
+import 'package:cloud_panel/ui/component/header_with_action.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:forui/forui.dart';
 import 'package:auto_route/auto_route.dart';
-import '../../providers/functions_provider.dart';
-import '../../providers/api_client_provider.dart';
-import '../../router.dart';
 
 @RoutePage()
 class FunctionsView extends ConsumerStatefulWidget {
@@ -18,9 +19,10 @@ class _FunctionsViewState extends ConsumerState<FunctionsView> {
   void _showCreateDialog(BuildContext context) {
     showDialog(
       context: context,
+
       builder: (context) => Dialog(
         backgroundColor: Colors.transparent,
-        child: Container(
+        child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 400),
           child: const CreateFunctionCard(),
         ),
@@ -34,28 +36,15 @@ class _FunctionsViewState extends ConsumerState<FunctionsView> {
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
+      spacing: 24,
       children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            const Text(
-              'Functions',
-              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-            ),
-            FButton(
-              onPress: () => _showCreateDialog(context),
-              child: const Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.add, size: 16),
-                  SizedBox(width: 8),
-                  Text('Create'),
-                ],
-              ),
-            ),
-          ],
+        HeaderWithAction(
+          title: 'Functions',
+          onActionPress: () => _showCreateDialog(context),
+          hideAction:
+              functionsAsync.hasValue && functionsAsync.value?.isEmpty == true,
         ),
-        const SizedBox(height: 24),
+
         Expanded(
           child: functionsAsync.when(
             data: (functions) {
@@ -72,7 +61,10 @@ class _FunctionsViewState extends ConsumerState<FunctionsView> {
                   return FTappable(
                     onPress: () {
                       context.router.push(
-                        FunctionDetailsRoute(uuid: func.uuid, name: func.name),
+                        FunctionDetailsRoute(
+                          uuid: func.uuid,
+                          name: func.name,
+                        ),
                       );
                     },
                     child: FCard(
@@ -91,12 +83,12 @@ class _FunctionsViewState extends ConsumerState<FunctionsView> {
                 },
               );
             },
-            loading: () => const Center(child: CircularProgressIndicator()),
+            loading: () => const Center(child: FCircularProgress()),
             error: (err, stack) => Center(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text('Error: $err'),
+                  Text('Opps!Error to Load Functions'),
                   const SizedBox(height: 16),
                   FButton(
                     onPress: () => ref.refresh(functionsProvider),
@@ -137,7 +129,11 @@ class _CreateFunctionCardState extends ConsumerState<CreateFunctionCard> {
         // It should work.
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('Error: $e')));
+        ).showSnackBar(
+          SnackBar(
+            content: Text('Opps!Error to Create Function'),
+          ),
+        );
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -161,8 +157,8 @@ class _CreateFunctionCardState extends ConsumerState<CreateFunctionCard> {
           Row(
             mainAxisAlignment: MainAxisAlignment.end,
             children: [
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(),
+              FButton.raw(
+                onPress: () => Navigator.of(context).pop(),
                 child: const Text('Cancel'),
               ),
               const SizedBox(width: 8),
@@ -194,16 +190,21 @@ class FunctionsEmptyWidget extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Icon(Icons.code, size: 48, color: Colors.grey),
-          const SizedBox(height: 16),
-          const Text(
-            'No functions found',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
+          const Icon(
+            Icons.code,
+            size: 48,
+            color: Colors.grey,
+          ),
+          Padding(
+            padding: const EdgeInsets.only(top: 16, bottom: 8),
+            child: const Text(
+              'No functions found',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
             ),
           ),
-          const SizedBox(height: 8),
           const Text(
             'Create your first function to get started',
             style: TextStyle(color: Colors.grey),
@@ -211,6 +212,8 @@ class FunctionsEmptyWidget extends StatelessWidget {
           const SizedBox(height: 24),
           FButton(
             onPress: () => openCreateDialog(context),
+            style: FButtonStyle.primary(),
+            mainAxisSize: MainAxisSize.min,
             child: const Text('Create Function'),
           ),
         ],

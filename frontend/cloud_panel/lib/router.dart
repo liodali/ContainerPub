@@ -23,9 +23,13 @@ class AppRouter extends RootStackRouter {
       page: DashboardRoute.page,
       path: '/dashboard',
       initial: true,
-      guards: [AuthGuard(() => ref.read(authProvider).isAuthenticated)],
+      guards: [AuthGuard(() => ref.read(authProvider).isAuthenticated == true)],
       children: [
-        AutoRoute(page: OverviewRoute.page, path: 'overview', initial: true),
+        AutoRoute(
+          page: OverviewRoute.page,
+          path: 'overview',
+          initial: true,
+        ),
         AutoRoute(
           page: FunctionsRoute.page,
           path: 'functions',
@@ -119,7 +123,10 @@ class FunctionDetailsRoute extends PageRouteInfo<FunctionDetailsRouteArgs> {
     List<PageRouteInfo>? children,
   }) : super(
          FunctionDetailsRoute.name,
-         args: FunctionDetailsRouteArgs(uuid: uuid, name: name),
+         args: FunctionDetailsRouteArgs(
+           uuid: uuid,
+           name: name,
+         ),
          initialChildren: children,
          rawPathParams: {'name': name},
        );

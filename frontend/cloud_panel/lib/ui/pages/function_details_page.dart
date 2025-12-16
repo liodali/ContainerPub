@@ -36,97 +36,70 @@ class _FunctionDetailsPageState extends ConsumerState<FunctionDetailsPage>
     final funcAsync = ref.watch(functionDetailsProvider(widget.uuid));
 
     return FScaffold(
-      child: Column(
-        children: [
-          // Header Row
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Row(
-                  children: [
-                    IconButton(
-                      icon: const Icon(Icons.arrow_back),
-                      onPressed: () => Navigator.pop(context),
-                    ),
-                    const SizedBox(width: 8),
-                    const Text(
-                      'Function Details',
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ],
-                ),
-                FButton(
-                  // style: FButtonStyle.outline,
-                  onPress: () =>
-                      ref.refresh(functionDetailsProvider(widget.uuid)),
-                  child: const Icon(Icons.refresh, size: 16),
-                ),
-              ],
+      header: FHeader(
+        title: Row(
+          children: [
+            FButton.raw(
+              onPress: () => Navigator.pop(context),
+              child: const Icon(Icons.arrow_back),
             ),
-          ),
-          Expanded(
-            child: funcAsync.when(
-              data: (func) => Column(
+            Expanded(
+              child: Column(
                 children: [
-                  Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 8,
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        Text(
-                          func.name,
-                          style: const TextStyle(
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold,
-                          ),
+                  Row(
+                    children: [
+                      Text(
+                        widget.name,
+                        style: context.theme.typography.lg.copyWith(
+                          fontSize: 20,
                         ),
-                        const SizedBox(height: 8),
-                        SelectableText('UUID: ${func.uuid}'),
-                        const SizedBox(height: 4),
-                        Text('Status: ${func.status}'),
-                        if (func.endpoint != null) ...[
-                          const SizedBox(height: 4),
-                          SelectableText('Endpoint: ${func.endpoint}'),
-                        ],
-                      ],
-                    ),
-                  ),
-                  TabBar(
-                    controller: _tabController,
-                    tabs: const [
-                      Tab(text: 'Overview'),
-                      Tab(text: 'Deployments'),
-                      Tab(text: 'API Keys'),
-                      Tab(text: 'Invoke'),
+                      ),
+                      Text(
+                        '(${funcAsync.value?.status})',
+                        style: context.theme.typography.xs.copyWith(
+                          fontSize: 12,
+                        ),
+                      ),
                     ],
-                    labelColor: Colors.black,
                   ),
-                  Expanded(
-                    child: TabBarView(
-                      controller: _tabController,
-                      children: [
-                        _OverviewTab(func: func),
-                        _DeploymentsTab(uuid: func.uuid),
-                        _ApiKeysTab(uuid: func.uuid),
-                        _InvokeTab(uuid: func.uuid),
-                      ],
-                    ),
+                  SelectableText(
+                    widget.uuid,
+                    style: context.theme.typography.xs.copyWith(fontSize: 12),
                   ),
                 ],
               ),
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (err, stack) => Center(child: Text('Error: $err')),
             ),
-          ),
-        ],
+          ],
+        ),
+      ),
+      child: funcAsync.when(
+        data: (func) => Column(
+          children: [
+            TabBar(
+              controller: _tabController,
+              tabs: const [
+                Tab(text: 'Overview'),
+                Tab(text: 'Deployments'),
+                Tab(text: 'API Keys'),
+                Tab(text: 'Invoke'),
+              ],
+              labelColor: Colors.black,
+            ),
+            Expanded(
+              child: TabBarView(
+                controller: _tabController,
+                children: [
+                  _OverviewTab(func: func),
+                  _DeploymentsTab(uuid: func.uuid),
+                  _ApiKeysTab(uuid: func.uuid),
+                  _InvokeTab(uuid: func.uuid),
+                ],
+              ),
+            ),
+          ],
+        ),
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (err, stack) => Center(child: Text('Error: $err')),
       ),
     );
   }
@@ -192,7 +165,12 @@ class _DeploymentsTab extends ConsumerWidget {
     String depUuid,
   ) async {
     try {
-      await ref.read(apiClientProvider).rollbackFunction(funcUuid, depUuid);
+      await ref
+          .read(apiClientProvider)
+          .rollbackFunction(
+            funcUuid,
+            depUuid,
+          );
       if (context.mounted) {
         ScaffoldMessenger.of(
           context,

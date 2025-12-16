@@ -12,10 +12,10 @@ class FakeTokenService implements TokenService {
   Future<void> init() async {}
 
   @override
-  String get token => _accessToken!;
+  Future<String?> get token async => _accessToken;
 
   @override
-  String? get refreshToken => _refreshToken;
+  Future<String?> get refreshToken async => _refreshToken;
 
   @override
   Future<void> loginSuccess(String token, String refreshToken) async {

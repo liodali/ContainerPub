@@ -9,26 +9,26 @@ class TokenService {
     return _authService!;
   }
 
-  static Box? _authBox;
+  static LazyBox? _authBox;
 
   Future<void> init() async {
     if (!Hive.isBoxOpen('auth')) {
-      _authBox = await Hive.openBox('auth');
+      _authBox = await Hive.openLazyBox('auth');
     }
   }
 
-  String? get token {
+  Future<String?> get token async {
     try {
-      return _authBox?.get('token');
+      return await _authBox?.get('token');
     } catch (e) {
       // Ignore error for now
       return null;
     }
   }
 
-  String? get refreshToken {
+    Future<String?> get refreshToken async {
     try {
-      return _authBox?.get('refreshToken');
+      return await _authBox?.get('refreshToken');
     } catch (e) {
       // Ignore error for now
       return null;

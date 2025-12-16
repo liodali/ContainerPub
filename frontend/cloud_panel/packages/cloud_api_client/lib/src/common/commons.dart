@@ -10,8 +10,7 @@ class CommonsApis {
 
   ///functions
   static const String apiFunctionsPath = '${CommonsApis.apiBaseUrl}/functions';
-  static const String apiFunctionLitsPath =
-      '${CommonsApis.apiFunctionsPath}/list';
+  static const String apiFunctionLitsPath = CommonsApis.apiFunctionsPath;
   static const String apiCreateFunctionPath =
       '${CommonsApis.apiFunctionsPath}/init';
   static String apiGetDeploymentsPath(String uuid) =>

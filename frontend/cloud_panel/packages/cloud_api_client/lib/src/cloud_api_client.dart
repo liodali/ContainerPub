@@ -8,19 +8,10 @@ import 'exceptions.dart';
 
 class CloudApiClient {
   final Dio _dio;
-  final Dio _dioAuth;
   CloudApiClient({
     required String baseUrl,
     required TokenAuthInterceptor authInterceptor,
-  })  : _dio = Dio(
-          BaseOptions(
-            baseUrl: baseUrl,
-            headers: {
-              'Content-Type': 'application/json',
-            },
-          ),
-        ),
-        _dioAuth = Dio(
+  }) : _dio = Dio(
           BaseOptions(
             baseUrl: baseUrl,
             headers: {
@@ -35,8 +26,7 @@ class CloudApiClient {
     required String baseUrl,
     required TokenAuthInterceptor authInterceptor,
     required Dio dio,
-  })  : _dio = dio,
-        _dioAuth = dio.clone() {
+  }) : _dio = dio {
     _dio.interceptors.add(authInterceptor);
   }
 
@@ -59,69 +49,13 @@ class CloudApiClient {
     }
   }
 
-  // --- Auth ---
-
-  Future<({String token, String refreshToken})> login(
-      String email, String password) async {
-    try {
-      final response = await _dioAuth.post('/api/auth/login', data: {
-        'email': email,
-        'password': base64Encode(utf8.encode(password)),
-      });
-
-      final data = response.data;
-      if (data is String) {
-        throw CloudApiException('Login failed: token is not a JSON object');
-      }
-      return (
-        token: data['accessToken'] as String,
-        refreshToken: data['refreshToken'] as String,
-      );
-    } on DioException catch (e) {
-      throw CloudApiException(e.response?.data['error'] ?? 'Login failed');
-    }
-  }
-
-  Future<void> register(String email, String password) async {
-    await _handleRequest(
-      () => _dioAuth.post(
-        '/api/auth/register',
-        data: {
-          'email': email,
-          'password': password,
-        },
-      ),
-    );
-  }
-
-  Future<({String token, String refreshToken})?> refreshToken({
-    required String refreshToken,
-  }) async {
-    final data = await _handleRequest(
-      () => _dioAuth.post(
-        CommonsApis.apiRefreshTokenPath,
-        data: {
-          'refreshToken': refreshToken,
-        },
-      ),
-    );
-    if (data is Map && data.containsKey('accessToken')) {
-      return (
-        token: data['accessToken'] as String,
-        refreshToken: data['refreshToken'] as String,
-      );
-    }
-    return null;
-  }
-
   // --- Functions ---
 
   Future<List<CloudFunction>> listFunctions() async {
-    final data = await _handleRequest(() => _dio.get('/api/functions'));
-    if (data is Map && data.containsKey('functions')) {
-      return (data['functions'] as List)
-          .map((e) => CloudFunction.fromJson(e))
-          .toList();
+    final data =
+        await _handleRequest(() => _dio.get(CommonsApis.apiFunctionLitsPath));
+    if (data is List) {
+      return data.map((e) => CloudFunction.fromJson(e)).toList();
     }
     return [];
   }

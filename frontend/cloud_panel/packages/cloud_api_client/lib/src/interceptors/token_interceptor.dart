@@ -31,7 +31,7 @@ class TokenAuthInterceptor extends QueuedInterceptor {
   @override
   void onRequest(
       RequestOptions options, RequestInterceptorHandler handler) async {
-    final accessToken = _tokenService.token;
+    final accessToken = await _tokenService.token;
 
     if (accessToken != null && !options.headers.containsKey("Authorization")) {
       options.headers["Authorization"] = "Bearer $accessToken";
@@ -43,8 +43,8 @@ class TokenAuthInterceptor extends QueuedInterceptor {
   void onError(DioException err, ErrorInterceptorHandler handler) async {
     // 1. Check if the error is 401 and if we have a refresh token
 
-    final refreshToken = _tokenService.refreshToken;
-    if (err.response?.statusCode == 401 &&
+    final refreshToken = await _tokenService.refreshToken;
+    if ((err.response?.statusCode == 401 || err.response?.statusCode == 403) &&
         refreshToken != null &&
         err.requestOptions.path != CommonsApis.apiRefreshTokenPath) {
       // Avoid infinite loop

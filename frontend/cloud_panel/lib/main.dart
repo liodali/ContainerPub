@@ -44,14 +44,15 @@ class _MyAppState extends ConsumerState<MyApp> {
 
   @override
   Widget build(BuildContext context) {
+    final isInitialized = ref.watch(authProvider).isAuthenticated;
     ref.listen(authProvider, (previous, next) {
-      if (next.isAuthenticated) {
+      if (next.isAuthenticated == true) {
         _appRouter.replaceAll(
           [
             const DashboardRoute(),
           ],
         );
-      } else {
+      } else if (next.isAuthenticated == false) {
         _appRouter.replaceAll(
           [
             const LoginRoute(),
@@ -59,7 +60,16 @@ class _MyAppState extends ConsumerState<MyApp> {
         );
       }
     });
-
+    if (isInitialized == null) {
+      return FTheme(
+        data: widget.theme,
+        child: FScaffold(
+          child: Center(
+            child: FCircularProgress(),
+          ),
+        ),
+      );
+    }
     return MaterialApp.router(
       title: 'Cloud Panel',
       builder: (context, child) => FTheme(
