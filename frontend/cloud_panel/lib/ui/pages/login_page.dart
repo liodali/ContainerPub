@@ -26,12 +26,13 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     });
 
     try {
-      final client = ref.read(apiClientProvider);
-      final token = await client.login(
-        _emailController.text,
-        _passwordController.text,
-      );
-      await ref.read(authProvider.notifier).loginSuccess(token);
+      await ref
+          .read(authProvider.notifier)
+          .login(
+            _emailController.text,
+            _passwordController.text,
+            onError: (e) => setState(() => _error = e.toString()),
+          );
       // Navigation is handled by auth state listener in main.dart
     } catch (e) {
       setState(() => _error = e.toString());

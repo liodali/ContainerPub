@@ -1,4 +1,6 @@
 import 'dart:convert';
+import 'package:cloud_api_client/src/common/commons.dart';
+import 'package:cloud_api_client/src/interceptors/token_interceptor.dart';
 import 'package:crypto/crypto.dart';
 import 'package:dio/dio.dart';
 import 'models/models.dart';
@@ -6,30 +8,27 @@ import 'exceptions.dart';
 
 class CloudApiClient {
   final Dio _dio;
-  String? _token;
-
+  final Dio _dioAuth;
   CloudApiClient({
     required String baseUrl,
-    String? token,
-  }) : _dio = Dio(BaseOptions(
-          baseUrl: baseUrl,
-          headers: {
-            'Content-Type': 'application/json',
-          },
-        )) {
-    if (token != null) {
-      setToken(token);
-    }
-  }
-
-  void setToken(String token) {
-    _token = token;
-    _dio.options.headers['Authorization'] = 'Bearer $token';
-  }
-
-  void clearToken() {
-    _token = null;
-    _dio.options.headers.remove('Authorization');
+    required TokenAuthInterceptor authInterceptor,
+  })  : _dio = Dio(
+          BaseOptions(
+            baseUrl: baseUrl,
+            headers: {
+              'Content-Type': 'application/json',
+            },
+          ),
+        ),
+        _dioAuth = Dio(
+          BaseOptions(
+            baseUrl: baseUrl,
+            headers: {
+              'Content-Type': 'application/json',
+            },
+          ),
+        ) {
+    _dio.interceptors.add(authInterceptor);
   }
 
   Future<T> _handleRequest<T>(Future<Response> Function() request) async {
@@ -53,9 +52,10 @@ class CloudApiClient {
 
   // --- Auth ---
 
-  Future<String> login(String email, String password) async {
+  Future<({String token, String refreshToken})> login(
+      String email, String password) async {
     try {
-      final response = await _dio.post('/api/auth/login', data: {
+      final response = await _dioAuth.post('/api/auth/login', data: {
         'email': email,
         'password': base64Encode(utf8.encode(password)),
       });
@@ -76,18 +76,48 @@ class CloudApiClient {
       // I'll assume login returns: { 'token': '...', 'refreshToken': '...' }
 
       final data = response.data;
-      if (data is String) return data; // If plain string
-      return data['token'] ?? data['accessToken'];
+      if (data is String) {
+        throw CloudApiException('Login failed: token is not a JSON object');
+      }
+      return (
+        token: data['accessToken'] as String,
+        refreshToken: data['refreshToken'] as String,
+      );
     } on DioException catch (e) {
       throw CloudApiException(e.response?.data['error'] ?? 'Login failed');
     }
   }
 
   Future<void> register(String email, String password) async {
-    await _handleRequest(() => _dio.post('/api/auth/register', data: {
+    await _handleRequest(
+      () => _dioAuth.post(
+        '/api/auth/register',
+        data: {
           'email': email,
           'password': password,
-        }));
+        },
+      ),
+    );
+  }
+
+  Future<({String token, String refreshToken})?> refreshToken({
+    required String refreshToken,
+  }) async {
+    final data = await _handleRequest(
+      () => _dioAuth.post(
+        CommonsApis.apiRefreshTokenPath,
+        data: {
+          'refreshToken': refreshToken,
+        },
+      ),
+    );
+    if (data is Map && data.containsKey('accessToken')) {
+      return (
+        token: data['accessToken'] as String,
+        refreshToken: data['refreshToken'] as String,
+      );
+    }
+    return null;
   }
 
   // --- Functions ---
@@ -104,28 +134,30 @@ class CloudApiClient {
   }
 
   Future<CloudFunction> getFunction(String uuid) async {
-    final data = await _handleRequest(() => _dio.get('/api/functions/$uuid'));
+    final data = await _handleRequest(
+        () => _dio.get(CommonsApis.apiGetFunctionsPath(uuid)));
     // data['function'] assumed
     return CloudFunction.fromJson(data['function'] ?? data);
   }
 
   Future<CloudFunction> createFunction(String name) async {
-    final data =
-        await _handleRequest(() => _dio.post('/api/functions/init', data: {
+    final data = await _handleRequest(
+        () => _dio.post(CommonsApis.apiCreateFunctionPath, data: {
               'name': name,
             }));
     return CloudFunction.fromJson(data['function'] ?? data);
   }
 
   Future<void> deleteFunction(String uuid) async {
-    await _handleRequest(() => _dio.delete('/api/functions/$uuid'));
+    await _handleRequest(
+        () => _dio.delete(CommonsApis.apiDeleteFunctionPath(uuid)));
   }
 
   // --- Deployments ---
 
   Future<List<FunctionDeployment>> getDeployments(String functionUuid) async {
     final data = await _handleRequest(
-        () => _dio.get('/api/functions/$functionUuid/deployments'));
+        () => _dio.get(CommonsApis.apiGetDeploymentsPath(functionUuid)));
     if (data is Map && data.containsKey('deployments')) {
       return (data['deployments'] as List)
           .map((e) => FunctionDeployment.fromJson(e))
@@ -137,9 +169,13 @@ class CloudApiClient {
   Future<void> rollbackFunction(
       String functionUuid, String deploymentUuid) async {
     await _handleRequest(
-        () => _dio.post('/api/functions/$functionUuid/rollback', data: {
-              'deployment_uuid': deploymentUuid,
-            }));
+      () => _dio.post(
+        CommonsApis.apiRollbackFunctionPath(functionUuid),
+        data: {
+          'deployment_uuid': deploymentUuid,
+        },
+      ),
+    );
   }
 
   // --- API Keys ---
@@ -206,4 +242,8 @@ class CloudApiClient {
     );
     return response.data;
   }
+}
+
+extension DioAPIClient on CloudApiClient {
+  Dio get refreshDio => _dio;
 }

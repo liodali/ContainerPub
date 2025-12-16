@@ -152,8 +152,11 @@ class _DeploymentsTab extends ConsumerWidget {
 
     return deploymentsAsync.when(
       data: (deployments) {
-        if (deployments.isEmpty)
-          return const Center(child: Text('No deployments'));
+        if (deployments.isEmpty) {
+          return const Center(
+            child: Text('No deployments'),
+          );
+        }
         return ListView.separated(
           itemCount: deployments.length,
           padding: const EdgeInsets.all(16),
@@ -190,16 +193,26 @@ class _DeploymentsTab extends ConsumerWidget {
   ) async {
     try {
       await ref.read(apiClientProvider).rollbackFunction(funcUuid, depUuid);
-      if (context.mounted)
+      if (context.mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(const SnackBar(content: Text('Rollback initiated')));
-      ref.refresh(functionDeploymentsProvider(funcUuid));
+        ).showSnackBar(
+          const SnackBar(
+            content: Text('Rollback initiated'),
+          ),
+        );
+      }
+      ref.invalidate(functionDeploymentsProvider(funcUuid));
     } catch (e) {
-      if (context.mounted)
+      if (context.mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('Error: $e')));
+        ).showSnackBar(
+          SnackBar(
+            content: Text('Error: $e'),
+          ),
+        );
+      }
     }
   }
 }
@@ -269,18 +282,17 @@ class _ApiKeysTab extends ConsumerWidget {
             title: const Text('API Key Generated'),
             content: Column(
               mainAxisSize: MainAxisSize.min,
+              spacing: 10,
               children: [
                 const Text(
                   'Please copy your secret key. It will not be shown again.',
                 ),
-                const SizedBox(height: 10),
                 SelectableText(
                   result.secretKey,
                   style: const TextStyle(fontWeight: FontWeight.bold),
                 ),
-                const SizedBox(height: 10),
-                ElevatedButton(
-                  onPressed: () {
+                FButton(
+                  onPress: () {
                     Clipboard.setData(ClipboardData(text: result.secretKey));
                     ScaffoldMessenger.of(
                       ctx,
@@ -291,20 +303,26 @@ class _ApiKeysTab extends ConsumerWidget {
               ],
             ),
             actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(ctx),
+              FButton(
+                onPress: () => Navigator.pop(ctx),
+                style: FButtonStyle.ghost(),
                 child: const Text('Close'),
               ),
             ],
           ),
         );
       }
-      ref.refresh(functionApiKeysProvider(uuid));
+      ref.invalidate(functionApiKeysProvider(uuid));
     } catch (e) {
-      if (context.mounted)
+      if (context.mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('Error: $e')));
+        ).showSnackBar(
+          SnackBar(
+            content: Text('Error: $e'),
+          ),
+        );
+      }
     }
   }
 
@@ -315,12 +333,17 @@ class _ApiKeysTab extends ConsumerWidget {
   ) async {
     try {
       await ref.read(apiClientProvider).revokeApiKey(keyUuid);
-      ref.refresh(functionApiKeysProvider(uuid));
+      ref.invalidate(functionApiKeysProvider(uuid));
     } catch (e) {
-      if (context.mounted)
+      if (context.mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('Error: $e')));
+        ).showSnackBar(
+          SnackBar(
+            content: Text('Error: $e'),
+          ),
+        );
+      }
     }
   }
 }

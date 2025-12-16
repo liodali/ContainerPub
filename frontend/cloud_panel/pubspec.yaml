@@ -36,10 +36,11 @@ dependencies:
   forui_assets: ^0.16.0
   flutter_riverpod: ^3.0.3
   hive_ce: ^2.15.1
-  hive_ce_flutter: ^2.0.0
+  hive_ce_flutter: ^2.3.3
   intl: ^0.20.0
   dio: ^5.0.0
   auto_route: ^11.0.0
+  auto_size_text: ^3.0.0
   cloud_api_client:
     path: packages/cloud_api_client
 
