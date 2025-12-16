@@ -21,8 +21,8 @@ class _FunctionsViewState extends ConsumerState<FunctionsView> {
       builder: (context) => Dialog(
         backgroundColor: Colors.transparent,
         child: Container(
-           constraints: const BoxConstraints(maxWidth: 400),
-           child: const CreateFunctionCard(),
+          constraints: const BoxConstraints(maxWidth: 400),
+          child: const CreateFunctionCard(),
         ),
       ),
     );
@@ -38,7 +38,10 @@ class _FunctionsViewState extends ConsumerState<FunctionsView> {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            const Text('Functions', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+            const Text(
+              'Functions',
+              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+            ),
             FButton(
               onPress: () => _showCreateDialog(context),
               child: const Row(
@@ -78,11 +81,15 @@ class _FunctionsViewState extends ConsumerState<FunctionsView> {
                   final func = functions[index];
                   return FTappable(
                     onPress: () {
-                      context.router.push(FunctionDetailsRoute(uuid: func.uuid, name: func.name));
+                      context.router.push(
+                        FunctionDetailsRoute(uuid: func.uuid, name: func.name),
+                      );
                     },
                     child: FCard(
                       title: Text(func.name),
-                      subtitle: Text('Status: ${func.status} • UUID: ${func.uuid}'),
+                      subtitle: Text(
+                        'Status: ${func.status} • UUID: ${func.uuid}',
+                      ),
                       child: const Row(
                         mainAxisAlignment: MainAxisAlignment.end,
                         children: [
@@ -138,7 +145,9 @@ class _CreateFunctionCardState extends ConsumerState<CreateFunctionCard> {
       if (mounted) {
         // Since we are in a dialog, snackbar might show behind or on parent scaffold.
         // It should work.
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error: $e')));
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -169,7 +178,9 @@ class _CreateFunctionCardState extends ConsumerState<CreateFunctionCard> {
               const SizedBox(width: 8),
               FButton(
                 onPress: _isLoading ? null : _create,
-                child: _isLoading ? const Text('Creating...') : const Text('Create'),
+                child: _isLoading
+                    ? const Text('Creating...')
+                    : const Text('Create'),
               ),
             ],
           ),
