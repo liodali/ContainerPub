@@ -40,7 +40,7 @@ class MyApp extends ConsumerStatefulWidget {
 }
 
 class _MyAppState extends ConsumerState<MyApp> {
-  final _appRouter = AppRouter();
+  late final _appRouter = AppRouter(ref);
 
   @override
   Widget build(BuildContext context) {

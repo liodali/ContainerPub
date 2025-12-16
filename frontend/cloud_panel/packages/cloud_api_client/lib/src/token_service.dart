@@ -17,18 +17,18 @@ class TokenService {
     }
   }
 
-  Future<String?> get token async {
+  String? get token {
     try {
-      return await _authBox?.get('token');
+      return _authBox?.get('token');
     } catch (e) {
       // Ignore error for now
       return null;
     }
   }
 
-  Future<String?> get refreshToken async {
+  String? get refreshToken {
     try {
-      return await _authBox?.get('refreshToken');
+      return _authBox?.get('refreshToken');
     } catch (e) {
       // Ignore error for now
       return null;

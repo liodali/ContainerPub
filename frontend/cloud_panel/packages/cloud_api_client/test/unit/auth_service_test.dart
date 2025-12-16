@@ -39,8 +39,8 @@ void main() {
 
       await authService.login(email, password);
 
-      expect(await tokenService.token, 'access-token');
-      expect(await tokenService.refreshToken, 'refresh-token');
+      expect(tokenService.token, 'access-token');
+      expect(tokenService.refreshToken, 'refresh-token');
     });
 
     test('login failure throws CloudApiException', () async {
@@ -57,15 +57,15 @@ void main() {
         throwsA(isA<CloudApiException>()),
       );
 
-      expect(await tokenService.token, isNull);
+      expect(tokenService.token, isNull);
     });
 
     test('logout clears tokens', () async {
       await tokenService.loginSuccess('token', 'refresh');
       await authService.logout();
 
-      expect(await tokenService.token, isNull);
-      expect(await tokenService.refreshToken, isNull);
+      expect(tokenService.token, isNull);
+      expect(tokenService.refreshToken, isNull);
     });
   });
 

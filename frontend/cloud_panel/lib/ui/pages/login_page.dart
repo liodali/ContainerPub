@@ -1,9 +1,8 @@
+import 'package:cloud_panel/providers/auth_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:forui/forui.dart';
 import 'package:auto_route/auto_route.dart';
-import '../../providers/auth_provider.dart';
-import '../../providers/api_client_provider.dart';
 
 @RoutePage()
 class LoginPage extends ConsumerStatefulWidget {
@@ -62,18 +61,18 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                   ),
                   child: Center(
                     child: Text(
-                      'D',
+                      'CP',
                       style: TextStyle(
                         color: context.theme.colors.primaryForeground,
                         fontWeight: FontWeight.bold,
-                        fontSize: 32,
+                        fontSize: 24,
                       ),
                     ),
                   ),
                 ),
                 const SizedBox(height: 16),
                 const Text(
-                  'Dart Cloud',
+                  'ContainerPub',
                   style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 32),

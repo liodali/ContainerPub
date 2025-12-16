@@ -10,9 +10,9 @@ class CloudApiException implements Exception {
 }
 
 class AuthException extends CloudApiException {
-  AuthException(String message) : super(message, statusCode: 401);
+  AuthException(super.message) : super(statusCode: 401);
 }
 
 class NotFoundException extends CloudApiException {
-  NotFoundException(String message) : super(message, statusCode: 404);
+  NotFoundException(super.message) : super(statusCode: 404);
 }

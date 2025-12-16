@@ -94,7 +94,7 @@ void main() {
     final response = await mainDio.get('/test-refresh');
 
     expect(response.data['data'], 'success');
-    expect(await tokenService.token, 'new-access-token');
+    expect(tokenService.token, 'new-access-token');
     expect(callCount,
         1); // 1 failure + 1 success (handled by adapter internal logic? No, retry calls adapter again)
     // Wait, retry calls fetch again. So adapter lambda runs again.
@@ -125,7 +125,7 @@ void main() {
       }
     }
 
-    expect(await tokenService.token, isNull); // Should be logged out
+    expect(tokenService.token, isNull); // Should be logged out
   });
 
   test('Interceptor queues concurrent requests during refresh', () async {
@@ -174,6 +174,6 @@ void main() {
 
     expect(results[0].data['id'], 1);
     expect(results[1].data['id'], 2);
-    expect(await tokenService.token, 'new-access-token');
+    expect(tokenService.token, 'new-access-token');
   });
 }

@@ -160,7 +160,7 @@ class _DeploymentsTab extends ConsumerWidget {
         return ListView.separated(
           itemCount: deployments.length,
           padding: const EdgeInsets.all(16),
-          separatorBuilder: (_, __) => const SizedBox(height: 12),
+          separatorBuilder: (_, _) => const SizedBox(height: 12),
           itemBuilder: (context, index) {
             final dep = deployments[index];
             return FCard(
@@ -241,7 +241,7 @@ class _ApiKeysTab extends ConsumerWidget {
               return ListView.separated(
                 itemCount: keys.length,
                 padding: const EdgeInsets.symmetric(horizontal: 16),
-                separatorBuilder: (_, __) => const SizedBox(height: 12),
+                separatorBuilder: (_, _) => const SizedBox(height: 12),
                 itemBuilder: (context, index) {
                   final key = keys[index];
                   return FCard(
@@ -454,9 +454,11 @@ class _InvokeTabState extends ConsumerState<_InvokeTab> {
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
                 color: _isError
-                    ? Colors.red.withOpacity(0.1)
-                    : Colors.green.withOpacity(0.1),
-                border: Border.all(color: _isError ? Colors.red : Colors.green),
+                    ? Colors.red.withValues(alpha: 0.1)
+                    : Colors.green.withValues(alpha: 0.1),
+                border: Border.all(
+                  color: _isError ? Colors.red : Colors.green,
+                ),
                 borderRadius: BorderRadius.circular(4),
               ),
               child: SelectableText(_response!),

@@ -60,23 +60,13 @@ class _FunctionsViewState extends ConsumerState<FunctionsView> {
           child: functionsAsync.when(
             data: (functions) {
               if (functions.isEmpty) {
-                return Center(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Text('No functions found'),
-                      const SizedBox(height: 16),
-                      FButton(
-                        onPress: () => _showCreateDialog(context),
-                        child: const Text('Create your first function'),
-                      ),
-                    ],
-                  ),
+                return FunctionsEmptyWidget(
+                  openCreateDialog: _showCreateDialog,
                 );
               }
               return ListView.separated(
                 itemCount: functions.length,
-                separatorBuilder: (_, __) => const SizedBox(height: 12),
+                separatorBuilder: (_, _) => const SizedBox(height: 12),
                 itemBuilder: (context, index) {
                   final func = functions[index];
                   return FTappable(
@@ -183,6 +173,45 @@ class _CreateFunctionCardState extends ConsumerState<CreateFunctionCard> {
                     : const Text('Create'),
               ),
             ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class FunctionsEmptyWidget extends StatelessWidget {
+  const FunctionsEmptyWidget({
+    super.key,
+    required this.openCreateDialog,
+  });
+
+  final Function(BuildContext) openCreateDialog;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Icon(Icons.code, size: 48, color: Colors.grey),
+          const SizedBox(height: 16),
+          const Text(
+            'No functions found',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            'Create your first function to get started',
+            style: TextStyle(color: Colors.grey),
+          ),
+          const SizedBox(height: 24),
+          FButton(
+            onPress: () => openCreateDialog(context),
+            child: const Text('Create Function'),
           ),
         ],
       ),

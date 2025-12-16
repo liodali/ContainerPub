@@ -26,16 +26,15 @@ class AuthState {
 class AuthNotifier extends Notifier<AuthState> {
   @override
   AuthState build() {
-    _loadToken();
-    return AuthState();
+    return _loadToken();
   }
 
-  Future<void> _loadToken() async {
+  AuthState _loadToken() {
     try {
-      final token = await ref.read(tokenServiceProvider).token;
+      final token = ref.read(tokenServiceProvider).token;
 
       if (token != null) {
-        state = state.copyWith(
+        return AuthState(
           isAuthenticated: true,
           token: token,
         );
@@ -45,6 +44,7 @@ class AuthNotifier extends Notifier<AuthState> {
       debugPrint('Error loading token: $e');
       debugPrint('Error loading token: $trace');
     }
+    return AuthState();
   }
 
   Future<void> login(
@@ -88,6 +88,7 @@ final tokenInterceptorProvider = Provider<TokenAuthInterceptor>(
     tokenService: ref.read(tokenServiceProvider),
     apiAuthClient: ref.read(apiAuthClientProvider),
     refreshDio: ref.read(dioProvider).clone(),
+    onLogout: () => ref.read(authProvider.notifier).logout(),
   ),
 );
 final tokenServiceProvider = Provider<TokenService>(

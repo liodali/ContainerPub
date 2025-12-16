@@ -9,6 +9,7 @@ class TokenAuthInterceptor extends QueuedInterceptor {
   final TokenService _tokenService;
   final CloudApiAuthClient _apiClient;
   final Dio _refreshDio;
+  final void Function()? onLogout;
   int _refreshRetryCount = 0;
   final int _maxRefreshRetries = 3;
 
@@ -16,6 +17,7 @@ class TokenAuthInterceptor extends QueuedInterceptor {
     required TokenService tokenService,
     required CloudApiAuthClient apiAuthClient,
     required Dio refreshDio,
+    this.onLogout,
   })  : _tokenService = tokenService,
         _apiClient = apiAuthClient,
         _refreshDio = refreshDio;
@@ -29,7 +31,7 @@ class TokenAuthInterceptor extends QueuedInterceptor {
   @override
   void onRequest(
       RequestOptions options, RequestInterceptorHandler handler) async {
-    final accessToken = await _tokenService.token;
+    final accessToken = _tokenService.token;
 
     if (accessToken != null && !options.headers.containsKey("Authorization")) {
       options.headers["Authorization"] = "Bearer $accessToken";
@@ -41,7 +43,7 @@ class TokenAuthInterceptor extends QueuedInterceptor {
   void onError(DioException err, ErrorInterceptorHandler handler) async {
     // 1. Check if the error is 401 and if we have a refresh token
 
-    final refreshToken = await _tokenService.refreshToken;
+    final refreshToken = _tokenService.refreshToken;
     if (err.response?.statusCode == 401 &&
         refreshToken != null &&
         err.requestOptions.path != CommonsApis.apiRefreshTokenPath) {
@@ -119,6 +121,7 @@ class TokenAuthInterceptor extends QueuedInterceptor {
     if (_refreshRetryCount >= _maxRefreshRetries) {
       // ⚠️ CRITICAL STEP: Logout the user
       _tokenService.logout();
+      onLogout?.call();
       _refreshRetryCount = 0;
     }
   }

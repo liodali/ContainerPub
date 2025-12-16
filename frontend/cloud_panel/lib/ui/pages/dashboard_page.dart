@@ -15,6 +15,8 @@ class DashboardPage extends ConsumerWidget {
       routes: const [
         OverviewRoute(),
         FunctionsRoute(),
+        ContainersRoute(),
+        WebhooksRoute(),
         SettingsRoute(),
       ],
       builder: (context, child) {
@@ -50,18 +52,18 @@ class DashboardPage extends ConsumerWidget {
                             ),
                             child: Center(
                               child: Text(
-                                'D',
+                                'CP',
                                 style: TextStyle(
                                   color: context.theme.colors.primaryForeground,
                                   fontWeight: FontWeight.bold,
-                                  fontSize: 18,
+                                  fontSize: 16,
                                 ),
                               ),
                             ),
                           ),
                           const SizedBox(width: 12),
                           const Text(
-                            'Dart Cloud',
+                            'ContainerPub',
                             style: TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
@@ -91,10 +93,24 @@ class DashboardPage extends ConsumerWidget {
                           ),
                           const SizedBox(height: 8),
                           _SidebarItem(
-                            icon: Icons.settings,
-                            label: 'Settings',
+                            icon: Icons.layers,
+                            label: 'Containers',
                             isSelected: tabsRouter.activeIndex == 2,
                             onTap: () => tabsRouter.setActiveIndex(2),
+                          ),
+                          const SizedBox(height: 8),
+                          _SidebarItem(
+                            icon: Icons.webhook,
+                            label: 'Webhooks',
+                            isSelected: tabsRouter.activeIndex == 3,
+                            onTap: () => tabsRouter.setActiveIndex(3),
+                          ),
+                          const SizedBox(height: 8),
+                          _SidebarItem(
+                            icon: Icons.settings,
+                            label: 'Settings',
+                            isSelected: tabsRouter.activeIndex == 4,
+                            onTap: () => tabsRouter.setActiveIndex(4),
                           ),
                         ],
                       ),
