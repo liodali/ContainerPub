@@ -30,6 +30,8 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  flutter_web_plugins:
+    sdk: flutter
   forui: ^0.16.0
   forui_assets: ^0.16.0
   flutter_riverpod: ^3.0.3
@@ -37,6 +39,7 @@ dependencies:
   hive_ce_flutter: ^2.0.0
   intl: ^0.20.0
   dio: ^5.0.0
+  auto_route: ^11.0.0
   cloud_api_client:
     path: packages/cloud_api_client
 

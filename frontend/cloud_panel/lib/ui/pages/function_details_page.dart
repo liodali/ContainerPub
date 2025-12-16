@@ -9,7 +9,12 @@ import '../../providers/api_client_provider.dart';
 
 class FunctionDetailsPage extends ConsumerStatefulWidget {
   final String uuid;
-  const FunctionDetailsPage({super.key, required this.uuid});
+  final String name;
+  const FunctionDetailsPage({
+    super.key,
+    required this.uuid,
+    required this.name,
+  });
 
   @override
   ConsumerState<FunctionDetailsPage> createState() =>
@@ -345,26 +350,28 @@ class _InvokeTabState extends ConsumerState<_InvokeTab> {
     try {
       final client = ref.read(apiClientProvider);
       Map<String, dynamic>? body;
-      
+
       if (_bodyController.text.isNotEmpty) {
         try {
           body = jsonDecode(_bodyController.text) as Map<String, dynamic>;
         } catch (e) {
-           setState(() {
-             _response = 'Invalid JSON: $e';
-             _isError = true;
-             _isLoading = false;
-           });
-           return;
+          setState(() {
+            _response = 'Invalid JSON: $e';
+            _isError = true;
+            _isLoading = false;
+          });
+          return;
         }
       }
 
       final result = await client.invokeFunction(
         widget.uuid,
         body: body,
-        secretKey: _secretController.text.isNotEmpty ? _secretController.text : null,
+        secretKey: _secretController.text.isNotEmpty
+            ? _secretController.text
+            : null,
       );
-      
+
       setState(() {
         _response = result.toString();
       });
@@ -385,7 +392,10 @@ class _InvokeTabState extends ConsumerState<_InvokeTab> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const Text('Request Body (JSON)', style: TextStyle(fontWeight: FontWeight.bold)),
+          const Text(
+            'Request Body (JSON)',
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
           const SizedBox(height: 8),
           FTextField(
             controller: _bodyController,
@@ -393,7 +403,10 @@ class _InvokeTabState extends ConsumerState<_InvokeTab> {
             hint: '{"key": "value"}',
           ),
           const SizedBox(height: 16),
-          const Text('Secret Key (Optional - for signed requests)', style: TextStyle(fontWeight: FontWeight.bold)),
+          const Text(
+            'Secret Key (Optional - for signed requests)',
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
           const SizedBox(height: 8),
           FTextField(
             controller: _secretController,
@@ -403,22 +416,29 @@ class _InvokeTabState extends ConsumerState<_InvokeTab> {
           const SizedBox(height: 16),
           FButton(
             onPress: _isLoading ? null : _invoke,
-            child: _isLoading ? const Text('Invoking...') : const Text('Invoke Function'),
+            child: _isLoading
+                ? const Text('Invoking...')
+                : const Text('Invoke Function'),
           ),
           const SizedBox(height: 24),
           if (_response != null) ...[
-            const Text('Response:', style: TextStyle(fontWeight: FontWeight.bold)),
+            const Text(
+              'Response:',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
             const SizedBox(height: 8),
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: _isError ? Colors.red.withOpacity(0.1) : Colors.green.withOpacity(0.1),
+                color: _isError
+                    ? Colors.red.withOpacity(0.1)
+                    : Colors.green.withOpacity(0.1),
                 border: Border.all(color: _isError ? Colors.red : Colors.green),
                 borderRadius: BorderRadius.circular(4),
               ),
               child: SelectableText(_response!),
             ),
-          ]
+          ],
         ],
       ),
     );

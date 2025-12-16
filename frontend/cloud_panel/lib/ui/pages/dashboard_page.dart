@@ -1,173 +1,168 @@
+import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:forui/forui.dart';
-import 'package:cloud_api_client/cloud_api_client.dart';
-import '../../providers/functions_provider.dart';
-import '../../providers/api_client_provider.dart';
+import '../../router.dart';
 import '../../providers/auth_provider.dart';
-import 'function_details_page.dart';
 
+@RoutePage()
 class DashboardPage extends ConsumerWidget {
   const DashboardPage({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final functionsAsync = ref.watch(functionsProvider);
-
-    return FScaffold(
-      // Replacing FHeader with a custom Row in the body or standard AppBar if FScaffold supports it.
-      // Assuming FScaffold.child is the body.
-      child: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text(
-                  'Functions',
-                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+    return AutoTabsRouter(
+      routes: const [
+        OverviewRoute(),
+        FunctionsRoute(),
+        SettingsRoute(),
+      ],
+      builder: (context, child) {
+        final tabsRouter = AutoTabsRouter.of(context);
+        return FScaffold(
+          child: Row(
+            children: [
+              // Sidebar
+              Container(
+                width: 250,
+                decoration: BoxDecoration(
+                  border: Border(
+                    right: BorderSide(
+                      color: context.theme.colors.border,
+                      width: 1,
+                    ),
+                  ),
                 ),
-                Row(
+                child: Column(
                   children: [
-                    FButton(
-                      onPress: () => _showCreateDialog(context, ref),
-                      child: const Row(
-                        mainAxisSize: MainAxisSize.min,
+                    const SizedBox(height: 24),
+                    // Logo Area
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 24),
+                      child: Row(
                         children: [
-                          Icon(Icons.add, size: 16),
-                          SizedBox(width: 8),
-                          Text('Create'),
+                          Container(
+                            width: 32,
+                            height: 32,
+                            decoration: BoxDecoration(
+                              color: context.theme.colors.primary,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Center(
+                              child: Text(
+                                'D',
+                                style: TextStyle(
+                                  color: context.theme.colors.primaryForeground,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 18,
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          const Text(
+                            'Dart Cloud',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
                         ],
                       ),
                     ),
-                    const SizedBox(width: 8),
-                    FButton(
-                      // style: FButtonStyle.outline, // Removed to avoid error
-                      onPress: () => ref.read(authProvider.notifier).logout(),
-                      child: const Icon(Icons.logout, size: 16),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-          Expanded(
-            child: functionsAsync.when(
-              data: (functions) {
-                if (functions.isEmpty) {
-                  return Center(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Text('No functions found'),
-                        const SizedBox(height: 16),
-                        FButton(
-                          onPress: () => _showCreateDialog(context, ref),
-                          child: const Text('Create your first function'),
-                        ),
-                      ],
-                    ),
-                  );
-                }
-                return ListView.separated(
-                  padding: const EdgeInsets.all(16),
-                  itemCount: functions.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: 12),
-                  itemBuilder: (context, index) {
-                    final func = functions[index];
-                    return FTappable(
-                      onPress: () {
-                        Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (_) =>
-                                FunctionDetailsPage(uuid: func.uuid),
+                    const SizedBox(height: 32),
+                    // Navigation Items
+                    Expanded(
+                      child: ListView(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        children: [
+                          _SidebarItem(
+                            icon: Icons.dashboard,
+                            label: 'Overview',
+                            isSelected: tabsRouter.activeIndex == 0,
+                            onTap: () => tabsRouter.setActiveIndex(0),
                           ),
-                        );
-                      },
-                      child: FCard(
-                        title: Text(func.name),
-                        subtitle: Text(
-                          'Status: ${func.status} • UUID: ${func.uuid}',
-                        ),
+                          const SizedBox(height: 8),
+                          _SidebarItem(
+                            icon: Icons.functions,
+                            label: 'Functions',
+                            isSelected: tabsRouter.activeIndex == 1,
+                            onTap: () => tabsRouter.setActiveIndex(1),
+                          ),
+                          const SizedBox(height: 8),
+                          _SidebarItem(
+                            icon: Icons.settings,
+                            label: 'Settings',
+                            isSelected: tabsRouter.activeIndex == 2,
+                            onTap: () => tabsRouter.setActiveIndex(2),
+                          ),
+                        ],
+                      ),
+                    ),
+                    // User / Logout
+                    Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: FButton(
+                        style: FButtonStyle.ghost(),
+                        onPress: () {
+                          ref.read(authProvider.notifier).logout();
+                          // Router will handle redirect via AuthGuard or simple check in main.dart
+                          // But since we use manual router, main.dart checks authState.
+                        },
                         child: const Row(
-                          mainAxisAlignment: MainAxisAlignment.end,
+                          mainAxisAlignment: MainAxisAlignment.start,
                           children: [
-                            Icon(Icons.chevron_right),
+                            Icon(Icons.logout, size: 18),
+                            SizedBox(width: 8),
+                            Text('Logout'),
                           ],
                         ),
                       ),
-                    );
-                  },
-                );
-              },
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (err, stack) => Center(child: Text('Error: $err')),
-            ),
+                    ),
+                  ],
+                ),
+              ),
+              // Main Content
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.all(32),
+                  child: child,
+                ),
+              ),
+            ],
           ),
-        ],
-      ),
-    );
-  }
-
-  void _showCreateDialog(BuildContext context, WidgetRef ref) {
-    showDialog(
-      context: context,
-      builder: (context) => const CreateFunctionDialog(),
+        );
+      },
     );
   }
 }
 
-class CreateFunctionDialog extends ConsumerStatefulWidget {
-  const CreateFunctionDialog({super.key});
+class _SidebarItem extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final bool isSelected;
+  final VoidCallback onTap;
 
-  @override
-  ConsumerState<CreateFunctionDialog> createState() =>
-      _CreateFunctionDialogState();
-}
-
-class _CreateFunctionDialogState extends ConsumerState<CreateFunctionDialog> {
-  final _nameController = TextEditingController();
-  bool _isLoading = false;
-
-  Future<void> _create() async {
-    if (_nameController.text.isEmpty) return;
-    setState(() => _isLoading = true);
-    try {
-      final client = ref.read(apiClientProvider);
-      await client.createFunction(_nameController.text);
-      ref.invalidate(functionsProvider); // Refresh list
-      if (mounted) Navigator.of(context).pop();
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Error: $e')));
-      }
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
-    }
-  }
+  const _SidebarItem({
+    required this.icon,
+    required this.label,
+    required this.isSelected,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return AlertDialog(
-      title: const Text('Create Function'),
-      content: FTextField(
-        controller: _nameController,
-        label: const Text('Function Name'),
-        hint: 'my-function',
+    return FButton(
+      style: isSelected ? FButtonStyle.primary() : FButtonStyle.ghost(),
+      onPress: onTap,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.start,
+        children: [
+          Icon(icon, size: 18),
+          const SizedBox(width: 8),
+          Text(label),
+        ],
       ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Cancel'),
-        ),
-        FButton(
-          onPress: _isLoading ? null : _create,
-          child: _isLoading ? const Text('Creating...') : const Text('Create'),
-        ),
-      ],
     );
   }
 }

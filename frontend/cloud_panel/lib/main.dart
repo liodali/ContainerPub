@@ -1,50 +1,99 @@
+import 'package:cloud_panel/providers/common_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_web_plugins/flutter_web_plugins.dart';
 import 'package:forui/forui.dart';
-import 'package:hive_ce_flutter/hive_flutter.dart';
 import 'providers/auth_provider.dart';
-import 'ui/pages/login_page.dart';
-import 'ui/pages/dashboard_page.dart';
+import 'router.dart';
 
 void main() async {
-  await Hive.initFlutter();
-  runApp(const ProviderScope(child: MyApp()));
+  usePathUrlStrategy();
+  runApp(
+    const ProviderScope(
+      child: InitApp(),
+    ),
+  );
 }
 
-class MyApp extends ConsumerWidget {
-  const MyApp({super.key});
+class InitApp extends StatelessWidget {
+  const InitApp({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return MaterialApp(
-      title: 'Cloud Panel',
-      builder: (context, child) => FTheme(
-        data: FThemes.zinc.light,
-        child: child!,
+  Widget build(BuildContext context) {
+    return IntializeApp(
+      theme: FThemes.zinc.light,
+      builder: (theme) => MyApp(
+        theme: FThemes.zinc.light,
       ),
-      home: const AuthGate(),
     );
   }
 }
 
-class AuthGate extends ConsumerWidget {
-  const AuthGate({super.key});
+class MyApp extends ConsumerStatefulWidget {
+  const MyApp({
+    super.key,
+    required this.theme,
+  });
+  final FThemeData theme;
+  @override
+  ConsumerState<MyApp> createState() => _MyAppState();
+}
+
+class _MyAppState extends ConsumerState<MyApp> {
+  final _appRouter = AppRouter();
+
+  @override
+  Widget build(BuildContext context) {
+    ref.listen(authProvider, (previous, next) {
+      if (next.isAuthenticated) {
+        _appRouter.replaceAll(
+          [
+            const DashboardRoute(),
+          ],
+        );
+      } else {
+        _appRouter.replaceAll(
+          [
+            const LoginRoute(),
+          ],
+        );
+      }
+    });
+
+    return MaterialApp.router(
+      title: 'Cloud Panel',
+      builder: (context, child) => FTheme(
+        data: widget.theme,
+        child: child!,
+      ),
+      routerConfig: _appRouter.config(),
+    );
+  }
+}
+
+class IntializeApp extends ConsumerWidget {
+  const IntializeApp({
+    super.key,
+    this.theme,
+    required this.builder,
+  });
+  final FThemeData? theme;
+  final Widget Function(FThemeData theme) builder;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final authState = ref.watch(authProvider);
-
-    // Simple check. In a real app, you'd want a loading state here
-    // to prevent flashing Login page while token loads.
-    // Since AuthNotifier loads token async, initial state is null.
-    // We can check if we have a token in Hive synchronously if we wanted,
-    // but Hive needs async openBox.
-    // For now, it will show Login briefly.
-
-    if (authState.isAuthenticated) {
-      return const DashboardPage();
-    } else {
-      return const LoginPage();
+    final isInitialized = ref.watch(initializeAppProvider);
+    final themeData = theme ?? FThemes.zinc.light;
+    if (isInitialized.isLoading) {
+      return FTheme(
+        data: themeData,
+        child: const FScaffold(
+          child: Center(
+            child: FCircularProgress(),
+          ),
+        ),
+      );
     }
+    return builder(themeData);
   }
 }

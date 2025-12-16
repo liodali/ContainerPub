@@ -1,5 +1,6 @@
+import 'package:cloud_panel/services/auth_service.dart';
+import 'package:flutter/widgets.dart' show debugPrint;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:hive_ce/hive.dart';
 
 class AuthState {
   final bool isAuthenticated;
@@ -30,29 +31,35 @@ class AuthNotifier extends Notifier<AuthState> {
 
   Future<void> _loadToken() async {
     try {
-      final box = await Hive.openBox('auth');
-      final token = box.get('token') as String?;
+      final token = await ref.read(authServiceProvider).token;
+
       if (token != null) {
-        state = state.copyWith(isAuthenticated: true, token: token);
+        state = state.copyWith(
+          isAuthenticated: true,
+          token: token,
+        );
       }
-    } catch (e) {
+    } catch (e, trace) {
       // Ignore error for now
+      debugPrint('Error loading token: $e');
+      debugPrint('Error loading token: $trace');
     }
   }
 
   Future<void> loginSuccess(String token) async {
-    final box = await Hive.openBox('auth');
-    await box.put('token', token);
+    await ref.read(authServiceProvider).loginSuccess(token);
     state = state.copyWith(isAuthenticated: true, token: token);
   }
 
   Future<void> logout() async {
-    final box = await Hive.openBox('auth');
-    await box.delete('token');
+    await ref.read(authServiceProvider).logout();
     state = state.copyWith(isAuthenticated: false, token: null);
   }
 }
 
+final authServiceProvider = Provider<AuthService>(
+  (ref) => AuthService.authService,
+);
 final authProvider = NotifierProvider<AuthNotifier, AuthState>(
   AuthNotifier.new,
 );
