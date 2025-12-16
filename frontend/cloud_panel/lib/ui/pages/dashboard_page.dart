@@ -23,10 +23,7 @@ class DashboardPage extends ConsumerWidget {
         final tabsRouter = AutoTabsRouter.of(context);
         return FScaffold(
           sidebar: SideBarDashboard(tabsRouter: tabsRouter),
-          child: Padding(
-            padding: const EdgeInsets.all(32),
-            child: child,
-          ),
+          child: child,
         );
       },
     );

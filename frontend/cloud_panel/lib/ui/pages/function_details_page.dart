@@ -23,14 +23,6 @@ class FunctionDetailsPage extends ConsumerStatefulWidget {
 
 class _FunctionDetailsPageState extends ConsumerState<FunctionDetailsPage>
     with SingleTickerProviderStateMixin {
-  late TabController _tabController;
-
-  @override
-  void initState() {
-    super.initState();
-    _tabController = TabController(length: 4, vsync: this);
-  }
-
   @override
   Widget build(BuildContext context) {
     final funcAsync = ref.watch(functionDetailsProvider(widget.uuid));
@@ -38,13 +30,15 @@ class _FunctionDetailsPageState extends ConsumerState<FunctionDetailsPage>
     return FScaffold(
       header: FHeader(
         title: Row(
+          spacing: 6,
           children: [
-            FButton.raw(
+            FTappable(
               onPress: () => Navigator.pop(context),
               child: const Icon(Icons.arrow_back),
             ),
             Expanded(
               child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
                     children: [
@@ -55,7 +49,7 @@ class _FunctionDetailsPageState extends ConsumerState<FunctionDetailsPage>
                         ),
                       ),
                       Text(
-                        '(${funcAsync.value?.status})',
+                        ' (${funcAsync.value?.status})',
                         style: context.theme.typography.xs.copyWith(
                           fontSize: 12,
                         ),
@@ -64,7 +58,10 @@ class _FunctionDetailsPageState extends ConsumerState<FunctionDetailsPage>
                   ),
                   SelectableText(
                     widget.uuid,
-                    style: context.theme.typography.xs.copyWith(fontSize: 12),
+                    style: context.theme.typography.xs.copyWith(
+                      fontSize: 12,
+                      color: context.theme.colors.foreground,
+                    ),
                   ),
                 ],
               ),
@@ -75,26 +72,25 @@ class _FunctionDetailsPageState extends ConsumerState<FunctionDetailsPage>
       child: funcAsync.when(
         data: (func) => Column(
           children: [
-            TabBar(
-              controller: _tabController,
-              tabs: const [
-                Tab(text: 'Overview'),
-                Tab(text: 'Deployments'),
-                Tab(text: 'API Keys'),
-                Tab(text: 'Invoke'),
+            FTabs(
+              children: [
+                FTabEntry(
+                  label: Text('Overview'),
+                  child: _OverviewTab(func: func),
+                ),
+                FTabEntry(
+                  label: Text('Deployments'),
+                  child: _DeploymentsTab(uuid: func.uuid),
+                ),
+                FTabEntry(
+                  label: Text('API Keys'),
+                  child: _ApiKeysTab(uuid: func.uuid),
+                ),
+                FTabEntry(
+                  label: Text('Invoke'),
+                  child: _InvokeTab(uuid: func.uuid),
+                ),
               ],
-              labelColor: Colors.black,
-            ),
-            Expanded(
-              child: TabBarView(
-                controller: _tabController,
-                children: [
-                  _OverviewTab(func: func),
-                  _DeploymentsTab(uuid: func.uuid),
-                  _ApiKeysTab(uuid: func.uuid),
-                  _InvokeTab(uuid: func.uuid),
-                ],
-              ),
             ),
           ],
         ),

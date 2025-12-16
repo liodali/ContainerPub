@@ -124,7 +124,7 @@ class CloudApiAuthClient {
     if (data is Map && data.containsKey('accessToken')) {
       return (
         token: data['accessToken'] as String,
-        refreshToken: data['refreshToken'] as String,
+        refreshToken: refreshToken,
       );
     }
     return null;

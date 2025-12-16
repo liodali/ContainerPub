@@ -31,9 +31,15 @@ class AppRouter extends RootStackRouter {
           initial: true,
         ),
         AutoRoute(
-          page: FunctionsRoute.page,
+          page: FunctionContentRoute.page,
           path: 'functions',
           children: [
+            // 3. The default page for this sub-router
+            AutoRoute(
+              path: '',
+              page: FunctionsRoute.page,
+              initial: true,
+            ),
             AutoRoute(
               page: FunctionDetailsRoute.page,
               path: ':name',
@@ -113,6 +119,17 @@ class SettingsRoute extends PageRouteInfo<void> {
   static final PageInfo page = PageInfo(
     name,
     builder: (router) => const SettingsView(),
+  );
+}
+
+class FunctionContentRoute extends PageRouteInfo<void> {
+  const FunctionContentRoute({List<PageRouteInfo>? children})
+    : super(FunctionContentRoute.name, initialChildren: children);
+
+  static const String name = 'FunctionContentRoute';
+  static final PageInfo page = PageInfo(
+    name,
+    builder: (router) => const AutoRouter(),
   );
 }
 

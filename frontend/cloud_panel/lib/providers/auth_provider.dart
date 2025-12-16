@@ -19,7 +19,7 @@ class AuthState {
 class AuthNotifier extends Notifier<AuthState> {
   @override
   AuthState build() {
-    _loadToken();
+    Future.microtask(_loadToken);
     return AuthState();
   }
 
@@ -27,19 +27,17 @@ class AuthNotifier extends Notifier<AuthState> {
     try {
       final token = await ref.read(tokenServiceProvider).token;
 
-      if (token != null) {
-        state = state.copyWith(
-          isAuthenticated: true,
-        );
-      }
+       state = state.copyWith(
+        isAuthenticated: token != null,
+      );
     } catch (e, trace) {
       // Ignore error for now
       debugPrint('Error loading token: $e');
       debugPrint('Error loading token: $trace');
+      state = state.copyWith(
+        isAuthenticated: false,
+      );
     }
-    state = state.copyWith(
-      isAuthenticated: false,
-    );
   }
 
   Future<void> login(
