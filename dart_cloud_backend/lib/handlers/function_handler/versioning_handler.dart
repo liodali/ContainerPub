@@ -1,7 +1,9 @@
 import 'dart:convert';
+import 'package:dart_cloud_backend/handlers/function_handler/log_utils.dart';
 import 'package:dart_cloud_backend/services/docker/docker.dart';
 import 'package:dart_cloud_backend/services/function_rollback.dart';
 import 'package:dart_cloud_backend/services/s3_service.dart';
+import 'package:dart_cloud_backend/utils/commons.dart';
 import 'package:shelf/shelf.dart';
 import 'package:database/database.dart';
 import 'auth_utils.dart';
@@ -83,27 +85,23 @@ class VersioningHandler {
       // === RETRIEVE DEPLOYMENT HISTORY ===
       // Query all deployments for this function
       // Ordered by version descending (newest first)
-      final deploymentsResult = await Database.connection.execute(
-        '''
-        SELECT id, version, image_tag, s3_key, status, is_active, deployed_at 
-        FROM function_deployments 
-        WHERE function_id = \$1 
-        ORDER BY version DESC
-        ''',
-        parameters: [id],
+      final deploymentsResult = await DatabaseManagers.functionDeployments.findAll(
+        where: {'function_id': id},
+        select: [
+          'uuid',
+          'version',
+          'image_tag',
+          's3_key',
+          'status',
+          'is_active',
+          'deployed_at',
+        ],
+        orderBy: 'version desc',
       );
 
       // Map database rows to JSON objects
-      final deployments = deploymentsResult.map((row) {
-        return {
-          'id': row[0], // Deployment UUID
-          'version': row[1], // Version number
-          'imageTag': row[2], // Docker image tag
-          's3Key': row[3], // S3 archive location
-          'status': row[4], // Deployment status
-          'isActive': row[5], // Currently active?
-          'deployedAt': (row[6] as DateTime).toIso8601String(), // Deployment timestamp
-        };
+      final deployments = deploymentsResult.map((deploy) {
+        return deploy.toMap();
       }).toList();
 
       // Return deployment history
@@ -225,6 +223,8 @@ class VersioningHandler {
       // Get deployment ID for target version
       final deploymentId = deploymentEntity.id;
 
+      // === PERFORM DOCKER/S3 ROLLBACK ===
+      // This rebuilds the Docker image from S3 archive if needed
       final result = await rollbackFunctionDeployment(
         functionId: functionEntity.id!,
         functionName: functionEntity.name,
@@ -236,33 +236,38 @@ class VersioningHandler {
       if (result != VersioningResultAction.rollbackFunctionDone) {
         return Response.badRequest(
           body: jsonEncode({
-            'error': 'Rollback failed',
+            'error': 'Rollback failed: could not restore Docker image',
           }),
           headers: {'Content-Type': 'application/json'},
         );
       }
 
-      // === PERFORM ROLLBACK ===
-      // Step 1: Deactivate current active deployment
-      // This marks the old version as inactive
-      await Database.connection.execute(
-        'UPDATE function_deployments SET is_active = false WHERE function_id = \$1 AND is_active = true',
-        parameters: [functionEntity.id],
-      );
+      // === UPDATE DATABASE (ATOMIC TRANSACTION) ===
+      // Only update DB after Docker image is confirmed ready
+      // Use transaction to ensure all-or-nothing update
+      await Database.transaction((conn) async {
+        // Step 1: Deactivate current active deployment
+        await conn.execute(
+          'UPDATE function_deployments SET is_active = false WHERE function_id = \$1 AND is_active = true',
+          parameters: [functionEntity.id],
+        );
 
-      // Step 2: Activate target deployment
-      // This marks the rollback version as active
-      await Database.connection.execute(
-        'UPDATE function_deployments SET is_active = true WHERE id = \$1',
-        parameters: [deploymentId],
-      );
+        // Step 2: Activate target deployment
+        await conn.execute(
+          'UPDATE function_deployments SET is_active = true WHERE id = \$1',
+          parameters: [deploymentId],
+        );
 
-      // Step 3: Update function's active deployment reference
-      // This ensures next invocation uses the rolled-back version
-      await Database.connection.execute(
-        'UPDATE functions SET active_deployment_id = \$1, status = \$2 WHERE id = \$3',
-        parameters: [deploymentId, 'active', functionEntity.id],
-      );
+        // Step 3: Update function's active deployment reference
+        await conn.execute(
+          'UPDATE functions SET active_deployment_id = \$1, status = \$2 WHERE id = \$3',
+          parameters: [
+            deploymentId,
+            DeploymentStatus.active.name,
+            functionEntity.id,
+          ],
+        );
+      });
 
       // Log rollback event for audit trail
       await FunctionUtils.logFunction(
@@ -280,15 +285,31 @@ class VersioningHandler {
         }),
         headers: {'Content-Type': 'application/json'},
       );
-    } catch (e) {
+    } catch (e, trace) {
       // Handle database or other errors
+      LogsUtils.log('error', 'rollback functon', {
+        'error': e.toString(),
+        'trace': trace.toString(),
+        'timestamp': DateTime.now().toIso8601String(),
+      });
       return Response.internalServerError(
-        body: jsonEncode({'error': 'Failed to rollback: $e'}),
-        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'error': 'Ops!Failed to rollback',
+        }),
+        headers: {
+          'Content-Type': 'application/json',
+        },
       );
     }
   }
 
+  /// Ensures Docker image exists for the target version.
+  ///
+  /// Strategy:
+  /// 1. Check if Docker image already exists → success (fast path)
+  /// 2. If not, verify S3 archive exists (required for rebuild)
+  /// 3. Download from S3 and rebuild Docker image
+  /// 4. Verify rebuilt image exists
   static Future<VersioningResultAction> rollbackFunctionDeployment({
     required int functionId,
     required String functionUUId,
@@ -297,15 +318,31 @@ class VersioningHandler {
     required String imageTag,
     required String s3Key,
   }) async {
+    // Fast path: Docker image already exists
     final isImageExist = await DockerService.isContainerImageExist(imageTag);
     if (isImageExist) {
+      // Log that we're using existing image
+      await FunctionUtils.logFunction(
+        functionUUId,
+        'info',
+        'Rollback to v$version: Using existing Docker image',
+      );
       return VersioningResultAction.rollbackFunctionDone;
     }
-    final exist = await S3Service.s3Client.isKeyBucketExist(s3Key);
-    if (!exist) {
+
+    // Image doesn't exist - need to rebuild from S3
+    // First verify S3 archive exists
+    final s3Exists = await S3Service.s3Client.isKeyBucketExist(s3Key);
+    if (!s3Exists) {
+      await FunctionUtils.logFunction(
+        functionUUId,
+        'error',
+        'Rollback to v$version failed: S3 archive not found at $s3Key',
+      );
       return VersioningResultAction.rollbackFailed;
     }
 
+    // Rebuild from S3 archive
     final result = await FunctionRollback.rollbackFunctionDeployment(
       functionId: functionId,
       functionUUId: functionUUId,
@@ -314,7 +351,6 @@ class VersioningHandler {
       s3key: s3Key,
     );
 
-    // Return the result based on the rollback outcome
     if (result) {
       return VersioningResultAction.rollbackFunctionDone;
     } else {
