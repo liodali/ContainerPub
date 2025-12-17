@@ -3,6 +3,7 @@ import 'package:shelf_router/shelf_router.dart';
 import 'package:dart_cloud_backend/handlers/auth_handler.dart';
 import 'package:dart_cloud_backend/handlers/function_handler.dart';
 import 'package:dart_cloud_backend/handlers/api_key_handler.dart';
+import 'package:dart_cloud_backend/handlers/statistics_handler.dart';
 import 'package:dart_cloud_backend/middleware/auth_middleware.dart';
 import 'package:dart_cloud_backend/middleware/signature_middleware.dart';
 
@@ -77,6 +78,50 @@ Router createRouter() {
     Pipeline()
         .addMiddleware(authMiddleware)
         .addHandler((req) => FunctionHandler.rollback(req, req.params['id']!)),
+  );
+
+  // User Overview Statistics routes (protected) - aggregated across all user's functions
+  router.get(
+    '/api/stats/overview',
+    Pipeline()
+        .addMiddleware(authMiddleware)
+        .addHandler(StatisticsHandler.getOverviewStats),
+  );
+
+  router.get(
+    '/api/stats/overview/hourly',
+    Pipeline()
+        .addMiddleware(authMiddleware)
+        .addHandler(StatisticsHandler.getOverviewHourlyStats),
+  );
+
+  router.get(
+    '/api/stats/overview/daily',
+    Pipeline()
+        .addMiddleware(authMiddleware)
+        .addHandler(StatisticsHandler.getOverviewDailyStats),
+  );
+
+  // Per-function Statistics routes (protected)
+  router.get(
+    '/api/functions/<id>/stats',
+    Pipeline()
+        .addMiddleware(authMiddleware)
+        .addHandler((req) => StatisticsHandler.getStats(req, req.params['id']!)),
+  );
+
+  router.get(
+    '/api/functions/<id>/stats/hourly',
+    Pipeline()
+        .addMiddleware(authMiddleware)
+        .addHandler((req) => StatisticsHandler.getHourlyStats(req, req.params['id']!)),
+  );
+
+  router.get(
+    '/api/functions/<id>/stats/daily',
+    Pipeline()
+        .addMiddleware(authMiddleware)
+        .addHandler((req) => StatisticsHandler.getDailyStats(req, req.params['id']!)),
   );
 
   // 404 handler
