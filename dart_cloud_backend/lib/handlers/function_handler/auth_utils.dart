@@ -35,6 +35,13 @@ class AuthUtils {
 
     return AuthenticatedUser(userEntity.id!);
   }
+
+  static Future<AuthenticatedUser?> getAuthenticatedUserFromJWT(String uuid) async {
+    final userEntity = await DatabaseManagers.users.findByUuid(uuid);
+    if (userEntity == null || userEntity.id == null) return null;
+
+    return AuthenticatedUser(userEntity.id!);
+  }
 }
 
 /// Utility functions shared across function handlers

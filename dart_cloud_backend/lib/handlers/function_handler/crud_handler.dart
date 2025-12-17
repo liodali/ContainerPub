@@ -34,14 +34,7 @@ class CrudHandler {
   static Future<Response> list(Request request) async {
     try {
       // Extract and validate authenticated user
-      final authUser = await AuthUtils.getAuthenticatedUser(request);
-      if (authUser == null) {
-        return Response.notFound(
-          jsonEncode({'error': 'Unauthorized'}),
-          headers: {'Content-Type': 'application/json'},
-        );
-      }
-
+      final userId = request.context['userId'];
       // Query all functions for this user
       // Ordered by creation date descending (newest first)
       // final result = await Database.connection.execute(
@@ -50,7 +43,7 @@ class CrudHandler {
       // );
       final entites = await DatabaseManagers.functions.findAll(
         where: {
-          FunctionEntityExtension.userIdNameField: authUser.id,
+          FunctionEntityExtension.userIdNameField: userId,
         },
       );
 
@@ -97,20 +90,14 @@ class CrudHandler {
   static Future<Response> get(Request request, String uuid) async {
     try {
       // Extract and validate authenticated user
-      final authUser = await AuthUtils.getAuthenticatedUser(request);
-      if (authUser == null) {
-        return Response.notFound(
-          jsonEncode({'error': 'Unauthorized'}),
-          headers: {'Content-Type': 'application/json'},
-        );
-      }
-
+      /// this is the user id from the auth middleware
+      final userId = request.context['userId'];
       // Query function with ownership verification
       // Only returns result if function exists AND belongs to this user
       final functionEntity = await DatabaseManagers.functions.findOne(
         where: {
           FunctionEntityExtension.uuidNameField: uuid,
-          FunctionEntityExtension.userIdNameField: authUser.id,
+          FunctionEntityExtension.userIdNameField: userId,
         },
       );
 
@@ -171,6 +158,8 @@ class CrudHandler {
   /// - 500: Deletion failed
   static Future<Response> delete(Request request, String uuid) async {
     try {
+      // Extract and validate authenticated user
+      final userId = request.context['userId'];
       // Parse and validate request body
       final body = await request.readAsString();
       if (body.isEmpty) {
@@ -220,20 +209,11 @@ class CrudHandler {
         );
       }
 
-      // Extract and validate authenticated user
-      final authUser = await AuthUtils.getAuthenticatedUser(request);
-      if (authUser == null) {
-        return Response.notFound(
-          jsonEncode({'error': 'Unauthorized'}),
-          headers: {'Content-Type': 'application/json'},
-        );
-      }
-
       // Verify function ownership before deletion using UUID and validate name matches
       final functionEntityToDelete = await DatabaseManagers.functions.findOne(
         where: {
           FunctionEntityExtension.uuidNameField: uuid,
-          FunctionEntityExtension.userIdNameField: authUser.id,
+          FunctionEntityExtension.userIdNameField: userId,
           FunctionEntityExtension.nameField: functionName,
         },
       );

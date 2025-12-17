@@ -34,13 +34,14 @@ class InitHandler {
   static Future<Response> init(Request request) async {
     try {
       // Extract user ID from authenticated request context
-      final authUser = await AuthUtils.getAuthenticatedUser(request);
-      if (authUser == null) {
-        return Response.notFound(
-          jsonEncode({'error': 'Unauthorized'}),
-          headers: {'Content-Type': 'application/json'},
-        );
-      }
+      // final authUser = await AuthUtils.getAuthenticatedUser(request);
+      // if (authUser == null) {
+      //   return Response.notFound(
+      //     jsonEncode({'error': 'Unauthorized'}),
+      //     headers: {'Content-Type': 'application/json'},
+      //   );
+      // }
+      final userId = request.context['userId'] as int;
       // Parse request body
       final bodyString = await request.readAsString();
       if (bodyString.isEmpty) {
@@ -63,7 +64,7 @@ class InitHandler {
       // Check if function with this name already exists for this user
       final existingFunction = await DatabaseManagers.functions.findOne(
         where: {
-          FunctionEntityExtension.userIdNameField: authUser.id,
+          FunctionEntityExtension.userIdNameField: userId,
           FunctionEntityExtension.nameField: functionName,
         },
       );
@@ -87,7 +88,7 @@ class InitHandler {
         FunctionEntity(
           name: functionName,
           uuid: functionUUID,
-          userId: authUser.id,
+          userId: userId,
           status: DeploymentStatus.init.name,
         ).toDBMap(),
       );

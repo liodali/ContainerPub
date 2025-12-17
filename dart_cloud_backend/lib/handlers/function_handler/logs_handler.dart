@@ -46,7 +46,7 @@ class LogsHandler {
   static Future<Response> getLogs(Request request, String id) async {
     try {
       // Extract user ID from authenticated request
-      final userId = request.context['userId'] as String;
+      final userId = request.context['userId'] as int;
 
       // === VERIFY FUNCTION OWNERSHIP ===
       // Check that function exists and belongs to requesting user

@@ -55,7 +55,7 @@ class DeploymentHandler {
     )..createSync(recursive: true);
     try {
       // Extract user ID from authenticated request context
-      final userId = request.context['userId'] as String;
+      final userUUID = request.context['userUUID'] as String;
 
       // Validate that request is multipart (required for file upload)
       if (request.multipart() == null) {
@@ -100,7 +100,7 @@ class DeploymentHandler {
       }
 
       // Check if user exists
-      final userResult = await DatabaseManagers.users.findByUuid(userId);
+      final userResult = await DatabaseManagers.users.findByUuid(userUUID);
       if (userResult == null) {
         return Response.badRequest(
           body: jsonEncode({'error': 'Unauthorized'}),
@@ -390,7 +390,6 @@ class DeploymentHandler {
 
     await pubspecFile.writeAsString(newYamlContent);
   }
-
 
   // Inject dependencies into pubspec.yaml
   static Future<void> _injectDependencies(
