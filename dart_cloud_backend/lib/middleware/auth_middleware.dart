@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:dart_cloud_backend/handlers/function_handler/auth_utils.dart';
 import 'package:dart_cloud_backend/services/token_service.dart';
 import 'package:shelf/shelf.dart';
 import 'package:dart_jsonwebtoken/dart_jsonwebtoken.dart';
@@ -20,18 +21,32 @@ Middleware get authMiddleware {
 
       try {
         final jwt = JWT.verify(token, SecretKey(Config.jwtSecret));
-        final userId = jwt.payload['userId'] as String;
+        final userUUID = jwt.payload['userId'] as String;
 
         // Check if token is valid in user's whitelist
-        final isValid = await TokenService.instance.isTokenValid(token, userId);
+        final isValid = await TokenService.instance.isTokenValid(token, userUUID);
         if (!isValid) {
           return Response.forbidden(
             jsonEncode({'error': 'Invalid or expired token'}),
             headers: {'Content-Type': 'application/json'},
           );
         }
+        final authUser = await AuthUtils.getAuthenticatedUserFromJWT(userUUID);
+        if (authUser == null) {
+          return Response.notFound(
+            jsonEncode({'error': 'Unauthorized'}),
+            headers: {'Content-Type': 'application/json'},
+          );
+        }
         // Add userId to request context
-        return await handler(request.change(context: {'userId': userId}));
+        return await handler(
+          request.change(
+            context: {
+              'userUUID': userUUID,
+              'userId': authUser.id,
+            },
+          ),
+        );
       } catch (e) {
         return Response.forbidden(
           jsonEncode({'error': 'Invalid or expired token'}),
