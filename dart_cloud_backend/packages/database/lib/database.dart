@@ -381,8 +381,8 @@ class Database {
         id SERIAL PRIMARY KEY,
         uuid UUID UNIQUE NOT NULL DEFAULT uuid_generate_v4(),
         level VARCHAR(20) NOT NULL,
-        message TEXT NOT NULL,
-        action VARCHAR(50) NOT NULL,
+        message JSONB NOT NULL,
+        action TEXT NOT NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     ''');
@@ -402,6 +402,17 @@ class Database {
 
     await _connection.execute('''
       CREATE INDEX IF NOT EXISTS idx_logs_created_at ON logs(created_at DESC)
+    ''');
+
+    // Alter logs table schema
+    await _connection.execute('''
+      ALTER TABLE logs
+      ALTER COLUMN message TYPE JSONB USING message::JSONB
+    ''');
+
+    await _connection.execute('''
+      ALTER TABLE logs
+      ALTER COLUMN action TYPE TEXT
     ''');
 
     // API Keys table for function signing

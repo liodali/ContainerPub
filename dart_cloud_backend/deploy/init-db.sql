@@ -88,8 +88,8 @@ CREATE TABLE IF NOT EXISTS logs (
     id SERIAL PRIMARY KEY,
     uuid UUID UNIQUE NOT NULL DEFAULT uuid_generate_v4(),
     level VARCHAR(20) NOT NULL,
-    message TEXT NOT NULL,
-    action VARCHAR(50) NOT NULL,
+    message JSONB NOT NULL,
+    action TEXT NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 \echo "Logs table created"
