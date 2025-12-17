@@ -2,6 +2,8 @@ import 'dart:convert';
 
 import 'package:collection/collection.dart';
 
+enum DeploymentStatus { init, building, active, disabled, deleted }
+
 extension StringExtension on String {
   String get encode => base64.encode(utf8.encode(this));
   String get decode {

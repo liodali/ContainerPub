@@ -3,7 +3,7 @@ import 'dart:io';
 import 'package:dart_cloud_backend/services/docker/docker.dart';
 import 'package:dart_cloud_backend/services/s3_service.dart' show S3Service;
 import 'package:dart_cloud_backend/utils/archive_utils.dart';
-import 'package:dart_cloud_backend/utils/commons.dart' show StringExtension;
+import 'package:dart_cloud_backend/utils/commons.dart' show StringExtension, DeploymentStatus;
 import 'package:json2yaml/json2yaml.dart';
 import 'package:shelf/shelf.dart';
 import 'package:shelf_multipart/shelf_multipart.dart';
@@ -17,7 +17,6 @@ import 'package:dart_cloud_backend/services/function_main_injection.dart';
 import 'package:yaml/yaml.dart';
 import 'auth_utils.dart';
 
-enum DeploymentStatus { init, building, active, disabled, deleted }
 
 /// Handles function deployment operations including:
 /// - Creating new functions
