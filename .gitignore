@@ -34,3 +34,5 @@ Thumbs.db
 
 # Config
 dart_cloud_cli/.dart_cloud/
+.dev
+.windsurf

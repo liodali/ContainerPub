@@ -4,7 +4,7 @@
 
 ### 1. Function Documentation & Details
 - [ ] **Function Details Page**: 
-  - Implement a dedicated subpage (`/functions/:id`) showing:
+  - Implement a dedicated subpage (`/functions/:uuid`) showing:
     - Invocation URL and usage examples (curl, JS, Dart).
     - Deployment history list.
     - Environment variables management.
@@ -15,8 +15,8 @@
 
 ### 2. Backend Integration
 - [ ] **Verify Endpoints**: Ensure backend supports:
-  - `GET /functions/:id/stats` (Invocations, Errors, Latency).
-  - `GET /functions/:id/logs` (Runtime logs).
+  - `GET /functions/:uuid/stats` (Invocations, Errors, Latency).
+  - `GET /functions/:uuid/logs` (Runtime logs).
 - [ ] **Error Handling**: Improve UI for 404s and 500s on detail pages.
 
 ## Medium Term (Priority: Medium)
