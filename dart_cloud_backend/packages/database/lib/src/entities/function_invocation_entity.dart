@@ -217,3 +217,15 @@ class FunctionInvocationEntity extends Entity {
     );
   }
 }
+extension ExtFunctionInvocations on FunctionInvocationEntity {
+  static const String functionIdNameField = 'function_id';
+  static const String uuidNameField = 'uuid';
+  static const String statusNameField = 'status';
+  static const String durationMsNameField = 'duration_ms';
+  static const String errorNameField = 'error';
+  static const String logsNameField = 'logs';
+  static const String timestampNameField = 'timestamp';
+  static const String requestInfoNameField = 'request_info';
+  static const String resultNameField = 'result';
+  static const String successNameField = 'success';
+}
