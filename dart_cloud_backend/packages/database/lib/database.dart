@@ -510,8 +510,8 @@ class Database {
   static Future<T> transaction<T>(
     Future<T> Function(Connection connection) callback,
   ) async {
-    return await _connection.runTx((ctx) async {
-      return await callback(ctx as Connection);
+    return _connection.runTx((ctx) async {
+      return callback(ctx as Connection);
     });
   }
 
