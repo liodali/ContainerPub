@@ -13,7 +13,8 @@ A serverless cloud platform for hosting and managing Dart functions with CLI dep
 
 - 🚀 Deploy Dart functions via CLI
 - 🔒 **Client-side security analysis before deployment**
-- 📊 Monitor function execution and performance
+- 📊 **Dashboard statistics** - Real-time metrics for all functions
+- 📈 **Hourly & daily charts** - Track performance trends
 - 🔄 Auto-scaling and load balancing
 - 📝 Function logs and metrics
 - 🔐 Authentication and authorization
@@ -39,11 +40,13 @@ ContainerPub/
 ### Installation
 
 **Automated Installation (Recommended):**
+
 ```bash
 curl -fsSL https://raw.githubusercontent.com/liodali/ContainerPub/main/scripts/install.sh | bash
 ```
 
 **Or download from releases:**
+
 ```bash
 # Linux
 curl -L -o dart_cloud https://github.com/liodali/ContainerPub/releases/latest/download/dart_cloud-linux-x64
@@ -62,6 +65,7 @@ sudo mv dart_cloud /usr/local/bin/
 ```
 
 **Or compile from source:**
+
 ```bash
 ./scripts/install-cli.sh
 ```
@@ -72,11 +76,15 @@ sudo mv dart_cloud /usr/local/bin/
 # Login to platform
 dart_cloud login
 
-# Deploy a function
+# Initialize and deploy a function
+dart_cloud init my_function
 dart_cloud deploy ./my_function
 
 # List deployed functions
 dart_cloud list
+
+# View function statistics
+dart_cloud stats <function-id>
 
 # View function logs
 dart_cloud logs <function-id>
