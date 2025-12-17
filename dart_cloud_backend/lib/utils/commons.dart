@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:collection/collection.dart';
 
 enum DeploymentStatus { init, building, active, disabled, deleted }
+enum LogLevels { info, warning, error, debug }
 
 extension StringExtension on String {
   String get encode => base64.encode(utf8.encode(this));
