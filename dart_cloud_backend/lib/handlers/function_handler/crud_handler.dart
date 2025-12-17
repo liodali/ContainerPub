@@ -44,18 +44,23 @@ class CrudHandler {
 
       // Query all functions for this user
       // Ordered by creation date descending (newest first)
-      final result = await Database.connection.execute(
-        'SELECT id, name, status, created_at FROM functions WHERE user_id = \$1 ORDER BY created_at DESC',
-        parameters: [authUser.id],
+      // final result = await Database.connection.execute(
+      //   'SELECT id, name, status, created_at FROM functions WHERE user_id = \$1 ORDER BY created_at DESC',
+      //   parameters: [authUser.id],
+      // );
+      final entites = await DatabaseManagers.functions.findAll(
+        where: {
+          FunctionEntityExtension.userIdNameField: authUser.id,
+        },
       );
 
       // Map database rows to JSON objects
-      final functions = result.map((row) {
+      final functions = entites.map((entity) {
         return {
-          'id': row[0],
-          'name': row[1],
-          'status': row[2],
-          'createdAt': (row[3] as DateTime).toIso8601String(),
+          'uuid': entity.uuid,
+          'name': entity.name,
+          'status': entity.status,
+          'createdAt': entity.createdAt?.toIso8601String(),
         };
       }).toList();
 
