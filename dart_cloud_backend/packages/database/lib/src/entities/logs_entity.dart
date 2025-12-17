@@ -7,7 +7,7 @@ class LogsEntity extends Entity {
   final int? id;
   final String uuid;
   final String level;
-  final String message;
+  final Map<String, dynamic> message;
   final LogsActionEnum action;
 
   LogsEntity({
@@ -48,12 +48,14 @@ class LogsEntity extends Entity {
       id: map['id'] as int?,
       uuid: map['uuid'].toString(),
       level: map['level'].toString(),
-      message: map['message'].toString(),
+      message: map['message'] is Map<String, dynamic>
+          ? map['message'] as Map<String, dynamic>
+          : {'raw': map['message'].toString()},
       action:
           LogsActionEnum.values.firstWhereOrNull(
             (e) => e.name == map['action'].toString(),
           ) ??
-          .unknown,
+          LogsActionEnum.unknown,
     );
   }
 }
