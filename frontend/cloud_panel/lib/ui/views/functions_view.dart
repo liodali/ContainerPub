@@ -1,8 +1,12 @@
+import 'package:cloud_panel/common/commons.dart' show FunctionStatusExtension;
 import 'package:cloud_panel/providers/api_client_provider.dart';
 import 'package:cloud_panel/providers/functions_provider.dart';
 import 'package:cloud_panel/router.dart';
+import 'package:cloud_panel/ui/component/clipboard_toast.dart'
+    show showClipboardToast;
 import 'package:cloud_panel/ui/component/header_with_action.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show Clipboard, ClipboardData;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:forui/forui.dart';
 import 'package:auto_route/auto_route.dart';
@@ -34,72 +38,88 @@ class _FunctionsViewState extends ConsumerState<FunctionsView> {
   Widget build(BuildContext context) {
     final functionsAsync = ref.watch(functionsProvider);
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      spacing: 24,
-      children: [
-        HeaderWithAction(
-          title: 'Functions',
-          onActionPress: () => _showCreateDialog(context),
-          hideAction:
-              functionsAsync.hasValue && functionsAsync.value?.isEmpty == true,
-        ),
-
-        Expanded(
-          child: functionsAsync.when(
-            data: (functions) {
-              if (functions.isEmpty) {
-                return FunctionsEmptyWidget(
-                  openCreateDialog: _showCreateDialog,
-                );
-              }
-              return ListView.separated(
-                itemCount: functions.length,
-                separatorBuilder: (_, _) => const SizedBox(height: 12),
-                itemBuilder: (context, index) {
-                  final func = functions[index];
-                  return FTappable(
-                    onPress: () {
-                      context.router.push(
-                        FunctionDetailsRoute(
-                          uuid: func.uuid,
-                          name: func.name,
-                        ),
-                      );
-                    },
-                    child: FCard(
-                      title: Text(func.name),
-                      subtitle: Text(
-                        'Status: ${func.status} • UUID: ${func.uuid}',
-                      ),
-                      child: const Row(
-                        mainAxisAlignment: MainAxisAlignment.end,
-                        children: [
-                          Icon(Icons.chevron_right),
-                        ],
-                      ),
+    return FScaffold(
+      header: HeaderWithAction(
+        title: 'Functions',
+        actions: [
+          FButton(
+            onPress: () => _showCreateDialog(context),
+            prefix: Icon(Icons.add, size: 16),
+            child: Text('Create'),
+          ),
+        ],
+        hideAction:
+            functionsAsync.hasValue && functionsAsync.value?.isEmpty == true,
+      ),
+      child: functionsAsync.when(
+        data: (functions) {
+          if (functions.isEmpty) {
+            return FunctionsEmptyWidget(
+              openCreateDialog: _showCreateDialog,
+            );
+          }
+          return ListView.separated(
+            itemCount: functions.length,
+            separatorBuilder: (_, _) => const SizedBox(height: 12),
+            itemBuilder: (context, index) {
+              final func = functions[index];
+              return FTappable(
+                onPress: () {
+                  context.router.push(
+                    FunctionDetailsRoute(
+                      uuid: func.uuid,
+                      name: func.name,
                     ),
                   );
                 },
+                child: FCard(
+                  title: Row(
+                    children: [
+                      SelectableText(
+                        func.name,
+                        style: context.theme.typography.lg.copyWith(
+                          fontSize: 20,
+                        ),
+                      ),
+                      func.statusWidget,
+                    ],
+                  ),
+                  subtitle: SelectableText(
+                    func.uuid,
+                    onTap: () {
+                      Clipboard.setData(ClipboardData(text: func.uuid));
+                      showClipboardToast(
+                        context,
+                        '${func.uuid} Copied to Clipboard',
+                      );
+                    },
+                  ),
+                  child: const Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      Icon(Icons.chevron_right),
+                    ],
+                  ),
+                ),
               );
             },
-            loading: () => const Center(child: FCircularProgress()),
-            error: (err, stack) => Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text('Opps!Error to Load Functions'),
-                  const SizedBox(height: 16),
-                  FButton(
-                    onPress: () => ref.refresh(functionsProvider),
-                    child: const Text('Retry'),
-                  ),
-                ],
+          );
+        },
+        loading: () => const Center(child: FCircularProgress()),
+        error: (err, stack) => Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text('Opps!Error to Load Functions'),
+              const SizedBox(height: 16),
+              FButton(
+                onPress: () => ref.refresh(functionsProvider),
+                child: const Text('Retry'),
               ),
-            ),
+            ],
           ),
         ),
-      ],
+      ),
     );
   }
 }
