@@ -28,7 +28,7 @@ class ListCommand extends BaseCommand {
       print('─' * 80);
 
       for (final func in functions) {
-        final id = (func['id'] as String).padRight(20);
+        final id = (func['uuid'] as String).padRight(20);
         final name = (func['name'] as String).padRight(25);
         final status = (func['status'] as String).padRight(15);
         final created = func['createdAt'] as String;
