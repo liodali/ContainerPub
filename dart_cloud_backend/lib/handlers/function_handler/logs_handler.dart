@@ -1,4 +1,6 @@
 import 'dart:convert';
+import 'package:dart_cloud_backend/handlers/function_handler/log_utils.dart';
+import 'package:dart_cloud_backend/utils/commons.dart';
 import 'package:shelf/shelf.dart';
 import 'package:database/database.dart';
 
@@ -43,20 +45,26 @@ class LogsHandler {
   /// - 200: Logs retrieved successfully
   /// - 404: Function not found or access denied
   /// - 500: Failed to retrieve logs
-  static Future<Response> getLogs(Request request, String id) async {
+  static Future<Response> getLogs(Request request, String uuid) async {
     try {
       // Extract user ID from authenticated request
       final userId = request.context['userId'] as int;
 
       // === VERIFY FUNCTION OWNERSHIP ===
       // Check that function exists and belongs to requesting user
-      final funcResult = await Database.connection.execute(
-        'SELECT id FROM functions WHERE id = \$1 AND user_id = \$2',
-        parameters: [id, userId],
+      // final funcResult = await Database.connection.execute(
+      //   'SELECT id FROM functions WHERE id = \$1 AND user_id = \$2',
+      //   parameters: [id, userId],
+      // );
+      final funcResult = await DatabaseManagers.functions.findOne(
+        where: {
+          FunctionEntityExtension.uuidNameField: uuid,
+          FunctionEntityExtension.userIdNameField: userId,
+        },
       );
 
       // Return 404 if function not found or access denied
-      if (funcResult.isEmpty) {
+      if (funcResult == null) {
         return Response.notFound(
           jsonEncode({'error': 'Function not found'}),
           headers: {'Content-Type': 'application/json'},
@@ -67,29 +75,45 @@ class LogsHandler {
       // Query recent logs for this function
       // Ordered by timestamp descending (newest first)
       // Limited to 100 entries to prevent excessive data transfer
-      final logsResult = await Database.connection.execute(
-        'SELECT level, message, created_at FROM function_logs WHERE function_id = \$1 ORDER BY created_at DESC LIMIT 100',
-        parameters: [id],
+      final logs = await DatabaseManagers.functionInvocations.findAll(
+        where: {
+          ExtFunctionInvocations.functionIdNameField: funcResult.id,
+        },
       );
+      // final logsResult = await Database.connection.execute(
+      //   'SELECT level, message, created_at FROM function_invocations WHERE function_id = \$1 ORDER BY created_at DESC LIMIT 100',
+      //   parameters: [funcResult.id],
+      // );
 
       // Map database rows to JSON objects
-      final logs = logsResult.map((row) {
+      final logResults = logs.map((log) {
         return {
-          'level': row[0], // Log level (info, warning, error, debug)
-          'message': row[1], // Human-readable log message
-          'timestamp': (row[2] as DateTime).toIso8601String(), // ISO 8601 timestamp
+          'status': log.status, // Log level (info, warning, error, debug)
+          'error': log.error,
+          'logs': log.functionDebugLogs
+              .map((log) => 'DEBUG. ${log.timestamp}. ${log.message}')
+              .toList(), // Human-readable log message
+          'timestamp': log.timestamp?.toIso8601String(), // ISO 8601 timestamp
         };
       }).toList();
 
       // Return logs array
       return Response.ok(
-        jsonEncode({'logs': logs}),
+        jsonEncode({'logs': logResults}),
         headers: {'Content-Type': 'application/json'},
       );
-    } catch (e) {
+    } catch (e, trace) {
       // Handle database or other errors
+      LogsUtils.log(
+        LogLevels.error.name,
+        'logs retrieval failed for $uuid',
+        {
+          'error': 'Failed to get logs for $uuid: $e',
+          'trace': trace.toString(),
+        },
+      );
       return Response.internalServerError(
-        body: jsonEncode({'error': 'Failed to get logs: $e'}),
+        body: jsonEncode({'error': 'Failed to get logs for $uuid'}),
         headers: {'Content-Type': 'application/json'},
       );
     }
