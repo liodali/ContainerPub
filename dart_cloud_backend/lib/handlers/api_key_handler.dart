@@ -1,7 +1,12 @@
 import 'dart:convert';
+import 'dart:math';
+import 'package:random_name_generator/random_name_generator.dart';
 import 'package:shelf/shelf.dart';
 import 'package:database/database.dart';
 import 'package:dart_cloud_backend/services/api_key_service.dart';
+
+final RandomNames randomNames = RandomNames(Zone.us);
+final Random randomNumbers = Random.secure();
 
 class ApiKeyHandler {
   /// POST /api/auth/apikey/generate
@@ -26,7 +31,7 @@ class ApiKeyHandler {
 
       // Validate validity
       final validity = ApiKeyValidity.fromString(validityStr);
-      final userId = request.context['userId'] as String?;
+      final userId = request.context['userId'] as int;
 
       // Verify function exists
       final function = await DatabaseManagers.functions.findOne(
@@ -47,7 +52,7 @@ class ApiKeyHandler {
       final apiKeyPair = await ApiKeyService.instance.generateApiKey(
         functionUuid: functionId,
         validity: validity,
-        name: name,
+        name: name ?? '${randomNames.name()}${randomNumbers.nextInt(1000) + 100}',
       );
 
       return Response.ok(
@@ -58,9 +63,11 @@ class ApiKeyHandler {
         }),
         headers: {'Content-Type': 'application/json'},
       );
-    } catch (e) {
+    } catch (e, trace) {
+      print(e);
+      print(trace);
       return Response.internalServerError(
-        body: jsonEncode({'error': 'Failed to generate API key: $e'}),
+        body: jsonEncode({'error': 'Failed to generate API key'}),
         headers: {'Content-Type': 'application/json'},
       );
     }
@@ -70,9 +77,10 @@ class ApiKeyHandler {
   /// Get API key info for a function (without private key)
   static Future<Response> getApiKeyInfo(Request request, String functionId) async {
     try {
+      final userId = request.context['userId'] as int;
       // Verify function exists
       final function = await DatabaseManagers.functions.findOne(
-        where: {'uuid': functionId},
+        where: {'uuid': functionId, FunctionEntityExtension.userIdNameField: userId},
       );
 
       if (function == null) {
@@ -81,25 +89,15 @@ class ApiKeyHandler {
           headers: {'Content-Type': 'application/json'},
         );
       }
-
-      // Get user ID from request context
-      final userId = request.context['userId'] as String?;
-      if (userId == null) {
-        return Response.forbidden(
-          jsonEncode({'error': 'Authentication required'}),
-          headers: {'Content-Type': 'application/json'},
-        );
-      }
-
       // Verify user owns the function
       final user = await DatabaseManagers.users.findOne(
-        where: {'uuid': userId},
+        where: {'id': userId},
       );
 
       if (user == null || function.userId != user.id) {
         return Response.forbidden(
           jsonEncode({
-            'error': 'You do not have permission to view API keys for this function',
+            'error': 'We cannot load the API key for this function',
           }),
           headers: {'Content-Type': 'application/json'},
         );

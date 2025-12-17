@@ -236,9 +236,6 @@ class ApiKeyCommand extends BaseCommand {
       print('');
       print('API Key Info:');
       print('  UUID: ${apiKey['uuid']}');
-      print(
-        '  Public Key: ${(apiKey['public_key'] as String).substring(0, 20)}...',
-      );
       print('  Validity: ${apiKey['validity']}');
       print('  Active: ${apiKey['is_active']}');
       if (apiKey['expires_at'] != null) {

@@ -27,7 +27,8 @@ void main(List<String> arguments) async {
       help: 'Data to send to the function',
       mandatory: false,
       defaultsTo: json.encode({}),
-    );
+    )
+    ..addFlag('sign', abbr: 's', help: 'Sign the request');
 
   final parser = ArgParser()
     ..addFlag('help', abbr: 'h', negatable: false, help: 'Show help')
