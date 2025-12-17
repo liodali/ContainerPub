@@ -24,11 +24,20 @@ The `dart_cloud_backend` is the core platform that:
 
 - [Authentication System](./authentication.md) - Complete authentication flow and token management
 - [API Keys & Signing](./api-keys.md) - Secure function invocations with HMAC signatures
+- [Statistics & Monitoring](./statistics.md) - Dashboard metrics and performance tracking
 - [Architecture Overview](./architecture.md) - System design and components
 - [Function Execution](./function-execution.md) - How functions are executed
 - [API Reference](./api-reference.md) - Complete API endpoint documentation
 
 ## Key Features
+
+### Statistics & Monitoring
+
+- **User Overview Stats** - Aggregated metrics across all user's functions
+- **Per-Function Stats** - Detailed metrics for individual functions
+- **Hourly Charts** - Request distribution by hour (up to 168 hours)
+- **Daily Charts** - Request distribution by day (up to 90 days)
+- **Real-time Metrics** - Invocation counts, success/error rates, latency tracking
 
 ### Authentication System
 
@@ -389,6 +398,7 @@ dart_cloud_backend/
 
 ## Next Steps
 
+- Read [Statistics & Monitoring](./statistics.md) for dashboard metrics documentation
 - Read [Authentication System](./authentication.md) for complete auth flow documentation
 - Read [Architecture Overview](./architecture.md) for detailed system design
 - Check [API Reference](./api-reference.md) for complete API documentation

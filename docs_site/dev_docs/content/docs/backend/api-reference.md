@@ -552,6 +552,189 @@ Authorization: Bearer <access-token>
 - **Requests per hour**: 1000
 - **Concurrent executions**: 10 per function
 
+## Statistics API
+
+### GET /api/stats/overview
+
+Get aggregated statistics for all user's functions.
+
+**Headers:**
+
+```dart
+Authorization: Bearer <access-token>
+```
+
+**Query Parameters:**
+
+- `period` - Time period: `1h`, `24h`, `7d`, `30d` (default: `24h`)
+
+**Response:**
+
+```dart
+{
+  "total_functions": 5,
+  "invocations_count": 1250,
+  "success_count": 1245,
+  "error_count": 5,
+  "average_latency_ms": 120,
+  "period": "24h"
+}
+```
+
+### GET /api/stats/overview/hourly
+
+Get hourly chart data for all user's functions.
+
+**Headers:**
+
+```dart
+Authorization: Bearer <access-token>
+```
+
+**Query Parameters:**
+
+- `hours` - Number of hours (default: 24, max: 168)
+
+**Response:**
+
+```dart
+{
+  "data": [
+    {
+      "hour": "2024-01-15T10:00:00Z",
+      "total_requests": 150,
+      "success_count": 148,
+      "error_count": 2,
+      "average_latency_ms": 120
+    }
+  ],
+  "hours": 24
+}
+```
+
+### GET /api/stats/overview/daily
+
+Get daily chart data for all user's functions.
+
+**Headers:**
+
+```dart
+Authorization: Bearer <access-token>
+```
+
+**Query Parameters:**
+
+- `days` - Number of days (default: 30, max: 90)
+
+**Response:**
+
+```dart
+{
+  "data": [
+    {
+      "day": "2024-01-15T00:00:00Z",
+      "total_requests": 1500,
+      "success_count": 1495,
+      "error_count": 5,
+      "average_latency_ms": 115
+    }
+  ],
+  "days": 30
+}
+```
+
+### GET /api/functions/:uuid/stats
+
+Get statistics for a specific function.
+
+**Headers:**
+
+```dart
+Authorization: Bearer <access-token>
+```
+
+**Query Parameters:**
+
+- `period` - Time period: `1h`, `24h`, `7d`, `30d` (default: `24h`)
+
+**Response:**
+
+```dart
+{
+  "invocations_count": 250,
+  "success_count": 248,
+  "error_count": 2,
+  "average_latency_ms": 125,
+  "period": "24h"
+}
+```
+
+### GET /api/functions/:uuid/stats/hourly
+
+Get hourly chart data for a specific function.
+
+**Headers:**
+
+```dart
+Authorization: Bearer <access-token>
+```
+
+**Query Parameters:**
+
+- `hours` - Number of hours (default: 24, max: 168)
+
+**Response:**
+
+```dart
+{
+  "data": [
+    {
+      "hour": "2024-01-15T10:00:00Z",
+      "total_requests": 25,
+      "success_count": 24,
+      "error_count": 1,
+      "average_latency_ms": 125
+    }
+  ],
+  "hours": 24
+}
+```
+
+### GET /api/functions/:uuid/stats/daily
+
+Get daily chart data for a specific function.
+
+**Headers:**
+
+```dart
+Authorization: Bearer <access-token>
+```
+
+**Query Parameters:**
+
+- `days` - Number of days (default: 30, max: 90)
+
+**Response:**
+
+```dart
+{
+  "data": [
+    {
+      "day": "2024-01-15T00:00:00Z",
+      "total_requests": 250,
+      "success_count": 248,
+      "error_count": 2,
+      "average_latency_ms": 125
+    }
+  ],
+  "days": 30
+}
+```
+
+<Info>
+For detailed documentation on statistics and monitoring, see [Statistics & Monitoring](./statistics.md).
+</Info>
+
 ## Health Check
 
 ### GET /health
@@ -571,6 +754,7 @@ Check backend server health.
 
 ## Next Steps
 
+- Read [Statistics & Monitoring](./statistics.md) for dashboard metrics documentation
 - Read [Architecture Overview](./architecture.md)
 - Check [CLI Documentation](../cli/dart-cloud-cli.md)
 - Explore [Development Guide](../development.md)
