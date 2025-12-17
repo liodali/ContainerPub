@@ -39,7 +39,7 @@ Middleware get authMiddleware {
           );
         }
         // Add userId to request context
-        return await handler(
+        return handler(
           request.change(
             context: {
               'userUUID': userUUID,
