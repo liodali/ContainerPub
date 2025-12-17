@@ -1,8 +1,8 @@
 import 'dart:convert';
+import 'package:dart_cloud_backend/utils/commons.dart';
 import 'package:shelf/shelf.dart';
 import 'package:uuid/uuid.dart';
 import 'package:database/database.dart';
-import 'package:dart_cloud_backend/handlers/function_handler/deployment_handler.dart';
 import 'auth_utils.dart';
 
 /// Handles function initialization operations

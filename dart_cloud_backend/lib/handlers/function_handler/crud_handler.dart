@@ -1,6 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
-import 'package:dart_cloud_backend/handlers/function_handler/auth_utils.dart';
+import 'package:dart_cloud_backend/handlers/function_handler/log_utils.dart';
 import 'package:dart_cloud_backend/services/docker/docker.dart' show DockerService;
 import 'package:dart_cloud_backend/services/s3_service.dart' show S3Service;
 import 'package:shelf/shelf.dart';
@@ -63,10 +63,14 @@ class CrudHandler {
         headers: {'Content-Type': 'application/json'},
       );
     } catch (e, trace) {
-      LogsUtils.log("unknown", "error", {
-        'err': "Failed to list functions: $e",
-        'trace': trace.toString(),
-      });
+      LogsUtils.log(
+        "unknown",
+        "error",
+        {
+          'err': "Failed to list functions: $e",
+          'trace': trace.toString(),
+        },
+      );
       // Handle database or other errors
       return Response.internalServerError(
         body: jsonEncode({'error': 'Failed to list functions: $e'}),
