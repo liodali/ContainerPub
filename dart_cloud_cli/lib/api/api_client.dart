@@ -1,9 +1,25 @@
 import 'dart:convert';
 import 'dart:io';
+import 'package:dart_cloud_cli/api/token_http.dart';
 import 'package:http/http.dart' as http;
 import 'package:dart_cloud_cli/config/config.dart';
 
 class ApiClient {
+  static final TokenHttpClient _client = TokenHttpClient(
+    getToken: () async {
+      return Config.token;
+    },
+    refreshToken: () async {
+      final token = await refreshToken(Config.refreshToken!);
+      if (token != null) {
+        Config().save(
+          token: token,
+          refreshToken: Config.refreshToken!,
+        );
+      }
+      return token;
+    },
+  );
   static Future<Map<String, dynamic>> login(
     String email,
     String password,
@@ -22,6 +38,25 @@ class ApiClient {
       return jsonDecode(response.body) as Map<String, dynamic>;
     } else {
       throw Exception('Login failed: ${response.body}');
+    }
+  }
+
+  static Future<String?> refreshToken(
+    String refreshToken,
+  ) async {
+    final body = {
+      'refreshToken': refreshToken,
+    };
+    final response = await http.post(
+      Uri.parse('${Config.serverUrl}/api/auth/refresh'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode(body),
+    );
+
+    if (response.statusCode == 200) {
+      return (jsonDecode(response.body) as Map<String, dynamic>)["accessToken"];
+    } else {
+      throw Exception('refreshToken failed');
     }
   }
 
@@ -88,7 +123,7 @@ class ApiClient {
   }
 
   static Future<Map<String, dynamic>> getFunctionLogs(String functionId) async {
-    final response = await http.get(
+    final response = await _client.get(
       Uri.parse('${Config.serverUrl}/api/functions/$functionId/logs'),
       headers: {'Authorization': 'Bearer ${Config.token}'},
     );

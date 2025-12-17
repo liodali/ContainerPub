@@ -59,15 +59,17 @@ class Config with AuthCache {
   }) async {
     if (token != null) _token = token;
     if (refreshToken != null) _refreshToken = refreshToken;
-    if (serverUrl != null) _serverUrl = serverUrl;
-
-    final data = {
-      'serverUrl': _serverUrl,
-    };
-
     await saveAuth(token: token!, refreshToken: refreshToken!);
-
-    await configFile.writeAsString(jsonEncode(data));
+    if (serverUrl != null && _serverUrl != serverUrl) {
+      _serverUrl = serverUrl;
+      await configFile.writeAsString(
+        jsonEncode(
+          {
+            'serverUrl': _serverUrl,
+          },
+        ),
+      );
+    }
   }
 
   Future<void> clear() async {
