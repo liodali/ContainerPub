@@ -74,6 +74,8 @@ class _FunctionsViewState extends ConsumerState<FunctionsView> {
                 },
                 child: FCard(
                   title: Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    mainAxisSize: .min,
                     children: [
                       SelectableText(
                         func.name,
@@ -81,7 +83,10 @@ class _FunctionsViewState extends ConsumerState<FunctionsView> {
                           fontSize: 20,
                         ),
                       ),
-                      func.statusWidget,
+                      Padding(
+                        padding: const EdgeInsets.only(top: 6),
+                        child: func.statusWidget,
+                      ),
                     ],
                   ),
                   subtitle: SelectableText(
