@@ -65,7 +65,7 @@ class VersioningHandler {
   static Future<Response> getDeployments(Request request, String uuid) async {
     try {
       // Extract user ID from authenticated request
-      final userId = request.context['userId'] as String;
+      final userId = request.context['userId'] as int;
 
       // === VERIFY FUNCTION OWNERSHIP ===
       // Check that function exists and belongs to requesting user
@@ -96,7 +96,8 @@ class VersioningHandler {
           'is_active',
           'deployed_at',
         ],
-        orderBy: 'version desc',
+        orderBy: 'version',
+        orderDirection: OrderSQLDirection.asc.label,
       );
 
       // Map database rows to JSON objects
@@ -114,10 +115,14 @@ class VersioningHandler {
         }),
         headers: {'Content-Type': 'application/json'},
       );
-    } catch (e) {
+    } catch (e, trace) {
+      LogsUtils.log(LogLevels.error.name, 'getDeployment', {
+        'error': e.toString(),
+        'trace': trace.toString(),
+      });
       // Handle database or other errors
       return Response.internalServerError(
-        body: jsonEncode({'error': 'Failed to get deployments: $e'}),
+        body: jsonEncode({'error': 'Failed to get deployments'}),
         headers: {'Content-Type': 'application/json'},
       );
     }
@@ -167,12 +172,7 @@ class VersioningHandler {
   static Future<Response> rollback(Request request, String uuid) async {
     try {
       // Extract user ID from authenticated request
-      final userUuid = request.context['userId'] as String;
-      final user = await DatabaseManagers.users.findOne(
-        where: {'uuid': userUuid},
-        select: ['id'],
-      );
-      final userId = user!.id;
+      final userId = request.context['userId'] as int;
 
       // Parse request body to get target version
       final body = jsonDecode(await request.readAsString());
@@ -209,7 +209,6 @@ class VersioningHandler {
       // Check that the specified version exists for this function
       final deploymentEntity = await DatabaseManagers.functionDeployments.findOne(
         where: {'function_id': functionEntity.id, 'version': version},
-        select: ['id'],
       );
       // final deploymentResult = await Database.connection.execute(
       //   'SELECT id FROM function_deployments WHERE function_id = \$1 AND version = \$2',
@@ -233,7 +232,7 @@ class VersioningHandler {
       final result = await rollbackFunctionDeployment(
         functionId: functionEntity.id!,
         functionName: functionEntity.name,
-        functionUUId: functionEntity.uuid!,
+        functionUUId: uuid,
         version: version,
         imageTag: deploymentEntity.imageTag,
         s3Key: deploymentEntity.s3Key,
@@ -253,14 +252,14 @@ class VersioningHandler {
       await Database.transaction((conn) async {
         // Step 1: Deactivate current active deployment
         await conn.execute(
-          'UPDATE function_deployments SET is_active = false WHERE function_id = \$1 AND is_active = true',
-          parameters: [functionEntity.id],
+          'UPDATE function_deployments SET is_active = false, status= \$2 WHERE function_id = \$1 AND is_active = true',
+          parameters: [functionEntity.id, DeployStatus.disabled.name],
         );
 
         // Step 2: Activate target deployment
         await conn.execute(
-          'UPDATE function_deployments SET is_active = true WHERE id = \$1',
-          parameters: [deploymentId],
+          'UPDATE function_deployments SET is_active = true,status= \$2 WHERE id = \$1',
+          parameters: [deploymentId, DeployStatus.active.name],
         );
 
         // Step 3: Update function's active deployment reference
@@ -337,7 +336,9 @@ class VersioningHandler {
 
     // Image doesn't exist - need to rebuild from S3
     // First verify S3 archive exists
-    final s3Exists = await S3Service.s3Client.isKeyBucketExist(s3Key);
+    final s3Exists = await S3Service.s3Client.isKeyBucketExist(
+      '$s3Key/${functionName}.zip',
+    );
     if (!s3Exists) {
       await FunctionUtils.logDeploymentFunction(
         functionUUId,
