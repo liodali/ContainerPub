@@ -40,9 +40,9 @@ class FunctionRollback {
     int version,
     String s3key,
   ) async {
-    final folderFunction = '${Config.functionsDir}/$functionUUId/$version';
+    final folderFunction = '${Config.functionsDir}/$functionUUId/v$version';
     final zipPath = '$folderFunction/$functionName.zip';
-
+    final objectKey = '$s3key/${functionName}.zip';
     try {
       // === STEP 1: DOWNLOAD FROM S3 ===
       await FunctionUtils.logDeploymentFunction(
@@ -51,7 +51,7 @@ class FunctionRollback {
         'Downloading function from S3: $s3key',
       );
 
-      final downloadResult = await S3Service.s3Client.download(s3key, zipPath);
+      final downloadResult = await S3Service.s3Client.download(objectKey, zipPath);
       if (downloadResult.isNotEmpty) {
         await FunctionUtils.logDeploymentFunction(
           functionUUId,
