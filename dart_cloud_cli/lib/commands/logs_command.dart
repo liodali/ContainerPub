@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:dart_cloud_cli/api/api_client.dart';
 import 'package:dart_cloud_cli/commands/base_command.dart' show BaseCommand;
+import 'package:dart_cloud_cli/common/commons.dart';
 
 class LogsCommand extends BaseCommand {
   Future<void> execute(List<String> args) async {
@@ -34,14 +35,17 @@ class LogsCommand extends BaseCommand {
 
       for (final log in logs) {
         final timestamp = log['timestamp'] as String;
-        final level = log['level'] as String;
-        final message = log['message'] as String;
+        final level = log['status'] as String;
+        final message = log['logs'];
+        final errorInvocation =
+            log['error'] != null ? tryDecode(log['error']) : null;
 
-        print('[$timestamp] [$level] $message');
+        print('[$timestamp] [$level] ${errorInvocation ?? message ?? ''}');
       }
 
       print('─' * 80);
       print('Total: ${logs.length} log entries');
+      exit(0);
     } catch (e) {
       print('✗ Failed to fetch logs: $e');
       exit(1);

@@ -40,6 +40,19 @@ class SecureDataEncoder {
     return utf8.decode(bytes);
   }
 
+  /// Decodes Base64 string back to original data
+  ///
+  /// Future versions will decrypt using developer-specific keys
+  /// before decoding from Base64.
+  static String tryDecode(String encodedData) {
+    try {
+      final bytes = base64Decode(encodedData);
+      return utf8.decode(bytes);
+    } catch (_) {
+      return encodedData;
+    }
+  }
+
   /// Decodes Base64 string back to Map
   ///
   /// Decodes from Base64 first, then parses JSON.
