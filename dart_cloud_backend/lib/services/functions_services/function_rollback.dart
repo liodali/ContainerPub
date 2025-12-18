@@ -1,10 +1,9 @@
 import 'dart:io';
 
 import 'package:dart_cloud_backend/configuration/config.dart';
-import 'package:dart_cloud_backend/handlers/function_handler.dart';
-import 'package:dart_cloud_backend/handlers/function_handler/auth_utils.dart'
-    show FunctionUtils;
-import 'package:dart_cloud_backend/handlers/function_handler/log_utils.dart';
+import 'package:dart_cloud_backend/handlers/logs/functions_utils.dart';
+
+import 'package:dart_cloud_backend/handlers/logs/log_utils.dart';
 import 'package:dart_cloud_backend/services/docker/docker.dart';
 import 'package:dart_cloud_backend/services/s3_service.dart' show S3Service;
 import 'package:dart_cloud_backend/utils/archive_utils.dart';
@@ -46,7 +45,7 @@ class FunctionRollback {
 
     try {
       // === STEP 1: DOWNLOAD FROM S3 ===
-      await FunctionUtils.logFunction(
+      await FunctionUtils.logDeploymentFunction(
         functionUUId,
         'info',
         'Downloading function from S3: $s3key',
@@ -54,7 +53,7 @@ class FunctionRollback {
 
       final downloadResult = await S3Service.s3Client.download(s3key, zipPath);
       if (downloadResult.isNotEmpty) {
-        await FunctionUtils.logFunction(
+        await FunctionUtils.logDeploymentFunction(
           functionUUId,
           'error',
           'Failed to download function for rollback: $downloadResult',
@@ -65,7 +64,7 @@ class FunctionRollback {
       // Verify download succeeded
       final zipFile = File(zipPath);
       if (!await zipFile.exists()) {
-        await FunctionUtils.logFunction(
+        await FunctionUtils.logDeploymentFunction(
           functionUUId,
           'error',
           'Downloaded file not found at: $zipPath',
@@ -74,7 +73,7 @@ class FunctionRollback {
       }
 
       // === STEP 2: EXTRACT ARCHIVE ===
-      await FunctionUtils.logFunction(
+      await FunctionUtils.logDeploymentFunction(
         functionUUId,
         'info',
         'Extracting function...',
@@ -83,7 +82,7 @@ class FunctionRollback {
       try {
         await ArchiveUtility.extractZipFile(zipPath, folderFunction);
       } catch (extractError, trace) {
-        await FunctionUtils.logFunction(
+        await FunctionUtils.logDeploymentFunction(
           functionUUId,
           'error',
           'Failed to extract archive',
@@ -103,7 +102,7 @@ class FunctionRollback {
       // Verify extraction - check for pubspec.yaml as indicator
       final pubspecFile = File('$folderFunction/pubspec.yaml');
       if (!await pubspecFile.exists()) {
-        await FunctionUtils.logFunction(
+        await FunctionUtils.logDeploymentFunction(
           functionUUId,
           'error',
           'Extraction verification failed: pubspec.yaml not found',
@@ -113,7 +112,7 @@ class FunctionRollback {
       }
 
       // === STEP 3: BUILD DOCKER IMAGE ===
-      await FunctionUtils.logFunction(
+      await FunctionUtils.logDeploymentFunction(
         functionUUId,
         'info',
         'Rolling back to version $version: Building function',
@@ -127,7 +126,7 @@ class FunctionRollback {
           folderFunction,
         );
       } catch (buildError) {
-        await FunctionUtils.logFunction(
+        await FunctionUtils.logDeploymentFunction(
           functionUUId,
           'error',
           'Docker build failed: $buildError',
@@ -139,7 +138,7 @@ class FunctionRollback {
       // Verify image was created
       final imageExists = await DockerService.isContainerImageExist(imageTag);
       if (!imageExists) {
-        await FunctionUtils.logFunction(
+        await FunctionUtils.logDeploymentFunction(
           functionUUId,
           'error',
           'Docker image verification failed: $imageTag not found after build',
@@ -149,7 +148,7 @@ class FunctionRollback {
       }
 
       // === SUCCESS ===
-      await FunctionUtils.logFunction(
+      await FunctionUtils.logDeploymentFunction(
         functionUUId,
         'info',
         'Rollback to version $version completed successfully',
@@ -160,7 +159,7 @@ class FunctionRollback {
 
       return true;
     } catch (e) {
-      await FunctionUtils.logFunction(
+      await FunctionUtils.logDeploymentFunction(
         functionUUId,
         'error',
         'Unexpected error during rollback: $e',

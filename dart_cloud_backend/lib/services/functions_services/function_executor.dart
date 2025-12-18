@@ -1,5 +1,5 @@
 import 'dart:async';
-import 'package:dart_cloud_backend/handlers/function_handler.dart';
+import 'package:dart_cloud_backend/handlers/logs/functions_utils.dart';
 import 'package:dart_cloud_backend/services/docker/docker_service.dart';
 import 'package:dart_cloud_backend/configuration/config.dart';
 import 'package:database/database.dart';
@@ -110,7 +110,7 @@ class FunctionExecutor {
 
       return executionResult;
     } catch (e, trace) {
-      FunctionUtils.logFunction(
+      FunctionUtils.logDeploymentFunction(
         functionUUId,
         'error',
         'Function execution failed: $e,trace:$trace',
