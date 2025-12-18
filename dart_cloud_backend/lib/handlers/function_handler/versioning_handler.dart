@@ -62,20 +62,20 @@ class VersioningHandler {
   /// - 200: Deployment history retrieved
   /// - 404: Function not found or access denied
   /// - 500: Failed to retrieve history
-  static Future<Response> getDeployments(Request request, String id) async {
+  static Future<Response> getDeployments(Request request, String uuid) async {
     try {
       // Extract user ID from authenticated request
       final userId = request.context['userId'] as String;
 
       // === VERIFY FUNCTION OWNERSHIP ===
       // Check that function exists and belongs to requesting user
-      final funcResult = await Database.connection.execute(
-        'SELECT id FROM functions WHERE id = \$1 AND user_id = \$2',
-        parameters: [id, userId],
+      final functionEntity = await DatabaseManagers.functions.findOne(
+        where: {'uuid': uuid, 'user_id': userId},
+        select: ['id', 'name', 'status'],
       );
 
       // Return 404 if function not found or access denied
-      if (funcResult.isEmpty) {
+      if (functionEntity == null) {
         return Response.notFound(
           jsonEncode({'error': 'Function not found'}),
           headers: {'Content-Type': 'application/json'},
@@ -83,10 +83,10 @@ class VersioningHandler {
       }
 
       // === RETRIEVE DEPLOYMENT HISTORY ===
-      // Query all deployments for this function
+      // Query all deployments for this function using internal ID
       // Ordered by version descending (newest first)
       final deploymentsResult = await DatabaseManagers.functionDeployments.findAll(
-        where: {'function_id': id},
+        where: {'function_id': functionEntity.id},
         select: [
           'uuid',
           'version',
@@ -104,9 +104,14 @@ class VersioningHandler {
         return deploy.toMap();
       }).toList();
 
-      // Return deployment history
+      // Return deployment history with function info
       return Response.ok(
-        jsonEncode({'deployments': deployments}),
+        jsonEncode({
+          'function_uuid': uuid,
+          'function_name': functionEntity.name,
+          'function_status': functionEntity.status,
+          'deployments': deployments,
+        }),
         headers: {'Content-Type': 'application/json'},
       );
     } catch (e) {

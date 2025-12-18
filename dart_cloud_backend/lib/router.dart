@@ -70,7 +70,9 @@ Router createRouter() {
     '/api/functions/<id>/deployments',
     Pipeline()
         .addMiddleware(authMiddleware)
-        .addHandler((req) => FunctionHandler.getDeployments(req, req.params['id']!)),
+        .addHandler(
+          (req) => FunctionHandler.getDeployments(req, req.params['id']!),
+        ),
   );
 
   router.post(
