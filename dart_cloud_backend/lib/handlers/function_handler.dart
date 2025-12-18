@@ -135,8 +135,8 @@ class FunctionHandler {
   // === VERSIONING OPERATIONS ===
   /// Get deployment history for a function
   /// Delegates to: VersioningHandler.getDeployments()
-  static Future<Response> getDeployments(Request request, String id) {
-    return VersioningHandler.getDeployments(request, id);
+  static Future<Response> getDeployments(Request request, String uuid) {
+    return VersioningHandler.getDeployments(request, uuid);
   }
 
   /// Rollback function to a specific version

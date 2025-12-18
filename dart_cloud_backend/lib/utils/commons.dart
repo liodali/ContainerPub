@@ -3,7 +3,19 @@ import 'dart:convert';
 import 'package:collection/collection.dart';
 
 enum DeploymentStatus { init, building, active, disabled, deleted }
+
+enum DeployStatus { active, disabled, archived }
+
 enum LogLevels { info, warning, error, debug }
+
+enum OrderSQLDirection {
+  asc('ASC'),
+  desc('DESC')
+  ;
+
+  const OrderSQLDirection(this.label);
+  final String label;
+}
 
 extension StringExtension on String {
   String get encode => base64.encode(utf8.encode(this));

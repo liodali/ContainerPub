@@ -79,7 +79,9 @@ Router createRouter() {
     '/api/functions/<id>/rollback',
     Pipeline()
         .addMiddleware(authMiddleware)
-        .addHandler((req) => FunctionHandler.rollback(req, req.params['id']!)),
+        .addHandler(
+          (req) => FunctionHandler.rollback(req, req.params['id']!),
+        ),
   );
 
   // User Overview Statistics routes (protected) - aggregated across all user's functions
@@ -87,7 +89,9 @@ Router createRouter() {
     '/api/stats/overview',
     Pipeline()
         .addMiddleware(authMiddleware)
-        .addHandler(StatisticsHandler.getOverviewStats),
+        .addHandler(
+          StatisticsHandler.getOverviewStats,
+        ),
   );
 
   router.get(
