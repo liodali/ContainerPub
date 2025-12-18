@@ -129,6 +129,8 @@ abstract class ContainerRuntime {
   /// Kill a running container
   Future<ProcessResult> killContainer(String containerName);
 
+  Future<void> prune();
+
   /// Check if the runtime is available
   Future<bool> isAvailable();
 

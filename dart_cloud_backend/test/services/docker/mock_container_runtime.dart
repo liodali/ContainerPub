@@ -247,6 +247,12 @@ class MockContainerRuntime extends ContainerRuntime {
     methodCalls.add(MethodCall('imageExists', {'imageTag': imageTag}));
     return Future.value(true); // Default to true for testing
   }
+
+  @override
+  Future<void> prune() {
+    methodCalls.add(MethodCall('prune', {}));
+    return Future.value();
+  }
 }
 
 /// Represents a method call for verification
