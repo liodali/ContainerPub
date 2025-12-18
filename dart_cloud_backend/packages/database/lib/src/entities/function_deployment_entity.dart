@@ -40,7 +40,7 @@ class FunctionDeploymentEntity extends Entity {
       if (status != null) 'status': status,
       if (isActive != null) 'is_active': isActive,
       if (buildLogs != null) 'build_logs': buildLogs,
-      if (deployedAt != null) 'deployed_at': deployedAt,
+      if (deployedAt != null) 'deployed_at': deployedAt!.toIso8601String(),
     };
   }
 
@@ -71,7 +71,7 @@ class FunctionDeploymentEntity extends Entity {
       status: map['status'] as String?,
       isActive: map['is_active'] as bool?,
       buildLogs: map['build_logs'] as String?,
-      deployedAt: map['deployed_at'] as DateTime?,
+      deployedAt: map['deployed_at'],
     );
   }
 
