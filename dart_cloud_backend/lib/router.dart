@@ -9,81 +9,15 @@ import 'package:dart_cloud_backend/middleware/signature_middleware.dart';
 
 Router createRouter() {
   final router = Router();
-
-  router.authRoutes();
-  router.userRoutes();
   // Health check
   router.get('/health', (Request request) {
     return Response.ok('OK');
   });
+  router.authRoutes();
+  router.userRoutes();
 
   // Function routes (protected)
-  router.post(
-    '/api/functions/init',
-    Pipeline().addMiddleware(authMiddleware).addHandler(FunctionHandler.init),
-  );
-
-  router.post(
-    '/api/functions/deploy',
-    Pipeline().addMiddleware(authMiddleware).addHandler(FunctionHandler.deploy),
-  );
-
-  router.get(
-    '/api/functions',
-    Pipeline().addMiddleware(authMiddleware).addHandler(FunctionHandler.list),
-  );
-
-  router.get(
-    '/api/functions/<id>',
-    Pipeline()
-        .addMiddleware(authMiddleware)
-        .addHandler(
-          (req) => FunctionHandler.get(
-            req,
-            req.params['id']!,
-          ),
-        ),
-  );
-
-  router.get(
-    '/api/functions/<id>/logs',
-    Pipeline()
-        .addMiddleware(authMiddleware)
-        .addHandler((req) => FunctionHandler.getLogs(req, req.params['id']!)),
-  );
-
-  router.delete(
-    '/api/functions/<id>',
-    Pipeline()
-        .addMiddleware(authMiddleware)
-        .addHandler((req) => FunctionHandler.delete(req, req.params['id']!)),
-  );
-
-  router.post(
-    '/api/functions/<id>/invoke',
-    Pipeline()
-        .addMiddleware(signatureMiddleware)
-        .addHandler((req) => FunctionHandler.invoke(req, req.params['id']!)),
-  );
-
-  router.get(
-    '/api/functions/<id>/deployments',
-    Pipeline()
-        .addMiddleware(authMiddleware)
-        .addHandler(
-          (req) => FunctionHandler.getDeployments(req, req.params['id']!),
-        ),
-  );
-
-  router.post(
-    '/api/functions/<id>/rollback',
-    Pipeline()
-        .addMiddleware(authMiddleware)
-        .addHandler(
-          (req) => FunctionHandler.rollback(req, req.params['id']!),
-        ),
-  );
-
+  router.functionRoutes();
   // User Overview Statistics routes (protected) - aggregated across all user's functions
   router.get(
     '/api/stats/overview',
@@ -106,28 +40,6 @@ Router createRouter() {
     Pipeline()
         .addMiddleware(authMiddleware)
         .addHandler(StatisticsHandler.getOverviewDailyStats),
-  );
-
-  // Per-function Statistics routes (protected)
-  router.get(
-    '/api/functions/<id>/stats',
-    Pipeline()
-        .addMiddleware(authMiddleware)
-        .addHandler((req) => StatisticsHandler.getStats(req, req.params['id']!)),
-  );
-
-  router.get(
-    '/api/functions/<id>/stats/hourly',
-    Pipeline()
-        .addMiddleware(authMiddleware)
-        .addHandler((req) => StatisticsHandler.getHourlyStats(req, req.params['id']!)),
-  );
-
-  router.get(
-    '/api/functions/<id>/stats/daily',
-    Pipeline()
-        .addMiddleware(authMiddleware)
-        .addHandler((req) => StatisticsHandler.getDailyStats(req, req.params['id']!)),
   );
 
   // 404 handler
@@ -186,5 +98,96 @@ extension ExtUserRouter on Router {
     post('/api/user/organization', AuthHandler.createOrganization);
     post('/api/user/upgrade', AuthHandler.upgrade);
     post('/api/user/add-member', AuthHandler.addMember);
+  }
+}
+
+extension FunctionRouter on Router {
+  void functionRoutes() {
+    post(
+      '/api/functions/init',
+      Pipeline().addMiddleware(authMiddleware).addHandler(FunctionHandler.init),
+    );
+
+    post(
+      '/api/functions/deploy',
+      Pipeline().addMiddleware(authMiddleware).addHandler(FunctionHandler.deploy),
+    );
+
+    get(
+      '/api/functions',
+      Pipeline().addMiddleware(authMiddleware).addHandler(FunctionHandler.list),
+    );
+
+    get(
+      '/api/functions/<id>',
+      Pipeline()
+          .addMiddleware(authMiddleware)
+          .addHandler(
+            (req) => FunctionHandler.get(
+              req,
+              req.params['id']!,
+            ),
+          ),
+    );
+
+    get(
+      '/api/functions/<id>/logs',
+      Pipeline()
+          .addMiddleware(authMiddleware)
+          .addHandler((req) => FunctionHandler.getLogs(req, req.params['id']!)),
+    );
+
+    delete(
+      '/api/functions/<id>',
+      Pipeline()
+          .addMiddleware(authMiddleware)
+          .addHandler((req) => FunctionHandler.delete(req, req.params['id']!)),
+    );
+
+    post(
+      '/api/functions/<id>/invoke',
+      Pipeline()
+          .addMiddleware(signatureMiddleware)
+          .addHandler((req) => FunctionHandler.invoke(req, req.params['id']!)),
+    );
+
+    get(
+      '/api/functions/<id>/deployments',
+      Pipeline()
+          .addMiddleware(authMiddleware)
+          .addHandler(
+            (req) => FunctionHandler.getDeployments(req, req.params['id']!),
+          ),
+    );
+
+    post(
+      '/api/functions/<id>/rollback',
+      Pipeline()
+          .addMiddleware(authMiddleware)
+          .addHandler(
+            (req) => FunctionHandler.rollback(req, req.params['id']!),
+          ),
+    );
+    // Per-function Statistics routes (protected)
+    get(
+      '/api/functions/<id>/stats',
+      Pipeline()
+          .addMiddleware(authMiddleware)
+          .addHandler((req) => StatisticsHandler.getStats(req, req.params['id']!)),
+    );
+
+    get(
+      '/api/functions/<id>/stats/hourly',
+      Pipeline()
+          .addMiddleware(authMiddleware)
+          .addHandler((req) => StatisticsHandler.getHourlyStats(req, req.params['id']!)),
+    );
+
+    get(
+      '/api/functions/<id>/stats/daily',
+      Pipeline()
+          .addMiddleware(authMiddleware)
+          .addHandler((req) => StatisticsHandler.getDailyStats(req, req.params['id']!)),
+    );
   }
 }

@@ -24,7 +24,7 @@ class AuthUtils {
   /// // Use authUser.id for database queries
   /// ```
   static Future<AuthenticatedUser?> getAuthenticatedUser(Request request) async {
-    final userUUID = request.context['userId'] as String?;
+    final userUUID = request.context['userUUID'] as String?;
     if (userUUID == null) return null;
 
     final userEntity = await DatabaseManagers.users.findByUuid(userUUID);
