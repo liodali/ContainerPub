@@ -93,7 +93,7 @@ class TokenAuthInterceptor extends QueuedInterceptor {
     } else {
       // Not a 401, or no refresh token, or refresh route failed (handled by _handleRefreshFailure)
       _refreshTokenFuture = null;
-      super.onError(err, handler);
+      return super.onError(err, handler);
     }
   }
 
