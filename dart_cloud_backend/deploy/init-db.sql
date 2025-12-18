@@ -54,16 +54,16 @@ CREATE TABLE IF NOT EXISTS function_deployments (
 );
 \echo "Function deployments table created"
 
--- Create function_logs table with serial ID (internal) and UUID (public)
-CREATE TABLE IF NOT EXISTS function_logs (
+-- Create function_deploy_logs table with serial ID (internal) and UUID (public)
+CREATE TABLE IF NOT EXISTS function_deploy_logs (
     id SERIAL PRIMARY KEY,
     uuid UUID UNIQUE NOT NULL DEFAULT uuid_generate_v4(),
-    function_id INTEGER NOT NULL REFERENCES functions(id) ON DELETE CASCADE,
+    function_uuid UUID NOT NULL REFERENCES functions(uuid) ON DELETE CASCADE,
     level VARCHAR(20) NOT NULL,
     message TEXT NOT NULL,
     timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
-\echo "Function logs table created"
+\echo "Function deploy logs table created"
 
 -- Create function_invocations table with serial ID (internal) and UUID (public)
 -- Stores request metadata and execution logs
@@ -99,7 +99,7 @@ DO $$
 DECLARE
     table_name TEXT;
 BEGIN
-    FOREACH table_name IN ARRAY ARRAY['users', 'functions', 'function_logs', 'function_invocations']
+    FOREACH table_name IN ARRAY ARRAY['users', 'functions', 'function_deploy_logs', 'function_invocations']
     LOOP
         IF EXISTS (SELECT FROM information_schema.tables WHERE table_schema = 'public' AND table_name = table_name) THEN
             RAISE NOTICE 'Table % exists', table_name;
@@ -114,7 +114,7 @@ END $$;
 CREATE INDEX IF NOT EXISTS idx_users_uuid ON users(uuid);
 CREATE INDEX IF NOT EXISTS idx_functions_uuid ON functions(uuid);
 CREATE INDEX IF NOT EXISTS idx_function_deployments_uuid ON function_deployments(uuid);
-CREATE INDEX IF NOT EXISTS idx_function_logs_uuid ON function_logs(uuid);
+CREATE INDEX IF NOT EXISTS idx_function_deploy_logs_uuid ON function_deploy_logs(uuid);
 CREATE INDEX IF NOT EXISTS idx_function_invocations_uuid ON function_invocations(uuid);
 CREATE INDEX IF NOT EXISTS idx_logs_uuid ON logs(uuid);
 
@@ -127,11 +127,11 @@ CREATE INDEX IF NOT EXISTS idx_functions_active_deployment ON functions(active_d
 CREATE INDEX IF NOT EXISTS idx_function_deployments_function_id ON function_deployments(function_id);
 CREATE INDEX IF NOT EXISTS idx_function_deployments_is_active ON function_deployments(function_id, is_active);
 CREATE INDEX IF NOT EXISTS idx_function_deployments_version ON function_deployments(function_id, version DESC);
-CREATE INDEX IF NOT EXISTS idx_function_logs_function_id ON function_logs(function_id);
+CREATE INDEX IF NOT EXISTS idx_function_deploy_logs_function_id ON function_deploy_logs(function_uuid);
 CREATE INDEX IF NOT EXISTS idx_function_invocations_function_id ON function_invocations(function_id);
 
 -- Timestamp indexes for time-based queries
-CREATE INDEX IF NOT EXISTS idx_function_logs_timestamp ON function_logs(timestamp DESC);
+CREATE INDEX IF NOT EXISTS idx_function_deploy_logs_timestamp ON function_deploy_logs(timestamp DESC);
 CREATE INDEX IF NOT EXISTS idx_function_invocations_timestamp ON function_invocations(timestamp DESC);
 CREATE INDEX IF NOT EXISTS idx_logs_created_at ON logs(created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_logs_action ON logs(action);
@@ -198,7 +198,7 @@ GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO dart_cloud;
 \echo '  ✓ users                    (SERIAL + UUID)'
 \echo '  ✓ functions                (SERIAL + UUID, with deployment support)'
 \echo '  ✓ function_deployments     (SERIAL + UUID, versioned deployments)'
-\echo '  ✓ function_logs            (SERIAL + UUID)'
+\echo '  ✓ function_deploy_logs     (SERIAL + UUID)'
 \echo '  ✓ function_invocations     (SERIAL + UUID)'
 \echo '  ✓ logs                     (SERIAL + UUID)'
 \echo ''
