@@ -1,9 +1,9 @@
 import 'dart:io';
 
 import 'package:dart_cloud_backend/configuration/config.dart';
-import 'package:dart_cloud_backend/handlers/logs/functions_utils.dart';
+import 'package:dart_cloud_backend/handlers/logs_utils/functions_utils.dart';
 
-import 'package:dart_cloud_backend/handlers/logs/log_utils.dart';
+import 'package:dart_cloud_backend/handlers/logs_utils/log_utils.dart';
 import 'package:dart_cloud_backend/services/docker/docker.dart';
 import 'package:dart_cloud_backend/services/s3_service.dart' show S3Service;
 import 'package:dart_cloud_backend/utils/archive_utils.dart';

@@ -1,4 +1,4 @@
-import 'package:dart_cloud_backend/handlers/logs/log_utils.dart';
+import 'package:dart_cloud_backend/handlers/logs_utils/log_utils.dart';
 import 'package:dart_cloud_backend/utils/commons.dart';
 import 'package:database/database.dart';
 

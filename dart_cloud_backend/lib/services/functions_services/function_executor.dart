@@ -1,5 +1,5 @@
 import 'dart:async';
-import 'package:dart_cloud_backend/handlers/logs/functions_utils.dart';
+import 'package:dart_cloud_backend/handlers/logs_utils/functions_utils.dart';
 import 'package:dart_cloud_backend/services/docker/docker_service.dart';
 import 'package:dart_cloud_backend/configuration/config.dart';
 import 'package:database/database.dart';

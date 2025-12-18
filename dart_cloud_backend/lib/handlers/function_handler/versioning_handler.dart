@@ -1,12 +1,12 @@
 import 'dart:convert';
-import 'package:dart_cloud_backend/handlers/logs/log_utils.dart';
+import 'package:dart_cloud_backend/handlers/logs_utils/log_utils.dart';
 import 'package:dart_cloud_backend/services/docker/docker.dart';
 import 'package:dart_cloud_backend/services/functions_services/function_rollback.dart';
 import 'package:dart_cloud_backend/services/s3_service.dart';
 import 'package:dart_cloud_backend/utils/commons.dart';
 import 'package:shelf/shelf.dart';
 import 'package:database/database.dart';
-import 'package:dart_cloud_backend/handlers/logs/functions_utils.dart';
+import 'package:dart_cloud_backend/handlers/logs_utils/functions_utils.dart';
 
 enum VersioningResultAction {
   rollbackFailed,
