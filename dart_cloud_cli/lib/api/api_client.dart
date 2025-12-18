@@ -249,4 +249,44 @@ class ApiClient {
       throw Exception('Failed to list API keys: ${response.body}');
     }
   }
+
+  /// Get deployment versions for a function
+  ///
+  /// Returns deployment history including version numbers, status, and active flag
+  static Future<Map<String, dynamic>> getDeployments(String functionId) async {
+    final response = await _client.get(
+      Uri.parse('${Config.serverUrl}/api/functions/$functionId/deployments'),
+      headers: {'Authorization': 'Bearer ${Config.token}'},
+    );
+
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body) as Map<String, dynamic>;
+    } else {
+      throw Exception('Failed to get deployments: ${response.body}');
+    }
+  }
+
+  /// Rollback function to a specific version
+  ///
+  /// [functionId]: The UUID of the function
+  /// [version]: The version number to rollback to
+  static Future<Map<String, dynamic>> rollbackFunction(
+    String functionId,
+    int version,
+  ) async {
+    final response = await http.post(
+      Uri.parse('${Config.serverUrl}/api/functions/$functionId/rollback'),
+      headers: {
+        'Authorization': 'Bearer ${Config.token}',
+        'Content-Type': 'application/json',
+      },
+      body: jsonEncode({'version': version}),
+    );
+
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body) as Map<String, dynamic>;
+    } else {
+      throw Exception('Failed to rollback: ${response.body}');
+    }
+  }
 }
