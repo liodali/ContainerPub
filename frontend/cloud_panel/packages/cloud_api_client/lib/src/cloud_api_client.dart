@@ -43,8 +43,11 @@ class CloudApiClient {
       } else if (statusCode == 404) {
         throw NotFoundException(message.toString());
       } else {
-        throw CloudApiException(message.toString(),
-            statusCode: statusCode, data: e.response?.data);
+        throw CloudApiException(
+          message.toString(),
+          statusCode: statusCode,
+          data: e.response?.data,
+        );
       }
     }
   }
@@ -64,6 +67,27 @@ class CloudApiClient {
     final data = await _handleRequest(
         () => _dio.get(CommonsApis.apiGetFunctionsPath(uuid)));
     return CloudFunction.fromJson(data['function'] ?? data);
+  }
+
+  Future<FunctionStats> getStats(String uuid) async {
+    final data =
+        await _handleRequest(() => _dio.get('/api/functions/$uuid/stats'));
+    return FunctionStats.fromJson(data['stats'] ?? data);
+  }
+
+  Future<HourlyStatsResponse> getHourlyStats(String uuid,
+      {int hours = 24}) async {
+    final data = await _handleRequest(() => _dio.get(
+        '/api/functions/$uuid/stats/hourly',
+        queryParameters: {'hours': hours}));
+    return HourlyStatsResponse.fromJson(data);
+  }
+
+  Future<DailyStatsResponse> getDailyStats(String uuid, {int days = 30}) async {
+    final data = await _handleRequest(() => _dio.get(
+        '/api/functions/$uuid/stats/daily',
+        queryParameters: {'days': days}));
+    return DailyStatsResponse.fromJson(data);
   }
 
   Future<CloudFunction> createFunction(String name) async {
