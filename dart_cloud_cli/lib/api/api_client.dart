@@ -88,19 +88,12 @@ class ApiClient {
     File archive,
     String functionUuid,
   ) async {
-    final request = http.MultipartRequest(
+    final response = await _client.sendMultipartRequest(
       'POST',
       Uri.parse('${Config.serverUrl}/api/functions/deploy'),
+      fields: {'function_id': functionUuid},
+      files: [await http.MultipartFile.fromPath('archive', archive.path)],
     );
-
-    // request.headers['Authorization'] = 'Bearer ${Config.token}';
-    request.fields['function_id'] = functionUuid;
-    request.headers['Content-Type'] = 'multipart/form-data';
-    request.files
-        .add(await http.MultipartFile.fromPath('archive', archive.path));
-
-    final streamedResponse = await request.send();
-    final response = await http.Response.fromStream(streamedResponse);
 
     if (response.statusCode == 200 || response.statusCode == 201) {
       return jsonDecode(response.body) as Map<String, dynamic>;

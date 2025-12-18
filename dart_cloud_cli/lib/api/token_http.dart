@@ -83,6 +83,38 @@ class TokenHttpClient extends http.BaseClient {
         request.headers['X-Skip-Token'] == 'true';
   }
 
+  /// Send a multipart request with automatic token handling and refresh
+  ///
+  /// [method]: HTTP method (e.g., 'POST', 'PUT')
+  /// [url]: The request URL
+  /// [fields]: Form fields to include
+  /// [files]: Files to upload
+  /// [headers]: Additional headers (Authorization will be added automatically)
+  Future<http.Response> sendMultipartRequest(
+    String method,
+    Uri url, {
+    Map<String, String>? fields,
+    List<http.MultipartFile>? files,
+    Map<String, String>? headers,
+  }) async {
+    final request = http.MultipartRequest(method, url);
+
+    if (fields != null) {
+      request.fields.addAll(fields);
+    }
+
+    if (files != null) {
+      request.files.addAll(files);
+    }
+
+    if (headers != null) {
+      request.headers.addAll(headers);
+    }
+
+    final streamedResponse = await send(request);
+    return http.Response.fromStream(streamedResponse);
+  }
+
   // Helper method to copy request (required because requests can only be sent once)
   http.BaseRequest _copyRequest(http.BaseRequest request) {
     http.BaseRequest requestCopy;
