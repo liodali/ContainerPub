@@ -46,6 +46,7 @@ class MyProcessor extends CloudDartFunction {
     final average = sum / numbers.length;
     final min = numbers.reduce((a, b) => a < b ? a : b);
     final max = numbers.reduce((a, b) => a > b ? a : b);
+    final diffMinMax = max - min;
     final sumLog = numbers.fold<num>(0, (a, b) => a + log(b));
 
     // Calculate standard deviation
@@ -62,6 +63,7 @@ class MyProcessor extends CloudDartFunction {
       'average': average,
       'min': min,
       'max': max,
+      'diffMinMax': diffMinMax,
       'standard_deviation': stdDev,
       'processed_at': DateTime.now().toIso8601String(),
     };
