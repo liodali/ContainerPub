@@ -140,11 +140,6 @@ func checkKeyBucketExist(objectKey *C.char) C.int {
 		// No error means the HeadObject call succeeded, and the object exists.
 		return C.int(1)
 	}
-
-	if err != nil {
-		// The specific error for a non-existent object is "NotFound" (HTTP 404).
-		return C.int(0)
-	}
 	return C.int(0)
 }
 
