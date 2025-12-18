@@ -1,5 +1,5 @@
 import 'dart:convert';
-import 'package:dart_cloud_backend/handlers/function_handler/log_utils.dart';
+import 'package:dart_cloud_backend/handlers/logs/log_utils.dart';
 import 'package:dart_cloud_backend/utils/commons.dart';
 import 'package:shelf/shelf.dart';
 import 'package:database/database.dart';

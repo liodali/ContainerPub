@@ -1,9 +1,9 @@
 import 'dart:convert';
+import 'package:dart_cloud_backend/handlers/logs/functions_utils.dart';
 import 'package:shelf/shelf.dart';
 import 'package:dart_cloud_backend/configuration/config.dart';
 import 'package:database/database.dart';
-import 'package:dart_cloud_backend/services/function_executor.dart';
-import 'auth_utils.dart';
+import 'package:dart_cloud_backend/services/functions_services/function_executor.dart';
 
 /// Handles function execution (invocation) operations
 ///
@@ -190,20 +190,21 @@ class ExecutionHandler {
       };
 
       // Store invocation with request info (no body for security)
-      final entity = FunctionInvocationEntity(
-        functionId: funcEntity.id,
-        status: isSuccess ? 'success' : 'error',
-        durationMs: duration,
-        error: SecureDataEncoder.encodeOrNull(errorMessage),
-        logs: invocationLogs.toJson(),
-        requestInfo: requestInfo,
-        result: SecureDataEncoder.encodeOrNull(resultString),
-        success: isSuccess,
+      FunctionUtils.logInvocationFunction(
+        FunctionInvocationEntity(
+          functionId: funcEntity.id,
+          status: isSuccess ? 'success' : 'error',
+          durationMs: duration,
+          error: SecureDataEncoder.encodeOrNull(errorMessage),
+          logs: invocationLogs.toJson(),
+          requestInfo: requestInfo,
+          result: SecureDataEncoder.encodeOrNull(resultString),
+          success: isSuccess,
+        ),
       );
-      DatabaseManagers.functionInvocations.insert(entity.toDBMap());
 
       // Log execution result for debugging and monitoring
-      await FunctionUtils.logFunction(
+      await FunctionUtils.logDeploymentFunction(
         uuid,
         executionResult['success'] == true ? 'info' : 'error',
         executionResult['success'] == true

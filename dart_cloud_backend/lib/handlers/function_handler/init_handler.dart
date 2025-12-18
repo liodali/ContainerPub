@@ -3,7 +3,7 @@ import 'package:dart_cloud_backend/utils/commons.dart';
 import 'package:shelf/shelf.dart';
 import 'package:uuid/uuid.dart';
 import 'package:database/database.dart';
-import 'auth_utils.dart';
+import 'package:dart_cloud_backend/handlers/logs/functions_utils.dart';
 
 /// Handles function initialization operations
 ///
@@ -101,7 +101,7 @@ class InitHandler {
       }
 
       // Log function initialization
-      await FunctionUtils.logFunction(
+      await FunctionUtils.logDeploymentFunction(
         functionUUID,
         'info',
         'Function initialized: $functionName',

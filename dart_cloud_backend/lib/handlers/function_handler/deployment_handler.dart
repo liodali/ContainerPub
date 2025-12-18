@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'package:dart_cloud_backend/handlers/logs/functions_utils.dart';
 import 'package:dart_cloud_backend/services/docker/docker.dart';
 import 'package:dart_cloud_backend/services/s3_service.dart' show S3Service;
 import 'package:dart_cloud_backend/utils/archive_utils.dart';
@@ -13,9 +14,8 @@ import 'package:archive/archive_io.dart';
 import 'package:s3_client_dart/s3_client_dart.dart';
 import 'package:dart_cloud_backend/configuration/config.dart';
 import 'package:database/database.dart';
-import 'package:dart_cloud_backend/services/function_main_injection.dart';
+import 'package:dart_cloud_backend/services/functions_services/function_main_injection.dart';
 import 'package:yaml/yaml.dart';
-import 'auth_utils.dart';
 
 
 /// Handles function deployment operations including:
@@ -143,7 +143,7 @@ class DeploymentHandler {
         );
 
         // Log first deployment
-        await FunctionUtils.logFunction(
+        await FunctionUtils.logDeploymentFunction(
           functionUUID,
           'info',
           'First deployment of function: $functionName',
@@ -171,7 +171,7 @@ class DeploymentHandler {
         );
 
         // Log function update
-        await FunctionUtils.logFunction(
+        await FunctionUtils.logDeploymentFunction(
           functionUUID,
           'info',
           'Updating function: $functionName (version $version)',
@@ -196,7 +196,7 @@ class DeploymentHandler {
       // === MAIN.DART INJECTION ===
       // Inject main.dart that reads environment and request.json,
       // then invokes the @cloudFunction annotated class
-      await FunctionUtils.logFunction(
+      await FunctionUtils.logDeploymentFunction(
         functionUUID,
         'info',
         'Injecting DotEnv...',
@@ -207,13 +207,13 @@ class DeploymentHandler {
         'dotenv': '^4.2.0',
         'dart_cloud_logger': '^0.2.1',
       });
-      await FunctionUtils.logFunction(
+      await FunctionUtils.logDeploymentFunction(
         functionUUID,
         'info',
         'Dependencies injected...',
       );
 
-      await FunctionUtils.logFunction(
+      await FunctionUtils.logDeploymentFunction(
         functionUUID,
         'info',
         'Injecting main.dart...',
@@ -233,13 +233,13 @@ class DeploymentHandler {
       // Remove dart_cloud_cli from pubspec.yaml to avoid unnecessary dependencies in production
       await _removeDartCloudCliFromPubspec(functionDir.path);
 
-      await FunctionUtils.logFunction(
+      await FunctionUtils.logDeploymentFunction(
         functionUUID,
         'info',
         'Removed dart_cloud_cli from dev_dependencies',
       );
 
-      await FunctionUtils.logFunction(
+      await FunctionUtils.logDeploymentFunction(
         functionUUID,
         'info',
         'main.dart injected at ${injectionResult.entrypoint}',
@@ -247,7 +247,7 @@ class DeploymentHandler {
 
       // === S3 UPLOAD (FUNCTION FOLDER) ===
       // Upload the entire function folder to S3 before building Docker image
-      await FunctionUtils.logFunction(
+      await FunctionUtils.logDeploymentFunction(
         functionUUID,
         'info',
         'Uploading function folder to S3...',
@@ -261,7 +261,7 @@ class DeploymentHandler {
         s3KeyPrefix: s3KeyPrefix,
       );
 
-      await FunctionUtils.logFunction(
+      await FunctionUtils.logDeploymentFunction(
         functionUUID,
         'info',
         'Function folder uploaded to S3: $s3KeyPrefix',
@@ -272,7 +272,7 @@ class DeploymentHandler {
 
       // === DOCKER IMAGE BUILD ===
       // Build Docker image with versioned tag
-      await FunctionUtils.logFunction(
+      await FunctionUtils.logDeploymentFunction(
         functionUUID,
         'info',
         'Building Docker image with entrypoint: ${injectionResult.entrypoint}...',
@@ -286,7 +286,7 @@ class DeploymentHandler {
         injectionResult.entrypoint,
       );
 
-      await FunctionUtils.logFunction(
+      await FunctionUtils.logDeploymentFunction(
         functionUUID,
         'info',
         'Docker image built: $imageTag',
@@ -326,7 +326,7 @@ class DeploymentHandler {
       );
 
       // Log successful deployment
-      await FunctionUtils.logFunction(
+      await FunctionUtils.logDeploymentFunction(
         functionUUID,
         'info',
         'Function deployed successfully (version $version)',
@@ -334,7 +334,7 @@ class DeploymentHandler {
 
       // === CLEANUP LOCAL FUNCTION FOLDER ===
       // Delete the local function folder after Docker image is built and uploaded to S3
-      await FunctionUtils.logFunction(
+      await FunctionUtils.logDeploymentFunction(
         functionUUID,
         'info',
         'Cleaning up local function folder...',

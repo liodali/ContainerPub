@@ -1,12 +1,12 @@
 import 'dart:convert';
-import 'package:dart_cloud_backend/handlers/function_handler/log_utils.dart';
+import 'package:dart_cloud_backend/handlers/logs/log_utils.dart';
 import 'package:dart_cloud_backend/services/docker/docker.dart';
-import 'package:dart_cloud_backend/services/function_rollback.dart';
+import 'package:dart_cloud_backend/services/functions_services/function_rollback.dart';
 import 'package:dart_cloud_backend/services/s3_service.dart';
 import 'package:dart_cloud_backend/utils/commons.dart';
 import 'package:shelf/shelf.dart';
 import 'package:database/database.dart';
-import 'auth_utils.dart';
+import 'package:dart_cloud_backend/handlers/logs/functions_utils.dart';
 
 enum VersioningResultAction {
   rollbackFailed,
@@ -270,7 +270,7 @@ class VersioningHandler {
       });
 
       // Log rollback event for audit trail
-      await FunctionUtils.logFunction(
+      await FunctionUtils.logDeploymentFunction(
         uuid,
         'info',
         'Rolled back to version $version',
@@ -322,7 +322,7 @@ class VersioningHandler {
     final isImageExist = await DockerService.isContainerImageExist(imageTag);
     if (isImageExist) {
       // Log that we're using existing image
-      await FunctionUtils.logFunction(
+      await FunctionUtils.logDeploymentFunction(
         functionUUId,
         'info',
         'Rollback to v$version: Using existing Docker image',
@@ -334,7 +334,7 @@ class VersioningHandler {
     // First verify S3 archive exists
     final s3Exists = await S3Service.s3Client.isKeyBucketExist(s3Key);
     if (!s3Exists) {
-      await FunctionUtils.logFunction(
+      await FunctionUtils.logDeploymentFunction(
         functionUUId,
         'error',
         'Rollback to v$version failed: S3 archive not found at $s3Key',
