@@ -4,7 +4,8 @@ import 'package:dart_cloud_backend/handlers/logs_utils/functions_utils.dart';
 import 'package:dart_cloud_backend/services/docker/docker.dart';
 import 'package:dart_cloud_backend/services/s3_service.dart' show S3Service;
 import 'package:dart_cloud_backend/utils/archive_utils.dart';
-import 'package:dart_cloud_backend/utils/commons.dart' show StringExtension, DeploymentStatus;
+import 'package:dart_cloud_backend/utils/commons.dart'
+    show StringExtension, DeploymentStatus, DeployStatus;
 import 'package:json2yaml/json2yaml.dart';
 import 'package:shelf/shelf.dart';
 import 'package:shelf_multipart/shelf_multipart.dart';
@@ -16,7 +17,6 @@ import 'package:dart_cloud_backend/configuration/config.dart';
 import 'package:database/database.dart';
 import 'package:dart_cloud_backend/services/functions_services/function_main_injection.dart';
 import 'package:yaml/yaml.dart';
-
 
 /// Handles function deployment operations including:
 /// - Creating new functions
@@ -52,9 +52,11 @@ class DeploymentHandler {
     final functDir = Directory(
       '${Config.functionsDir}/dart_cloud_upload_${DateTime.now().millisecondsSinceEpoch}',
     )..createSync(recursive: true);
+    // Parse multipart request to extract function UUID and archive file
+    String? functionUuidFromRequest;
     try {
       // Extract user ID from authenticated request context
-      final userUUID = request.context['userUUID'] as String;
+      final userId = request.context['userId'] as int;
 
       // Validate that request is multipart (required for file upload)
       if (request.multipart() == null) {
@@ -64,8 +66,6 @@ class DeploymentHandler {
         );
       }
 
-      // Parse multipart request to extract function UUID and archive file
-      String? functionUuidFromRequest;
       File? archiveFile;
       final multipart = request.multipart()!;
 
@@ -98,20 +98,11 @@ class DeploymentHandler {
         );
       }
 
-      // Check if user exists
-      final userResult = await DatabaseManagers.users.findByUuid(userUUID);
-      if (userResult == null) {
-        return Response.badRequest(
-          body: jsonEncode({'error': 'Unauthorized'}),
-          headers: {'Content-Type': 'application/json'},
-        );
-      }
-
       // Find function by UUID
       final functionEntity = await DatabaseManagers.functions.findOne(
         where: {
           FunctionEntityExtension.uuidNameField: functionUuidFromRequest,
-          FunctionEntityExtension.userIdNameField: userResult.id,
+          FunctionEntityExtension.userIdNameField: userId,
         },
       );
 
@@ -160,8 +151,8 @@ class DeploymentHandler {
 
         // Mark current active deployment as inactive (old version)
         await Database.connection.execute(
-          'UPDATE function_deployments SET is_active = false WHERE function_id = \$1 AND is_active = true',
-          parameters: [functionId],
+          'UPDATE function_deployments SET is_active = false, status= \$2 WHERE function_id = \$1 AND is_active = true',
+          parameters: [functionId, DeployStatus.disabled.name],
         );
 
         // Update function status to 'building' during deployment
@@ -306,18 +297,6 @@ class DeploymentHandler {
         'status': DeploymentStatus.active.name,
         'is_active': true,
       });
-      // final result = await Database.connection.execute(
-      //   'INSERT INTO function_deployments (uuid, function_id, version, image_tag, s3_key, status, is_active) VALUES (\$1, \$2, \$3, \$4, \$5, \$6, \$7)',
-      //   parameters: [
-      //     deploymentUUId,
-      //     functionId,
-      //     version,
-      //     imageTag,
-      //     s3KeyPrefix,
-      //     'active',
-      //     true, // Mark as active deployment
-      //   ],
-      // );
 
       // Update function record with active deployment reference
       await Database.connection.execute(
@@ -355,11 +334,19 @@ class DeploymentHandler {
         }),
         headers: {'Content-Type': 'application/json'},
       );
-    } catch (e) {
+    } catch (e, trace) {
       functDir.deleteSync(recursive: true);
+      if (functionUuidFromRequest != null) {
+        await FunctionUtils.logDeploymentFunction(
+          functionUuidFromRequest,
+          'error',
+          'Deployment failed: $e,$trace',
+        );
+      }
+
       // Handle any errors during deployment
       return Response.internalServerError(
-        body: jsonEncode({'error': 'Deployment failed: $e'}),
+        body: jsonEncode({'error': 'Deployment failed'}),
         headers: {'Content-Type': 'application/json'},
       );
     }
