@@ -1,13 +1,13 @@
 import 'package:cloud_panel/providers/common_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_web_plugins/flutter_web_plugins.dart';
 import 'package:forui/forui.dart';
 import 'providers/auth_provider.dart';
 import 'router.dart';
+import 'common/web_url_platform/platform_url.dart';
 
 void main() async {
-  usePathUrlStrategy();
+  PlatformUrl.useWebUrlStrategy();
   runApp(
     const ProviderScope(
       child: InitApp(),
