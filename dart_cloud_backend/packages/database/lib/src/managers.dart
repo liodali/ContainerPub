@@ -56,7 +56,7 @@ class DatabaseManagers
 
   /// Function log manager
   static final functionLogs = DatabaseManagerQuery<FunctionLogEntity>(
-    tableName: 'function_logs',
+    tableName: 'function_deploy_logs',
     fromMap: FunctionLogEntity.fromMap,
   );
 

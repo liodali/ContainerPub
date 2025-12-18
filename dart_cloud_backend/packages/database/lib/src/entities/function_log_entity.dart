@@ -19,7 +19,7 @@ class FunctionLogEntity extends Entity {
   });
 
   @override
-  String get tableName => 'function_logs';
+  String get tableName => 'function_deploy_logs';
 
   @override
   Map<String, dynamic> toMap() {

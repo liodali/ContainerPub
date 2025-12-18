@@ -212,8 +212,8 @@ class QueryHelpers {
     final result = await Database.connection.execute(
       Sql.named('''
         SELECT fl.uuid, fl.level, fl.message, fl.timestamp
-        FROM function_logs fl
-        JOIN functions f ON fl.function_id = f.id
+        FROM function_deploy_logs fl
+        JOIN functions f ON fl.function_uuid = f.uuid
         WHERE f.uuid = @function_uuid
         ORDER BY fl.timestamp DESC
         LIMIT @limit OFFSET @offset
@@ -243,10 +243,8 @@ class QueryHelpers {
   }) async {
     final result = await Database.connection.execute(
       Sql.named('''
-        INSERT INTO function_logs (function_id, level, message)
-        SELECT f.id, @level, @message
-        FROM functions f
-        WHERE f.uuid = @function_uuid
+        INSERT INTO function_deploy_logs (function_uuid, level, message)
+        VALUES (@function_uuid, @level, @message)
         RETURNING uuid
       '''),
       parameters: {

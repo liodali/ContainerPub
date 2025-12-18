@@ -186,9 +186,29 @@ class Database {
       CREATE INDEX IF NOT EXISTS idx_function_deployments_version ON function_deployments(function_id, version DESC)
     ''');
 
-    // Function logs table with serial ID (internal) and UUID (public)
+    // Alter function_logs table if it exists (for migration from old schema)
+    try {
+      await _connection.execute('''
+        ALTER TABLE IF EXISTS function_logs
+        RENAME TO function_deploy_logs
+      ''');
+    } catch (e) {
+      // Table might not exist or already renamed, continue
+    }
+
+    // Alter message column to JSONB if table exists
+    try {
+      await _connection.execute('''
+        ALTER TABLE IF EXISTS function_deploy_logs
+        ALTER COLUMN message TYPE JSONB USING message::JSONB
+      ''');
+    } catch (e) {
+      // Column might already be JSONB or table doesn't exist, continue
+    }
+
+    // Function deploy logs table with serial ID (internal) and UUID (public)
     await _connection.execute('''
-      CREATE TABLE IF NOT EXISTS function_logs (
+      CREATE TABLE IF NOT EXISTS function_deploy_logs (
         id SERIAL PRIMARY KEY,
         uuid UUID UNIQUE NOT NULL DEFAULT uuid_generate_v4(),
         function_uuid UUID NOT NULL REFERENCES functions(uuid) ON DELETE CASCADE,
@@ -198,14 +218,14 @@ class Database {
       )
     ''');
 
-    // Create index on function_id for fast function log queries
+    // Create index on function_id for fast function deploy log queries
     await _connection.execute('''
-      CREATE INDEX IF NOT EXISTS idx_function_logs_function_id ON function_logs(function_uuid)
+      CREATE INDEX IF NOT EXISTS idx_function_deploy_logs_function_id ON function_deploy_logs(function_uuid)
     ''');
 
     // Create index on timestamp for time-based queries
     await _connection.execute('''
-      CREATE INDEX IF NOT EXISTS idx_function_logs_timestamp ON function_logs(timestamp DESC)
+      CREATE INDEX IF NOT EXISTS idx_function_deploy_logs_timestamp ON function_deploy_logs(timestamp DESC)
     ''');
 
     // Function invocations table with serial ID (internal) and UUID (public)
