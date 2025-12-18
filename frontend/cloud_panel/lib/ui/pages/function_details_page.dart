@@ -1,13 +1,13 @@
 import 'dart:convert';
 import 'package:cloud_panel/common/commons.dart';
+import 'package:cloud_panel/providers/api_client_provider.dart';
+import 'package:cloud_panel/providers/function_details_provider.dart';
 import 'package:cloud_panel/ui/component/header_with_action.dart';
+import 'package:cloud_panel/ui/component/overview_tab.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:forui/forui.dart';
-import 'package:cloud_api_client/cloud_api_client.dart';
 import 'package:flutter/services.dart';
-import '../../providers/function_details_provider.dart';
-import '../../providers/api_client_provider.dart';
 
 class FunctionDetailsPage extends ConsumerStatefulWidget {
   final String uuid;
@@ -66,7 +66,7 @@ class _FunctionDetailsPageState extends ConsumerState<FunctionDetailsPage>
               children: [
                 FTabEntry(
                   label: Text('Overview'),
-                  child: _OverviewTab(func: func),
+                  child: OverviewTab(func: func),
                 ),
                 FTabEntry(
                   label: Text('Deployments'),
@@ -88,16 +88,6 @@ class _FunctionDetailsPageState extends ConsumerState<FunctionDetailsPage>
         error: (err, stack) => Center(child: Text('Error: $err')),
       ),
     );
-  }
-}
-
-class _OverviewTab extends StatelessWidget {
-  final CloudFunction func;
-  const _OverviewTab({required this.func});
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(child: Text('Function ${func.name} is ${func.status}'));
   }
 }
 
@@ -326,6 +316,7 @@ class _InvokeTabState extends ConsumerState<_InvokeTab> {
   bool _isLoading = false;
   String? _response;
   bool _isError = false;
+  bool _useSigning = true;
 
   Future<void> _invoke() async {
     setState(() {
@@ -351,16 +342,18 @@ class _InvokeTabState extends ConsumerState<_InvokeTab> {
         }
       }
 
+      final secretKey = _useSigning
+          ? (_secretController.text.isNotEmpty ? _secretController.text : null)
+          : null;
+
       final result = await client.invokeFunction(
         widget.uuid,
         body: body,
-        secretKey: _secretController.text.isNotEmpty
-            ? _secretController.text
-            : null,
+        secretKey: secretKey,
       );
 
       setState(() {
-        _response = result.toString();
+        _response = jsonEncode(result);
       });
     } catch (e) {
       setState(() {
@@ -378,58 +371,110 @@ class _InvokeTabState extends ConsumerState<_InvokeTab> {
       padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
+        spacing: 16,
         children: [
-          const Text(
-            'Request Body (JSON)',
-            style: TextStyle(fontWeight: FontWeight.bold),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            spacing: 8,
+            children: [
+              const Text(
+                'Request Body (JSON)',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              FTextField(
+                controller: _bodyController,
+                maxLines: 5,
+                hint: '{"key": "value"}',
+              ),
+            ],
           ),
-          const SizedBox(height: 8),
-          FTextField(
-            controller: _bodyController,
-            maxLines: 5,
-            hint: '{"key": "value"}',
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            spacing: 8,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'Signing (--sign)',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  FSwitch(
+                    value: _useSigning,
+                    onChange: (value) {
+                      setState(() => _useSigning = value);
+                    },
+                  ),
+                ],
+              ),
+              if (_useSigning) ...[
+                const Text(
+                  'Secret Key (for signed requests)',
+                  style: TextStyle(fontSize: 12),
+                ),
+                FTextField(
+                  controller: _secretController,
+                  obscureText: true,
+                  hint: 'Enter your API secret key',
+                ),
+              ],
+            ],
           ),
-          const SizedBox(height: 16),
-          const Text(
-            'Secret Key (Optional - for signed requests)',
-            style: TextStyle(fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 8),
-          FTextField(
-            controller: _secretController,
-            obscureText: true,
-            hint: 'Enter function secret key',
-          ),
-          const SizedBox(height: 16),
           FButton(
             onPress: _isLoading ? null : _invoke,
             child: _isLoading
                 ? const Text('Invoking...')
                 : const Text('Invoke Function'),
           ),
-          const SizedBox(height: 24),
           if (_response != null) ...[
-            const Text(
-              'Response:',
-              style: TextStyle(fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 8),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: _isError
-                    ? Colors.red.withValues(alpha: 0.1)
-                    : Colors.green.withValues(alpha: 0.1),
-                border: Border.all(
-                  color: _isError ? Colors.red : Colors.green,
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              spacing: 8,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      'Response:',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    FButton(
+                      onPress: () {
+                        Clipboard.setData(ClipboardData(text: _response!));
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Copied to clipboard!')),
+                        );
+                      },
+                      style: FButtonStyle.ghost(),
+                      child: const Text('Copy'),
+                    ),
+                  ],
                 ),
-                borderRadius: BorderRadius.circular(4),
-              ),
-              child: SelectableText(_response!),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: _isError
+                        ? Colors.red.withValues(alpha: 0.1)
+                        : Colors.green.withValues(alpha: 0.1),
+                    border: Border.all(
+                      color: _isError ? Colors.red : Colors.green,
+                    ),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: SelectableText(_response!),
+                ),
+              ],
             ),
           ],
         ],
       ),
     );
+  }
+
+  @override
+  void dispose() {
+    _bodyController.dispose();
+    _secretController.dispose();
+    super.dispose();
   }
 }
