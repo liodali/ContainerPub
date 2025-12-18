@@ -93,7 +93,7 @@ class ApiClient {
       Uri.parse('${Config.serverUrl}/api/functions/deploy'),
     );
 
-    request.headers['Authorization'] = 'Bearer ${Config.token}';
+    // request.headers['Authorization'] = 'Bearer ${Config.token}';
     request.fields['function_id'] = functionUuid;
     request.headers['Content-Type'] = 'multipart/form-data';
     request.files
@@ -110,7 +110,7 @@ class ApiClient {
   }
 
   static Future<List<dynamic>> listFunctions() async {
-    final response = await http.get(
+    final response = await _client.get(
       Uri.parse('${Config.serverUrl}/api/functions'),
       headers: {'Authorization': 'Bearer ${Config.token}'},
     );
@@ -136,7 +136,7 @@ class ApiClient {
   }
 
   static Future<void> deleteFunction(String functionId) async {
-    final response = await http.delete(
+    final response = await _client.delete(
       Uri.parse('${Config.serverUrl}/api/functions/$functionId'),
       headers: {'Authorization': 'Bearer ${Config.token}'},
     );
@@ -159,7 +159,6 @@ class ApiClient {
         : null;
 
     final headers = <String, String>{
-      'Authorization': 'Bearer ${Config.token}',
       'Content-Type': 'application/json',
     };
 
@@ -194,7 +193,7 @@ class ApiClient {
       if (name != null) 'name': name,
     };
 
-    final response = await http.post(
+    final response = await _client.post(
       Uri.parse('${Config.serverUrl}/api/auth/apikey/generate'),
       headers: {
         'Authorization': 'Bearer ${Config.token}',
@@ -212,7 +211,7 @@ class ApiClient {
 
   /// Get API key info for a function
   static Future<Map<String, dynamic>> getApiKeyInfo(String functionId) async {
-    final response = await http.get(
+    final response = await _client.get(
       Uri.parse('${Config.serverUrl}/api/auth/apikey/$functionId'),
       headers: {'Authorization': 'Bearer ${Config.token}'},
     );
@@ -226,7 +225,7 @@ class ApiClient {
 
   /// Revoke an API key
   static Future<void> revokeApiKey(String apiKeyUuid) async {
-    final response = await http.delete(
+    final response = await _client.delete(
       Uri.parse('${Config.serverUrl}/api/auth/apikey/$apiKeyUuid'),
       headers: {'Authorization': 'Bearer ${Config.token}'},
     );
@@ -238,7 +237,7 @@ class ApiClient {
 
   /// List all API keys for a function
   static Future<Map<String, dynamic>> listApiKeys(String functionId) async {
-    final response = await http.get(
+    final response = await _client.get(
       Uri.parse('${Config.serverUrl}/api/auth/apikey/$functionId/list'),
       headers: {'Authorization': 'Bearer ${Config.token}'},
     );

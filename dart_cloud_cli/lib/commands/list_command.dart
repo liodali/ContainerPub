@@ -38,6 +38,7 @@ class ListCommand extends BaseCommand {
 
       print('─' * 80);
       print('Total: ${functions.length} function(s)');
+      exit(0);
     } catch (e) {
       print('✗ Failed to list functions: $e');
       exit(1);
