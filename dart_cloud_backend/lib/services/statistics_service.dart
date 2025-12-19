@@ -45,7 +45,7 @@ class StatisticsService {
       invocationsCount: (result['total_invocations'] as int?) ?? 0,
       successCount: (result['success_count'] as int?) ?? 0,
       errorCount: (result['error_count'] as int?) ?? 0,
-      averageLatencyMs: (result['avg_latency_ms'] as num?)?.toDouble() ?? 0.0,
+      averageLatencyMs: (double.tryParse(result['avg_latency_ms']) ?? 0.0),
       period: period,
     );
   }
@@ -108,7 +108,7 @@ class StatisticsService {
         totalRequests: (row['total_requests'] as int?) ?? 0,
         successCount: (row['success_count'] as int?) ?? 0,
         errorCount: (row['error_count'] as int?) ?? 0,
-        averageLatencyMs: (row['avg_latency_ms'] as num?)?.toDouble() ?? 0.0,
+        averageLatencyMs: (double.tryParse(row['avg_latency_ms']) ?? 0.0),
       );
     }
 
@@ -171,7 +171,7 @@ class StatisticsService {
         totalRequests: (row['total_requests'] as int?) ?? 0,
         successCount: (row['success_count'] as int?) ?? 0,
         errorCount: (row['error_count'] as int?) ?? 0,
-        averageLatencyMs: (row['avg_latency_ms'] as num?)?.toDouble() ?? 0.0,
+        averageLatencyMs: (double.tryParse(row['avg_latency_ms']) ?? 0.0),
       );
     }
 
@@ -241,7 +241,7 @@ class StatisticsService {
       invocationsCount: (statsResult?['total_invocations'] as int?) ?? 0,
       successCount: (statsResult?['success_count'] as int?) ?? 0,
       errorCount: (statsResult?['error_count'] as int?) ?? 0,
-      averageLatencyMs: (statsResult?['avg_latency_ms'] as num?)?.toDouble() ?? 0.0,
+      averageLatencyMs: (double.tryParse(statsResult?['avg_latency_ms']) ?? 0.0),
       period: period,
     );
   }
@@ -304,7 +304,7 @@ class StatisticsService {
         totalRequests: (row['total_requests'] as int?) ?? 0,
         successCount: (row['success_count'] as int?) ?? 0,
         errorCount: (row['error_count'] as int?) ?? 0,
-        averageLatencyMs: (row['avg_latency_ms'] as num?)?.toDouble() ?? 0.0,
+        averageLatencyMs: (double.tryParse(row['avg_latency_ms']) ?? 0.0),
       );
     }
 
@@ -368,7 +368,7 @@ class StatisticsService {
         totalRequests: (row['total_requests'] as int?) ?? 0,
         successCount: (row['success_count'] as int?) ?? 0,
         errorCount: (row['error_count'] as int?) ?? 0,
-        averageLatencyMs: (row['avg_latency_ms'] as num?)?.toDouble() ?? 0.0,
+        averageLatencyMs: (double.tryParse(row['avg_latency_ms']) ?? 0.0),
       );
     }
 

@@ -1,5 +1,7 @@
 import 'dart:convert';
 
+import 'package:dart_cloud_backend/handlers/logs_utils/log_utils.dart';
+import 'package:dart_cloud_backend/utils/commons.dart';
 import 'package:shelf/shelf.dart';
 import 'package:database/database.dart';
 
@@ -62,9 +64,19 @@ class StatisticsHandler {
         json.encode(stats.toJson()),
         headers: {'Content-Type': 'application/json'},
       );
-    } catch (e) {
+    } catch (e, trace) {
+      LogsUtils.log(
+        LogLevels.error.name,
+        'getStats',
+        {
+          'functionUuid': functionUuid,
+          'period': request.url.queryParameters['period'],
+          'error': e.toString(),
+          'trace': trace.toString(),
+        },
+      );
       return Response.internalServerError(
-        body: json.encode({'error': 'Failed to get statistics: $e'}),
+        body: json.encode({'error': 'Failed to get statistics'}),
         headers: {'Content-Type': 'application/json'},
       );
     }
@@ -129,9 +141,18 @@ class StatisticsHandler {
         }),
         headers: {'Content-Type': 'application/json'},
       );
-    } catch (e) {
+    } catch (e, trace) {
+      LogsUtils.log(
+        LogLevels.error.name,
+        'getHourlyStats',
+        {
+          'functionUuid': functionUuid,
+          'error': e.toString(),
+          'trace': trace.toString(),
+        },
+      );
       return Response.internalServerError(
-        body: json.encode({'error': 'Failed to get hourly statistics: $e'}),
+        body: json.encode({'error': 'Failed to get hourly statistics'}),
         headers: {'Content-Type': 'application/json'},
       );
     }
@@ -156,7 +177,10 @@ class StatisticsHandler {
   ///   ]
   /// }
   /// ```
-  static Future<Response> getDailyStats(Request request, String functionUuid) async {
+  static Future<Response> getDailyStats(
+    Request request,
+    String functionUuid,
+  ) async {
     try {
       // Verify user owns this function
       final function = await _verifyFunctionOwnership(request, functionUuid);
@@ -196,9 +220,18 @@ class StatisticsHandler {
         }),
         headers: {'Content-Type': 'application/json'},
       );
-    } catch (e) {
+    } catch (e, trace) {
+      LogsUtils.log(
+        LogLevels.error.name,
+        'getDailyStats',
+        {
+          'functionUuid': functionUuid,
+          'error': e.toString(),
+          'trace': trace.toString(),
+        },
+      );
       return Response.internalServerError(
-        body: json.encode({'error': 'Failed to get daily statistics: $e'}),
+        body: json.encode({'error': 'Failed to get daily statistics'}),
         headers: {'Content-Type': 'application/json'},
       );
     }
@@ -280,9 +313,17 @@ class StatisticsHandler {
         json.encode(stats.toJson()),
         headers: {'Content-Type': 'application/json'},
       );
-    } catch (e) {
+    } catch (e, trace) {
+      LogsUtils.log(
+        LogLevels.error.name,
+        'getOverviewStats',
+        {
+          'error': e.toString(),
+          'trace': trace.toString(),
+        },
+      );
       return Response.internalServerError(
-        body: json.encode({'error': 'Failed to get overview statistics: $e'}),
+        body: json.encode({'error': 'Failed to get overview statistics'}),
         headers: {'Content-Type': 'application/json'},
       );
     }
@@ -331,9 +372,17 @@ class StatisticsHandler {
         }),
         headers: {'Content-Type': 'application/json'},
       );
-    } catch (e) {
+    } catch (e, trace) {
+      LogsUtils.log(
+        LogLevels.error.name,
+        'getOverviewHourlyStats',
+        {
+          'error': e.toString(),
+          'trace': trace.toString(),
+        },
+      );
       return Response.internalServerError(
-        body: json.encode({'error': 'Failed to get hourly statistics: $e'}),
+        body: json.encode({'error': 'Failed to get hourly statistics'}),
         headers: {'Content-Type': 'application/json'},
       );
     }
@@ -382,9 +431,17 @@ class StatisticsHandler {
         }),
         headers: {'Content-Type': 'application/json'},
       );
-    } catch (e) {
+    } catch (e, trace) {
+      LogsUtils.log(
+        LogLevels.error.name,
+        'getOverviewDailyStats',
+        {
+          'error': e.toString(),
+          'trace': trace.toString(),
+        },
+      );
       return Response.internalServerError(
-        body: json.encode({'error': 'Failed to get daily statistics: $e'}),
+        body: json.encode({'error': 'Failed to get daily statistics'}),
         headers: {'Content-Type': 'application/json'},
       );
     }
