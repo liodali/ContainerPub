@@ -1,5 +1,7 @@
 import 'dart:convert';
 import 'dart:math';
+import 'package:dart_cloud_backend/handlers/logs_utils/log_utils.dart';
+import 'package:dart_cloud_backend/utils/commons.dart';
 import 'package:random_name_generator/random_name_generator.dart';
 import 'package:shelf/shelf.dart';
 import 'package:database/database.dart';
@@ -207,8 +209,13 @@ class ApiKeyHandler {
   static Future<Response> listApiKeys(Request request, String functionId) async {
     try {
       // Verify function exists
+      final userId = request.context['userId'] as int;
+
       final function = await DatabaseManagers.functions.findOne(
-        where: {'uuid': functionId},
+        where: {
+          'uuid': functionId,
+          FunctionEntityExtension.userIdNameField: userId,
+        },
       );
 
       if (function == null) {
@@ -219,27 +226,6 @@ class ApiKeyHandler {
       }
 
       // Get user ID from request context
-      final userId = request.context['userId'] as String?;
-      if (userId == null) {
-        return Response.forbidden(
-          jsonEncode({'error': 'Authentication required'}),
-          headers: {'Content-Type': 'application/json'},
-        );
-      }
-
-      // Verify user owns the function
-      final user = await DatabaseManagers.users.findOne(
-        where: {'uuid': userId},
-      );
-
-      if (user == null || function.userId != user.id) {
-        return Response.forbidden(
-          jsonEncode({
-            'error': 'You do not have permission to view API keys for this function',
-          }),
-          headers: {'Content-Type': 'application/json'},
-        );
-      }
 
       // Get all API keys
       final apiKeys = await ApiKeyService.instance.listApiKeys(functionId);
@@ -250,9 +236,13 @@ class ApiKeyHandler {
         }),
         headers: {'Content-Type': 'application/json'},
       );
-    } catch (e) {
+    } catch (e, trace) {
+      LogsUtils.log(LogLevels.error.name, 'listApiKeys', {
+        'error': e,
+        'trace': trace,
+      });
       return Response.internalServerError(
-        body: jsonEncode({'error': 'Failed to list API keys: $e'}),
+        body: jsonEncode({'error': 'Failed to list API keys'}),
         headers: {'Content-Type': 'application/json'},
       );
     }

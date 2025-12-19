@@ -33,6 +33,7 @@ class DeleteCommand extends BaseCommand {
       print('Deleting function...');
       await ApiClient.deleteFunction(functionId);
       print('✓ Function deleted successfully!');
+      exit(0);
     } catch (e) {
       print('✗ Failed to delete function: $e');
       exit(1);

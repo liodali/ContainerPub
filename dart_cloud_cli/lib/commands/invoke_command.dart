@@ -93,6 +93,7 @@ class InvokeCommand extends BaseCommand {
       print('─' * 80);
       print(const JsonEncoder.withIndent('  ').convert(response));
       print('─' * 80);
+      exit(0);
     } catch (e) {
       print('✗ Failed to invoke function: $e');
       exit(1);

@@ -192,7 +192,8 @@ class ApiKeyService {
   Future<List<ApiKeyEntity>> listApiKeys(String functionUuid) async {
     return await DatabaseManagers.apiKeys.findAll(
       where: {'function_uuid': functionUuid},
-      orderBy: 'created_at DESC',
+      orderBy: 'created_at',
+     orderDirection: 'desc',
     );
   }
 

@@ -41,6 +41,7 @@ class ApiKeyCommand extends BaseCommand {
         _printUsage();
         exit(1);
     }
+    exit(0);
   }
 
   void _printUsage() {
