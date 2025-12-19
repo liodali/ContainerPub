@@ -151,7 +151,16 @@ class CloudApiClient {
   }
 
   Future<void> revokeApiKey(String apiKeyUuid) async {
+    await _handleRequest(
+        () => _dio.delete('/api/auth/apikey/$apiKeyUuid/revoke'));
+  }
+
+  Future<void> deleteApiKey(String apiKeyUuid) async {
     await _handleRequest(() => _dio.delete('/api/auth/apikey/$apiKeyUuid'));
+  }
+
+  Future<void> rollApiKey(String apiKeyUuid) async {
+    await _handleRequest(() => _dio.put('/api/auth/apikey/$apiKeyUuid/roll'));
   }
 
   // --- Invocation Helper ---

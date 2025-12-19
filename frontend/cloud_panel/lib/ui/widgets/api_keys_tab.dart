@@ -1,8 +1,8 @@
-import 'package:cloud_api_client/cloud_api_client.dart';
 import 'package:cloud_panel/common/commons.dart';
 import 'package:cloud_panel/providers/api_client_provider.dart';
 import 'package:cloud_panel/providers/common_provider.dart';
 import 'package:cloud_panel/providers/function_details_provider.dart';
+import 'package:cloud_panel/ui/widgets/api_key_item_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -43,96 +43,11 @@ class ApiKeysTab extends ConsumerWidget {
                   separatorBuilder: (_, _) => const SizedBox(height: 12),
                   itemBuilder: (context, index) {
                     final key = keys[index];
-                    final isExpired =
-                        key.expiresAt != null &&
-                        key.expiresAt!.isBefore(DateTime.now());
-                    final expirationText = key.expiresAt != null
-                        ? dateFormatter.format(key.expiresAt!)
-                        : 'Never';
-                    final creationText = dateFormatter.format(key.createdAt);
 
-                    Color getStatusColor() {
-                      if (isExpired) return Colors.red;
-                      if (key.isActive) return Colors.green;
-                      return Colors.orange;
-                    }
-
-                    String getStatusText() {
-                      if (isExpired) return 'Expired';
-                      if (key.isActive) return 'Active';
-                      return 'Inactive';
-                    }
-
-                    final statusColor = getStatusColor();
-                    final statusText = getStatusText();
-
-                    return FCard(
-                      title: Text(key.name ?? 'Unnamed Key'),
-                      subtitle: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        spacing: 4,
-                        children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text(
-                                'Prefix: ${key.uuid.substring(0, 8)}...',
-                              ),
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 8,
-                                  vertical: 2,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: statusColor.withValues(alpha: 0.1),
-                                  border: Border.all(color: statusColor),
-                                  borderRadius: BorderRadius.circular(4),
-                                ),
-                                child: Text(
-                                  statusText,
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    color: statusColor,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                          Text(
-                            'Created: $creationText',
-                            style: const TextStyle(fontSize: 12),
-                          ),
-                          Text(
-                            'Expires: $expirationText',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: isExpired ? Colors.red : null,
-                              fontWeight: isExpired ? FontWeight.bold : null,
-                            ),
-                          ),
-                        ],
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.end,
-                        spacing: 8,
-                        children: [
-                          FButton(
-                            onPress: () => _deleteKey(
-                              context,
-                              ref,
-                              key.uuid,
-                              key.name ?? 'Unnamed Key',
-                            ),
-                            style: FButtonStyle.destructive(),
-                            child: const Text('Delete'),
-                          ),
-                          FButton(
-                            onPress: () => _revokeKey(context, ref, key.uuid),
-                            child: const Text('Revoke'),
-                          ),
-                        ],
-                      ),
+                    return ApiKeyItemWidget(
+                      key: UniqueKey(),
+                      apiKeyModel: key,
+                      uuid: uuid,
                     );
                   },
                 ),
@@ -242,27 +157,6 @@ class ApiKeysTab extends ConsumerWidget {
     }
   }
 
-  Future<void> _revokeKey(
-    BuildContext context,
-    WidgetRef ref,
-    String keyUuid,
-  ) async {
-    try {
-      await ref.read(apiClientProvider).revokeApiKey(keyUuid);
-      ref.invalidate(functionApiKeysProvider(uuid));
-    } catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(
-          SnackBar(
-            content: Text('Error: $e'),
-          ),
-        );
-      }
-    }
-  }
-
   Future<void> _saveKeyToLocalStorage(
     BuildContext context,
     WidgetRef ref,
@@ -299,49 +193,6 @@ class ApiKeysTab extends ConsumerWidget {
           context: context,
           alignment: FToastAlignment.bottomCenter,
           title: const Text('API key saved to local storage'),
-        );
-      }
-    } catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e')),
-        );
-      }
-    }
-  }
-
-  Future<void> _deleteKey(
-    BuildContext context,
-    WidgetRef ref,
-    String keyUuid,
-    String keyName,
-  ) async {
-    if (!context.mounted) return;
-
-    final nameController = TextEditingController();
-    final confirmed = await showFDialog<bool>(
-      context: context,
-      builder: (ctx, style, _) => _DeleteKeyDialog(
-        keyName: keyName,
-        controller: nameController,
-        style: style,
-      ),
-    );
-
-    nameController.dispose();
-
-    if (confirmed != true) return;
-
-    if (!context.mounted) return;
-
-    try {
-      await ref.read(apiClientProvider).revokeApiKey(keyUuid);
-      ref.invalidate(functionApiKeysProvider(uuid));
-      if (context.mounted) {
-        showFToast(
-          context: context,
-          alignment: FToastAlignment.bottomCenter,
-          title: const Text('API key deleted successfully'),
         );
       }
     } catch (e) {
@@ -490,85 +341,6 @@ class _KeyNameDialogState extends State<_KeyNameDialog> {
   }
 }
 
-class _DeleteKeyDialog extends StatefulWidget {
-  final String keyName;
-  final TextEditingController controller;
-  final FDialogStyle style;
-
-  const _DeleteKeyDialog({
-    required this.keyName,
-    required this.controller,
-    required this.style,
-  });
-
-  @override
-  State<_DeleteKeyDialog> createState() => _DeleteKeyDialogState();
-}
-
-class _DeleteKeyDialogState extends State<_DeleteKeyDialog> {
-  bool get _isValid => widget.controller.text.trim() == widget.keyName;
-
-  @override
-  Widget build(BuildContext context) {
-    return FDialog(
-      style: (_) => widget.style,
-      title: const Text('Delete API Key'),
-      body: Padding(
-        padding: const EdgeInsets.only(bottom: 8.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          spacing: 12,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text(
-              'This action cannot be undone. To confirm deletion, please enter the API key name:',
-              style: TextStyle(fontSize: 13),
-            ),
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: Colors.red.withValues(alpha: 0.1),
-                border: Border.all(color: Colors.red),
-                borderRadius: BorderRadius.circular(4),
-              ),
-              child: Text(
-                'Key Name: ${widget.keyName}',
-                style: const TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-            ListenableBuilder(
-              listenable: widget.controller,
-              builder: (context, _) => FTextField(
-                controller: widget.controller,
-                hint: 'Enter key name to confirm',
-                autofocus: true,
-              ),
-            ),
-          ],
-        ),
-      ),
-      actions: [
-        FButton(
-          onPress: () => Navigator.pop(context, false),
-          style: FButtonStyle.secondary(),
-          child: const Text('Cancel'),
-        ),
-        ListenableBuilder(
-          listenable: widget.controller,
-          builder: (context, _) => FButton(
-            onPress: _isValid ? () => Navigator.pop(context, true) : null,
-            style: FButtonStyle.destructive(),
-            child: const Text('Delete'),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
 class _PasswordDialog extends StatefulWidget {
   final TextEditingController passwordController;
   final TextEditingController confirmPasswordController;
@@ -616,6 +388,13 @@ class _PasswordDialogState extends State<_PasswordDialog> {
                 hint: 'Password',
                 obscureText: !_showPassword,
                 autofocus: true,
+                suffixBuilder: (context, _, _) => FTappable(
+                  onPress: () => setState(() => _showPassword = !_showPassword),
+                  child: Icon(
+                    _showPassword ? Icons.visibility_off : Icons.visibility,
+                    color: context.theme.colors.foreground,
+                  ),
+                ),
               ),
             ),
             ListenableBuilder(
@@ -624,6 +403,17 @@ class _PasswordDialogState extends State<_PasswordDialog> {
                 controller: widget.confirmPasswordController,
                 hint: 'Confirm Password',
                 obscureText: !_showConfirmPassword,
+                suffixBuilder: (context, _, _) => FTappable(
+                  onPress: () => setState(
+                    () => _showConfirmPassword = !_showConfirmPassword,
+                  ),
+                  child: Icon(
+                    _showConfirmPassword
+                        ? Icons.visibility_off
+                        : Icons.visibility,
+                    color: context.theme.colors.foreground,
+                  ),
+                ),
               ),
             ),
             ListenableBuilder(
