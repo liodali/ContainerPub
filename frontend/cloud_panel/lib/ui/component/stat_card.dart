@@ -7,6 +7,7 @@ class StatCard extends StatelessWidget {
   final BuildContext context;
 
   const StatCard({
+    super.key,
     required this.label,
     required this.value,
     required this.context,
