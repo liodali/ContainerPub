@@ -37,3 +37,6 @@ enum FunctionStatus {
 extension FunctionStatusExtension on CloudFunction {
   Widget get statusWidget => FunctionStatus.fromString(status).toWidget();
 }
+extension DateFormatExtension on DateTime {
+  String get formattedDate => dateFormatter.format(this);
+}
