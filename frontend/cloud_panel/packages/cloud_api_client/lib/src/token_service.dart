@@ -26,7 +26,7 @@ class TokenService {
     }
   }
 
-    Future<String?> get refreshToken async {
+  Future<String?> get refreshToken async {
     try {
       return await _authBox?.get('refreshToken');
     } catch (e) {

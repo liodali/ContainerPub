@@ -1,6 +1,7 @@
 import 'package:cloud_api_client/cloud_api_client.dart';
 import 'package:cloud_panel/common/commons.dart';
 import 'package:cloud_panel/providers/api_client_provider.dart';
+import 'package:cloud_panel/providers/common_provider.dart';
 import 'package:cloud_panel/providers/function_details_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -208,7 +209,20 @@ class ApiKeysTab extends ConsumerWidget {
               FButton(
                 onPress: () => Navigator.pop(ctx),
                 style: FButtonStyle.ghost(),
-                child: const Text('Close'),
+                child: const Text('Skip'),
+              ),
+              FButton(
+                onPress: () {
+                  Navigator.pop(ctx);
+                  _saveKeyToLocalStorage(
+                    context,
+                    ref,
+                    apiKey.uuid,
+                    apiKey.secretKey,
+                  );
+                },
+                style: FButtonStyle.secondary(),
+                child: const Text('Save Locally'),
               ),
             ],
           ),
@@ -244,6 +258,53 @@ class ApiKeysTab extends ConsumerWidget {
           SnackBar(
             content: Text('Error: $e'),
           ),
+        );
+      }
+    }
+  }
+
+  Future<void> _saveKeyToLocalStorage(
+    BuildContext context,
+    WidgetRef ref,
+    String keyUuid,
+    String secretKey,
+  ) async {
+    if (!context.mounted) return;
+
+    final passwordController = TextEditingController();
+    final confirmPasswordController = TextEditingController();
+
+    final password = await showFDialog<String?>(
+      context: context,
+      builder: (ctx, style, _) => _PasswordDialog(
+        passwordController: passwordController,
+        confirmPasswordController: confirmPasswordController,
+        style: style,
+      ),
+    );
+
+    passwordController.dispose();
+    confirmPasswordController.dispose();
+
+    if (password == null || password.isEmpty) return;
+
+    if (!context.mounted) return;
+
+    try {
+      final apiKeyStorage = ref.read(apiKeyStorageProvider);
+      await apiKeyStorage.storeApiKey(keyUuid, secretKey, password);
+
+      if (context.mounted) {
+        showFToast(
+          context: context,
+          alignment: FToastAlignment.bottomCenter,
+          title: const Text('API key saved to local storage'),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e')),
         );
       }
     }
@@ -501,6 +562,183 @@ class _DeleteKeyDialogState extends State<_DeleteKeyDialog> {
             onPress: _isValid ? () => Navigator.pop(context, true) : null,
             style: FButtonStyle.destructive(),
             child: const Text('Delete'),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _PasswordDialog extends StatefulWidget {
+  final TextEditingController passwordController;
+  final TextEditingController confirmPasswordController;
+  final FDialogStyle style;
+
+  const _PasswordDialog({
+    required this.passwordController,
+    required this.confirmPasswordController,
+    required this.style,
+  });
+
+  @override
+  State<_PasswordDialog> createState() => _PasswordDialogState();
+}
+
+class _PasswordDialogState extends State<_PasswordDialog> {
+  bool _showPassword = false;
+  bool _showConfirmPassword = false;
+
+  bool get _isValid =>
+      widget.passwordController.text.isNotEmpty &&
+      widget.confirmPasswordController.text.isNotEmpty &&
+      widget.passwordController.text == widget.confirmPasswordController.text;
+
+  @override
+  Widget build(BuildContext context) {
+    return FDialog(
+      style: (_) => widget.style,
+      title: const Text('Set Password for API Key'),
+      body: Padding(
+        padding: const EdgeInsets.only(bottom: 8.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          spacing: 12,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+              'Enter a password to encrypt and store this API key locally. You will need to enter this password to use the key for signing.',
+              style: TextStyle(fontSize: 13),
+            ),
+            ListenableBuilder(
+              listenable: widget.passwordController,
+              builder: (context, _) => FTextField(
+                controller: widget.passwordController,
+                hint: 'Password',
+                obscureText: !_showPassword,
+                autofocus: true,
+              ),
+            ),
+            ListenableBuilder(
+              listenable: widget.confirmPasswordController,
+              builder: (context, _) => FTextField(
+                controller: widget.confirmPasswordController,
+                hint: 'Confirm Password',
+                obscureText: !_showConfirmPassword,
+              ),
+            ),
+            ListenableBuilder(
+              listenable: Listenable.merge([
+                widget.passwordController,
+                widget.confirmPasswordController,
+              ]),
+              builder: (context, _) {
+                final passwordsMatch =
+                    widget.passwordController.text ==
+                    widget.confirmPasswordController.text;
+                final isEmpty = widget.passwordController.text.isEmpty;
+
+                return Text(
+                  isEmpty
+                      ? 'Enter a password'
+                      : passwordsMatch
+                      ? 'Passwords match ✓'
+                      : 'Passwords do not match',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: isEmpty
+                        ? Colors.grey
+                        : passwordsMatch
+                        ? Colors.green
+                        : Colors.red,
+                  ),
+                );
+              },
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        FButton(
+          onPress: () => Navigator.pop(context),
+          style: FButtonStyle.secondary(),
+          child: const Text('Cancel'),
+        ),
+        ListenableBuilder(
+          listenable: Listenable.merge([
+            widget.passwordController,
+            widget.confirmPasswordController,
+          ]),
+          builder: (context, _) => FButton(
+            onPress: _isValid
+                ? () => Navigator.pop(context, widget.passwordController.text)
+                : null,
+            child: const Text('Save'),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _SecretKeyDialog extends StatefulWidget {
+  final TextEditingController controller;
+  final FDialogStyle style;
+
+  const _SecretKeyDialog({
+    required this.controller,
+    required this.style,
+  });
+
+  @override
+  State<_SecretKeyDialog> createState() => _SecretKeyDialogState();
+}
+
+class _SecretKeyDialogState extends State<_SecretKeyDialog> {
+  bool _showSecret = false;
+
+  bool get _isValid => widget.controller.text.trim().isNotEmpty;
+
+  @override
+  Widget build(BuildContext context) {
+    return FDialog(
+      style: (_) => widget.style,
+      title: const Text('Enter API Key Secret'),
+      body: Padding(
+        padding: const EdgeInsets.only(bottom: 8.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          spacing: 12,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+              'Paste the secret key that was shown when you generated the API key:',
+              style: TextStyle(fontSize: 13),
+            ),
+            ListenableBuilder(
+              listenable: widget.controller,
+              builder: (context, _) => FTextField(
+                controller: widget.controller,
+                hint: 'Paste secret key here',
+                obscureText: !_showSecret,
+                autofocus: true,
+              ),
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        FButton(
+          onPress: () => Navigator.pop(context),
+          style: FButtonStyle.secondary(),
+          child: const Text('Cancel'),
+        ),
+        ListenableBuilder(
+          listenable: widget.controller,
+          builder: (context, _) => FButton(
+            onPress: _isValid
+                ? () => Navigator.pop(context, widget.controller.text.trim())
+                : null,
+            child: const Text('Save'),
           ),
         ),
       ],
