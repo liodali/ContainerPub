@@ -5,9 +5,11 @@ import 'package:hive_ce_flutter/hive_flutter.dart';
 
 final initializeAppProvider = FutureProvider.autoDispose<bool>((ref) async {
   await Hive.initFlutter();
+  await ApiKeyStorage.instance.init();
   await TokenService.tokenService.init();
   return true;
 });
+final apiKeyStorageProvider = Provider((ref) => ApiKeyStorage.instance);
 
 final baseURLProvider = Provider<String>(
   (ref) => 'http://127.0.0.1:8080',
