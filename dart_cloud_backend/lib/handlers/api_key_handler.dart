@@ -137,6 +137,7 @@ class ApiKeyHandler {
   /// Revoke an API key
   static Future<Response> revokeApiKey(Request request, String apiKeyUuid) async {
     try {
+      final userId = request.context['userId'] as int;
       // Get the API key
       final apiKey = await DatabaseManagers.apiKeys.findOne(
         where: {'uuid': apiKeyUuid},
@@ -151,21 +152,15 @@ class ApiKeyHandler {
 
       // Get function to verify ownership
       final function = await DatabaseManagers.functions.findOne(
-        where: {'uuid': apiKey.functionUuid},
+        where: {
+          FunctionEntityExtension.uuidNameField: apiKey.functionUuid,
+          FunctionEntityExtension.userIdNameField: userId,
+        },
       );
 
       if (function == null) {
         return Response.notFound(
-          jsonEncode({'error': 'Function not found'}),
-          headers: {'Content-Type': 'application/json'},
-        );
-      }
-
-      // Get user ID from request context
-      final userId = request.context['userId'] as String?;
-      if (userId == null) {
-        return Response.forbidden(
-          jsonEncode({'error': 'Authentication required'}),
+          jsonEncode({'error': 'Cannot Revoke this API key'}),
           headers: {'Content-Type': 'application/json'},
         );
       }
@@ -196,7 +191,11 @@ class ApiKeyHandler {
         jsonEncode({'message': 'API key revoked successfully'}),
         headers: {'Content-Type': 'application/json'},
       );
-    } catch (e) {
+    } catch (e, trace) {
+      LogsUtils.log(LogLevels.error.name, 'revokeApiKey', {
+        'error': e,
+        'trace': trace,
+      });
       return Response.internalServerError(
         body: jsonEncode({'error': 'Failed to revoke API key: $e'}),
         headers: {'Content-Type': 'application/json'},
@@ -206,21 +205,21 @@ class ApiKeyHandler {
 
   /// GET /api/auth/apikey/<function_id>/list
   /// List all API keys for a function (history)
-  static Future<Response> listApiKeys(Request request, String functionId) async {
+  static Future<Response> listApiKeys(Request request, String uuid) async {
     try {
       // Verify function exists
       final userId = request.context['userId'] as int;
 
       final function = await DatabaseManagers.functions.findOne(
         where: {
-          'uuid': functionId,
+          FunctionEntityExtension.uuidNameField: uuid,
           FunctionEntityExtension.userIdNameField: userId,
         },
       );
 
       if (function == null) {
         return Response.notFound(
-          jsonEncode({'error': 'Function not found'}),
+          jsonEncode({'error': 'API Keys not found for this function'}),
           headers: {'Content-Type': 'application/json'},
         );
       }
@@ -228,7 +227,7 @@ class ApiKeyHandler {
       // Get user ID from request context
 
       // Get all API keys
-      final apiKeys = await ApiKeyService.instance.listApiKeys(functionId);
+      final apiKeys = await ApiKeyService.instance.listApiKeys(uuid);
 
       return Response.ok(
         jsonEncode({
@@ -238,6 +237,100 @@ class ApiKeyHandler {
       );
     } catch (e, trace) {
       LogsUtils.log(LogLevels.error.name, 'listApiKeys', {
+        'error': e,
+        'trace': trace,
+      });
+      return Response.internalServerError(
+        body: jsonEncode({'error': 'Failed to list API keys'}),
+        headers: {'Content-Type': 'application/json'},
+      );
+    }
+  }
+
+  static Future<Response> rollApiKey(Request request, String uuid) async {
+    try {
+      // Verify function exists
+      final userId = request.context['userId'] as int;
+
+      final function = await DatabaseManagers.functions.findOne(
+        where: {
+          FunctionEntityExtension.uuidNameField: uuid,
+          FunctionEntityExtension.userIdNameField: userId,
+        },
+      );
+
+      if (function == null) {
+        return Response.notFound(
+          jsonEncode({'error': 'API Keys not found for this function'}),
+          headers: {'Content-Type': 'application/json'},
+        );
+      }
+      final apiKey = await ApiKeyService.instance.getActiveApiKey(function.uuid!);
+      final durationAdded = switch (apiKey?.validityEnum) {
+        null => null,
+        ApiKeyValidity.oneHour => const Duration(hours: 1),
+        ApiKeyValidity.oneDay => const Duration(days: 1),
+        ApiKeyValidity.oneWeek => const Duration(days: 7),
+        ApiKeyValidity.oneMonth => const Duration(days: 30),
+        ApiKeyValidity.forever => null,
+      };
+
+      await ApiKeyService.instance.updateApiKey(
+        uuid,
+        expiresAt: durationAdded == null ? null : apiKey?.expiresAt?.add(durationAdded),
+      );
+
+      return Response.ok(
+        jsonEncode({
+          'message': 'API key updated successfully',
+        }),
+        headers: {'Content-Type': 'application/json'},
+      );
+    } catch (e, trace) {
+      LogsUtils.log(LogLevels.error.name, 'rollApiKey', {
+        'error': e,
+        'trace': trace,
+      });
+      return Response.internalServerError(
+        body: jsonEncode({'error': 'Failed to list API keys'}),
+        headers: {'Content-Type': 'application/json'},
+      );
+    }
+  }
+
+  static Future<Response> updateApiKey(Request request, String uuid) async {
+    try {
+      // Verify function exists
+      final userId = request.context['userId'] as int;
+
+      final function = await DatabaseManagers.functions.findOne(
+        where: {
+          FunctionEntityExtension.uuidNameField: uuid,
+          FunctionEntityExtension.userIdNameField: userId,
+        },
+      );
+
+      if (function == null) {
+        return Response.notFound(
+          jsonEncode({'error': 'API Keys not found for this function'}),
+          headers: {'Content-Type': 'application/json'},
+        );
+      }
+      final body = request.context['body'] as Map<String, Object>;
+
+      await ApiKeyService.instance.updateApiKey(
+        uuid,
+        name: body['name'] as String?,
+      );
+
+      return Response.ok(
+        jsonEncode({
+          'message': 'API key updated successfully',
+        }),
+        headers: {'Content-Type': 'application/json'},
+      );
+    } catch (e, trace) {
+      LogsUtils.log(LogLevels.error.name, 'updateApiKey', {
         'error': e,
         'trace': trace,
       });

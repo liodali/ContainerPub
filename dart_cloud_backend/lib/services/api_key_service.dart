@@ -105,6 +105,25 @@ class ApiKeyService {
     return key;
   }
 
+  /// Update an API key
+  Future<bool> updateApiKey(
+    String apiKeyUuid, {
+    String? name,
+    DateTime? expiresAt,
+  }) async {
+    final mapData = <String, dynamic>{};
+    if (name != null) mapData['name'] = name;
+    if (expiresAt != null) mapData['expires_at'] = expiresAt;
+    final results = await DatabaseManagers.apiKeys.update(
+      mapData,
+      where: {
+        'uuid': apiKeyUuid,
+      },
+    );
+
+    return results.isNotEmpty;
+  }
+
   /// Revoke an API key
   Future<bool> revokeApiKey(String apiKeyUuid) async {
     final results = await DatabaseManagers.apiKeys.update(
@@ -116,6 +135,18 @@ class ApiKeyService {
     );
 
     return results.isNotEmpty;
+  }
+
+  /// Revoke an API key
+  Future<bool> deleteApiKey(String apiKeyUuid) async {
+    try {
+      await DatabaseManagers.apiKeys.delete(
+        where: {'uuid': apiKeyUuid},
+      );
+      return true;
+    } catch (e) {
+      return false;
+    }
   }
 
   /// Verify a signature against the stored secret key
@@ -193,7 +224,7 @@ class ApiKeyService {
     return await DatabaseManagers.apiKeys.findAll(
       where: {'function_uuid': functionUuid},
       orderBy: 'created_at',
-     orderDirection: 'desc',
+      orderDirection: 'desc',
     );
   }
 

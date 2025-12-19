@@ -71,6 +71,30 @@ extension ExtAuthRouter on Router {
             (req) => ApiKeyHandler.getApiKeyInfo(req, req.params['function_id']!),
           ),
     );
+    put(
+      '/api/auth/apikey/<api_key_uuid>/roll',
+      Pipeline()
+          .addMiddleware(authMiddleware)
+          .addHandler(
+            (req) => ApiKeyHandler.rollApiKey(req, req.params['api_key_uuid']!),
+          ),
+    );
+    put(
+      '/api/auth/apikey/<api_key_uuid>/update',
+      Pipeline()
+          .addMiddleware(authMiddleware)
+          .addHandler(
+            (req) => ApiKeyHandler.updateApiKey(req, req.params['api_key_uuid']!),
+          ),
+    );
+    delete(
+      '/api/auth/apikey/<api_key_uuid>/revoke',
+      Pipeline()
+          .addMiddleware(authMiddleware)
+          .addHandler(
+            (req) => ApiKeyHandler.revokeApiKey(req, req.params['api_key_uuid']!),
+          ),
+    );
     delete(
       '/api/auth/apikey/<api_key_uuid>',
       Pipeline()
