@@ -108,7 +108,7 @@ class CloudApiClient {
   Future<List<FunctionDeployment>> getDeployments(String functionUuid) async {
     final data = await _handleRequest(
         () => _dio.get(CommonsApis.apiGetDeploymentsPath(functionUuid)));
-    if (data is Map && data.containsKey('deployments')) {
+    if (data is Map) {
       return (data['deployments'] as List)
           .map((e) => FunctionDeployment.fromJson(e))
           .toList();

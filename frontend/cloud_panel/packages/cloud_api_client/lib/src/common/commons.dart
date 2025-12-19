@@ -1,3 +1,11 @@
+
+import 'package:intl/intl.dart';
+
+const dateWithTimeFormatterStr = 'yyyy-MM-dd HH:mm:ss';
+const dateFormatterStr = 'yyyy-MM-dd';
+final dateWithTimeFormater = DateFormat(dateWithTimeFormatterStr);
+final dateFormatter = DateFormat(dateFormatterStr);
+
 class CommonsApis {
   static const String apiBaseUrl = '/api';
 
