@@ -44,12 +44,14 @@ class TokenAuthInterceptor extends QueuedInterceptor {
   void onError(DioException err, ErrorInterceptorHandler handler) async {
     // 1. Check if the error is 401 and if we have a refresh token
 
-    final refreshToken = await _tokenService.refreshToken;
     if ((err.response?.statusCode == 401 || err.response?.statusCode == 403) &&
-        refreshToken != null &&
         err.requestOptions.path != CommonsApis.apiRefreshTokenPath) {
       // Avoid infinite loop
-
+      final refreshToken = await _tokenService.refreshToken;
+      if(refreshToken == null){
+        onLogout?.call();
+        return;
+      }
       final options = err.requestOptions;
       // 1. Create a Completer to hold the request result
       final completer = Completer<Response<dynamic>>();
@@ -88,12 +90,12 @@ class TokenAuthInterceptor extends QueuedInterceptor {
         if (e is DioException) {
           return handler.reject(e);
         }
-        return handler.reject(DioException(requestOptions: options, error: e));
+        return handler.next(DioException(requestOptions: options, error: e));
       }
     } else {
       // Not a 401, or no refresh token, or refresh route failed (handled by _handleRefreshFailure)
       _refreshTokenFuture = null;
-      return super.onError(err, handler);
+      return handler.next(err);
     }
   }
 
