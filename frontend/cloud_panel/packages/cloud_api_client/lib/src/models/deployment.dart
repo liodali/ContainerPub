@@ -1,34 +1,31 @@
+import 'package:cloud_api_client/src/common/commons.dart';
 import 'package:equatable/equatable.dart';
 
 class FunctionDeployment extends Equatable {
   final String uuid;
-  final String functionUuid;
   final String status;
+  final bool isLatest;
   final int version;
-  final String? buildLogs;
   final DateTime createdAt;
 
   const FunctionDeployment({
     required this.uuid,
-    required this.functionUuid,
+    required this.isLatest,
     required this.status,
     required this.version,
-    this.buildLogs,
     required this.createdAt,
   });
 
   factory FunctionDeployment.fromJson(Map<String, dynamic> json) {
     return FunctionDeployment(
       uuid: json['uuid'] as String,
-      functionUuid: json['function_uuid'] as String,
+      isLatest: json['is_active'] as bool,
       status: json['status'] as String,
-      version: json['version'] as int? ?? 0,
-      buildLogs: json['build_logs'] as String?,
-      createdAt: DateTime.parse(json['created_at'] as String),
+      version: json['version'] as int,
+      createdAt: dateFormatter.tryParse(json['deployed_at']) ?? DateTime.now(),
     );
   }
 
   @override
-  List<Object?> get props =>
-      [uuid, functionUuid, status, version, buildLogs, createdAt];
+  List<Object?> get props => [uuid, isLatest, status, version, createdAt];
 }
