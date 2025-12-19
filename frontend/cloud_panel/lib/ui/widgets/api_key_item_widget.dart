@@ -167,12 +167,22 @@ class ApiKeyItemWidgetState extends ConsumerState<ApiKeyItemWidget> {
       ref.invalidate(functionApiKeysProvider(widget.uuid));
     } catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(
-          SnackBar(
-            content: Text('Error: $e'),
+        showFToast(
+          context: context,
+          style: (style) => style.copyWith(
+            decoration: BoxDecoration(
+              color: context.theme.colors.background.withAlpha(100),
+              borderRadius: BorderRadius.circular(6),
+              border: Border.all(color: context.theme.colors.error),
+            ),
           ),
+          title: Text(
+            'Oppssy!! Cannot revoke apikey function',
+            style: context.theme.typography.sm.copyWith(
+              color: context.theme.colors.error,
+            ),
+          ),
+          alignment: FToastAlignment.bottomCenter,
         );
       }
     } finally {

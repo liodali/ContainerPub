@@ -3,7 +3,7 @@ import 'package:cloud_api_client/cloud_api_client.dart';
 import 'api_client_provider.dart';
 
 final functionDetailsProvider = FutureProvider.family
-    .autoDispose<CloudFunction, String>((
+    <CloudFunction, String>((
       ref,
       uuid,
     ) async {
@@ -12,7 +12,7 @@ final functionDetailsProvider = FutureProvider.family
     });
 
 final functionDeploymentsProvider = FutureProvider.family
-    .autoDispose<List<FunctionDeployment>, String>((ref, uuid) async {
+    <List<FunctionDeployment>, String>((ref, uuid) async {
       final client = ref.watch(apiClientProvider);
       final deployments = await client.getDeployments(uuid);
       final sorted = deployments.reversed.toList();
@@ -25,7 +25,7 @@ final functionDeploymentsProvider = FutureProvider.family
     });
 
 final functionApiKeysProvider = FutureProvider.family
-    .autoDispose<List<ApiKey>, String>((
+    <List<ApiKey>, String>((
       ref,
       uuid,
     ) async {
@@ -34,7 +34,7 @@ final functionApiKeysProvider = FutureProvider.family
     });
 
 final functionStatsProvider = FutureProvider.family
-    .autoDispose<FunctionStats, String>((
+    <FunctionStats, String>((
       ref,
       uuid,
     ) async {
@@ -43,13 +43,13 @@ final functionStatsProvider = FutureProvider.family
     });
 
 final functionHourlyStatsProvider = FutureProvider.family
-    .autoDispose<HourlyStatsResponse, String>((ref, uuid) async {
+    <HourlyStatsResponse, String>((ref, uuid) async {
       final client = ref.watch(apiClientProvider);
       return client.getHourlyStats(uuid, hours: 24);
     });
 
 final functionDailyStatsProvider = FutureProvider.family
-    .autoDispose<DailyStatsResponse, String>((ref, uuid) async {
+    <DailyStatsResponse, String>((ref, uuid) async {
       final client = ref.watch(apiClientProvider);
       return client.getDailyStats(uuid, days: 7);
     });

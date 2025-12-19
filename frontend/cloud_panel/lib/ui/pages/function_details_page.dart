@@ -1,7 +1,7 @@
 import 'package:cloud_panel/common/commons.dart';
 import 'package:cloud_panel/providers/function_details_provider.dart';
 import 'package:cloud_panel/ui/component/header_with_action.dart';
-import 'package:cloud_panel/ui/widgets/overview_tab.dart';
+import 'package:cloud_panel/ui/widgets/overview_function_tab.dart';
 import 'package:cloud_panel/ui/widgets/deployments_tab.dart';
 import 'package:cloud_panel/ui/widgets/api_keys_tab.dart';
 import 'package:cloud_panel/ui/widgets/invoke_tab.dart';
@@ -29,7 +29,7 @@ class _FunctionDetailsPageState extends ConsumerState<FunctionDetailsPage>
   @override
   void initState() {
     super.initState();
-    _tabController = FTabController(length: 4, vsync: this, initialIndex: 2);
+    _tabController = FTabController(length: 4, vsync: this, initialIndex: 0);
   }
 
   @override
@@ -65,6 +65,26 @@ class _FunctionDetailsPageState extends ConsumerState<FunctionDetailsPage>
             ),
           ],
         ),
+        actions: [
+          FTappable(
+            onPress: () {
+              switch (_tabController.index) {
+                case 0:
+                  ref.invalidate(functionStatsProvider(widget.uuid));
+                  break;
+                case 1:
+                  ref.invalidate(functionDeploymentsProvider(widget.uuid));
+                  break;
+                case 2:
+                  ref.invalidate(functionApiKeysProvider(widget.uuid));
+                  break;
+                case 3:
+                  break;
+              }
+            },
+            child: const Icon(FIcons.refreshCcw),
+          ),
+        ],
       ),
       child: funcAsync.when(
         data: (func) => SizedBox(

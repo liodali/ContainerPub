@@ -2,6 +2,8 @@ import 'dart:convert';
 import 'package:hive_ce/hive.dart';
 import 'package:dart_cloud_cli/services/hive_service.dart';
 
+typedef ApiKeyStorageData = ({String uuid, String privateKey});
+
 /// Service for managing API key storage using Hive CE
 ///
 /// Stores API keys with:
@@ -31,6 +33,7 @@ mixin ApiKeyStorage {
   static Future<void> storeApiKey(
     String functionUuid,
     String privateKey,
+    String keyUUID,
   ) async {
     if (!_initialized) {
       await initialize();
@@ -38,8 +41,10 @@ mixin ApiKeyStorage {
 
     try {
       // Base64 encode the private key for storage
+
       final encoded = base64.encode(utf8.encode(privateKey));
-      await _box.put(functionUuid, encoded);
+      final data = {'keyUUID': keyUUID, 'privateKey': encoded};
+      await _box.put(functionUuid, jsonEncode(data));
     } catch (e) {
       throw Exception('Failed to store API key: $e');
     }
@@ -49,7 +54,7 @@ mixin ApiKeyStorage {
   ///
   /// [functionUuid]: The UUID of the function
   /// Returns the decoded private key, or null if not found
-  static Future<String?> getApiKey(String functionUuid) async {
+  static Future<ApiKeyStorageData?> getApiKey(String functionUuid) async {
     if (!_initialized) {
       await initialize();
     }
@@ -59,9 +64,17 @@ mixin ApiKeyStorage {
       if (encoded == null) {
         return null;
       }
+      if (!encoded.contains('keyUUID')) {
+        return (uuid: '', privateKey: utf8.decode(base64.decode(encoded)));
+      }
+      final data = json.decode(encoded);
+      final privateKey = data['keyUUID'];
 
       // Decode the base64-encoded private key
-      return utf8.decode(base64.decode(encoded));
+      return (
+        uuid: data['keyUUID'] as String,
+        privateKey: utf8.decode(base64.decode(privateKey)),
+      );
     } catch (e) {
       throw Exception('Failed to retrieve API key: $e');
     }
