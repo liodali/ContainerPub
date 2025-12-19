@@ -188,6 +188,24 @@ class ApiKeyItemWidgetState extends ConsumerState<ApiKeyItemWidget> {
       loadingRollNotifier.value = true;
       await ref.read(apiClientProvider).rollApiKey(keyUuid);
       ref.invalidate(functionApiKeysProvider(widget.uuid));
+      if (context.mounted) {
+        showFToast(
+          context: context,
+          style: (style) => style.copyWith(
+            decoration: BoxDecoration(
+              color: Colors.green.withAlpha(200),
+              borderRadius: BorderRadius.circular(6),
+            ),
+          ),
+          title: Text(
+            'API key rolled successfully',
+            style: context.theme.typography.sm.copyWith(
+              color: context.theme.colors.background,
+            ),
+          ),
+          alignment: FToastAlignment.bottomCenter,
+        );
+      }
     } catch (e) {
       if (context.mounted) {
         showFToast(
