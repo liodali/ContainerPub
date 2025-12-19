@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:forui/forui.dart';
 import 'package:cloud_api_client/cloud_api_client.dart';
-import 'stat_card.dart';
+import '../component/stat_card.dart';
 
 class OverviewTab extends StatelessWidget {
   const OverviewTab({
