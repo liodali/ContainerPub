@@ -1,105 +1,88 @@
 import 'dart:math';
 
-/// A utility class for generating random alphanumeric strings with improved performance.
+/// A utility class for generating random alphanumeric strings optimized for server use.
 class NameGenerator {
   static const String _chars =
       'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-  static const int _maxUniqueNonces = 10000; // Prevent memory leaks
+  static const int _charsLength = 62;
 
   const NameGenerator._(this._value);
 
   /// Creates a [NameGenerator] containing a random alphanumeric string [length] characters long.
   factory NameGenerator([int length = 32]) {
-    assert(length > 0);
-    return NameGenerator._(_generateFast(length));
+    assert(length > 0, 'Length must be positive');
+    return NameGenerator._(_generate(length, _defaultRandom));
   }
 
-  /// Constructs a [NameGenerator] that's unique from every other [NameGenerator] with LRU eviction.
-  factory NameGenerator.unique([int length = 32]) {
-    assert(length > 0);
-
-    var value = _generateFast(length);
-    var attempts = 0;
-    const maxAttempts = 100;
-
-    while (_uniqueNonces.containsKey(value) && attempts < maxAttempts) {
-      value = _generateFast(length);
-      attempts++;
-    }
-
-    if (attempts >= maxAttempts) {
-      // Fallback to timestamp-based uniqueness
-      value =
-          '${DateTime.now().microsecondsSinceEpoch}_${_generateFast(length - 14)}';
-    }
-
-    _addUniqueNonce(value);
-    return NameGenerator._(value);
-  }
-
-  /// Constructs a secure [NameGenerator] using crypto-strong randomness.
+  /// Creates a [NameGenerator] using cryptographically secure randomness.
   factory NameGenerator.secure([int length = 32]) {
-    assert(length > 0);
-    return NameGenerator._(_generateSecure(length));
+    assert(length > 0, 'Length must be positive');
+    return NameGenerator._(_generate(length, Random.secure()));
   }
 
-  /// Constructs a unique nonce 16 characters in length.
-  factory NameGenerator.key() => NameGenerator.unique(16);
+  /// Creates a short 16-character nonce, useful for keys/tokens.
+  factory NameGenerator.key() => NameGenerator(16);
+
+  /// Creates a secure short 16-character nonce.
+  factory NameGenerator.secureKey() => NameGenerator.secure(16);
 
   final String _value;
 
+  /// Returns the length of this nonce.
   int get length => _value.length;
 
-  /// Fast generation using pre-allocated character table.
-  static String _generateFast(int length, [Random? random]) {
-    random ??= _defaultRandom;
+  /// Returns the string value of this nonce.
+  String get value => _value;
 
-    final buffer = StringBuffer();
-    for (int i = 0; i < length; i++) {
-      buffer.writeCharCode(_chars.codeUnitAt(random.nextInt(62)));
-    }
-    return buffer.toString();
-  }
-
-  /// Secure generation with cryptographically strong randomness.
-  static String _generateSecure(int length) {
-    final random = Random.secure();
+  /// Fast NameGenerator generation using optimized character selection.
+  static String _generate(int length, Random random) {
+    // Use StringBuffer for efficient string building
     final buffer = StringBuffer();
 
     for (int i = 0; i < length; i++) {
-      buffer.writeCharCode(_chars.codeUnitAt(random.nextInt(62)));
+      buffer.writeCharCode(_chars.codeUnitAt(random.nextInt(_charsLength)));
     }
+
     return buffer.toString();
   }
 
-  /// Batch generation for better performance when creating multiple nonces.
-  static List<String> generateBatch(int count, [int length = 32]) {
-    final random = Random();
-    return List.generate(count, (_) => _generateFast(length, random));
-  }
-
-  /// Legacy method for backward compatibility.
+  /// Static method for generating NameGenerator strings directly.
   static String generate([int length = 32, Random? random]) {
-    return _generateFast(length, random);
+    assert(length > 0, 'Length must be positive');
+    return _generate(length, random ?? _defaultRandom);
   }
 
-  /// Adds a nonce to unique set with LRU eviction.
-  static void _addUniqueNonce(String value) {
-    if (_uniqueNonces.length >= _maxUniqueNonces) {
-      // Remove oldest entry (LRU eviction)
-      final oldestKey = _uniqueNonces.keys.first;
-      _uniqueNonces.remove(oldestKey);
-    }
-    _uniqueNonces[value] = DateTime.now().millisecondsSinceEpoch;
+  /// Static method for generating secure nonce strings directly.
+  static String generateSecure([int length = 32]) {
+    assert(length > 0, 'Length must be positive');
+    return _generate(length, Random.secure());
   }
 
-  /// Clears the unique nonces cache.
-  static void clearUniqueCache() {
-    _uniqueNonces.clear();
+  /// Efficiently generates multiple nonces in a batch.
+  static List<String> generateBatch(int count, [int length = 32]) {
+    assert(count > 0, 'Count must be positive');
+    assert(length > 0, 'Length must be positive');
+
+    final random = _defaultRandom;
+    return List.generate(
+      count,
+      (_) => _generate(length, random),
+      growable: false,
+    );
   }
 
-  /// Returns the number of cached unique nonces.
-  static int get uniqueCacheSize => _uniqueNonces.length;
+  /// Efficiently generates multiple secure nonces in a batch.
+  static List<String> generateSecureBatch(int count, [int length = 32]) {
+    assert(count > 0, 'Count must be positive');
+    assert(length > 0, 'Length must be positive');
+
+    final random = Random.secure();
+    return List.generate(
+      count,
+      (_) => _generate(length, random),
+      growable: false,
+    );
+  }
 
   @override
   bool operator ==(Object other) =>
@@ -112,9 +95,6 @@ class NameGenerator {
   @override
   String toString() => _value;
 
-  /// Cached random instance for better performance.
+  /// Cached random instance for better performance in non-secure scenarios.
   static final Random _defaultRandom = Random();
-
-  /// LRU cache with timestamp tracking instead of growing Set.
-  static final Map<String, int> _uniqueNonces = <String, int>{};
 }

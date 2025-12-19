@@ -3,14 +3,13 @@ import 'package:test/test.dart';
 
 void main() {
   group('A group of tests', () {
-    final awesome = NameGenerator();
-
     setUp(() {
       // Additional setup goes here.
     });
 
     test('First Test', () {
-      expect(awesome.length, 32);
+      final name = NameGenerator();
+      expect(name.length, 32);
     });
   });
 }
