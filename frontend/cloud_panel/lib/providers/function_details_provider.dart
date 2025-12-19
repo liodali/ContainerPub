@@ -14,7 +14,14 @@ final functionDetailsProvider = FutureProvider.family
 final functionDeploymentsProvider = FutureProvider.family
     .autoDispose<List<FunctionDeployment>, String>((ref, uuid) async {
       final client = ref.watch(apiClientProvider);
-      return client.getDeployments(uuid);
+      final deployments = await client.getDeployments(uuid);
+      final sorted = deployments.reversed.toList();
+      sorted.sort((a, b) {
+        if (a.isLatest && !b.isLatest) return -1;
+        if (!a.isLatest && b.isLatest) return 1;
+        return 0;
+      });
+      return sorted;
     });
 
 final functionApiKeysProvider = FutureProvider.family
