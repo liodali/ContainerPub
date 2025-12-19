@@ -90,12 +90,12 @@ class TokenAuthInterceptor extends QueuedInterceptor {
         if (e is DioException) {
           return handler.reject(e);
         }
-        return handler.next(DioException(requestOptions: options, error: e));
+        return handler.reject(DioException(requestOptions: options, error: e));
       }
     } else {
       // Not a 401, or no refresh token, or refresh route failed (handled by _handleRefreshFailure)
       _refreshTokenFuture = null;
-      return handler.next(err);
+      return handler.reject(err);
     }
   }
 
