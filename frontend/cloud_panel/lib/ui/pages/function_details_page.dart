@@ -84,8 +84,14 @@ class _FunctionDetailsPageState extends ConsumerState<FunctionDetailsPage>
             ),
           ],
         ),
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (err, stack) => Center(child: Text('Error: $err')),
+        loading: () => const Center(child: FCircularProgress()),
+        error: (err, stack) => Center(
+          child: FAlert(
+            title: const Text('Oppssy!! Cannot load function details'),
+            subtitle: Text('Something went wrong'),
+            style: FAlertStyle.destructive(),
+          ),
+        ),
       ),
     );
   }

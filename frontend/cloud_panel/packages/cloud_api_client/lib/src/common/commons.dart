@@ -14,7 +14,7 @@ class CommonsApis {
   static const String apiCreateFunctionPath =
       '${CommonsApis.apiFunctionsPath}/init';
   static String apiGetDeploymentsPath(String uuid) =>
-      '${CommonsApis.apiFunctionsPath}/$uuid/deploy';
+      '${CommonsApis.apiFunctionsPath}/$uuid/deployments';
   static String apiRollbackFunctionPath(String uuid) =>
       '${CommonsApis.apiFunctionsPath}/$uuid/rollback';
   static String apiGetFunctionsPath(String uuid) =>
