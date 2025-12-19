@@ -4,6 +4,7 @@ import 'package:cloud_panel/providers/api_client_provider.dart';
 import 'package:cloud_panel/providers/function_details_provider.dart';
 import 'package:cloud_panel/ui/component/header_with_action.dart';
 import 'package:cloud_panel/ui/component/overview_tab.dart';
+import 'package:cloud_panel/ui/widgets/deployments_tab.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:forui/forui.dart';
@@ -60,32 +61,25 @@ class _FunctionDetailsPageState extends ConsumerState<FunctionDetailsPage>
         ),
       ),
       child: funcAsync.when(
-        data: (func) => Column(
+        data: (func) => FTabs(
           children: [
-            Expanded(
-              child: FTabs(
-                children: [
-                  FTabEntry(
-                    label: Text('Overview'),
-                    child: OverviewTab(func: func),
-                  ),
-                  FTabEntry(
-                    label: Text('Deployments'),
-                    child: SizedBox(
-                      height: MediaQuery.sizeOf(context).height - 120,
-                      child: _DeploymentsTab(uuid: func.uuid),
-                    ),
-                  ),
-                  FTabEntry(
-                    label: Text('API Keys'),
-                    child: _ApiKeysTab(uuid: func.uuid),
-                  ),
-                  FTabEntry(
-                    label: Text('Invoke'),
-                    child: _InvokeTab(uuid: func.uuid),
-                  ),
-                ],
+            FTabEntry(
+              label: Text('Overview'),
+              child: OverviewTab(func: func),
+            ),
+            FTabEntry(
+              label: Text('Deployments'),
+              child: DeploymentsTab(
+                uuid: func.uuid,
               ),
+            ),
+            FTabEntry(
+              label: Text('API Keys'),
+              child: _ApiKeysTab(uuid: func.uuid),
+            ),
+            FTabEntry(
+              label: Text('Invoke'),
+              child: _InvokeTab(uuid: func.uuid),
             ),
           ],
         ),
@@ -98,340 +92,6 @@ class _FunctionDetailsPageState extends ConsumerState<FunctionDetailsPage>
           ),
         ),
       ),
-    );
-  }
-}
-
-class _DeploymentsTab extends ConsumerWidget {
-  final String uuid;
-  const _DeploymentsTab({required this.uuid});
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final deploymentsAsync = ref.watch(functionDeploymentsProvider(uuid));
-
-    return deploymentsAsync.when(
-      data: (deployments) {
-        if (deployments.isEmpty) {
-          return const Center(
-            child: Text('No deployments'),
-          );
-        }
-
-        final activeDeployment = deployments.firstWhere(
-          (d) => d.isLatest,
-          orElse: () => deployments.first,
-        );
-        final otherDeployments = deployments
-            .where((d) => d.uuid != activeDeployment.uuid)
-            .toList();
-
-        return SingleChildScrollView(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            spacing: 16,
-            children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                spacing: 8,
-                children: [
-                  Text(
-                    'Active Deployment',
-                    style: context.theme.typography.sm.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: Colors.green,
-                    ),
-                  ),
-                  FCard(
-                    title: Text(
-                      activeDeployment.uuid,
-                      style: context.theme.typography.lg,
-                    ),
-                    subtitle: Text(
-                      '${activeDeployment.status} • ${activeDeployment.createdAt.formattedDate} • Version ${activeDeployment.version}',
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: [
-                        FButton(
-                          onPress: null,
-                          style: FButtonStyle.secondary(),
-                          child: const Text('Active'),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-              if (otherDeployments.isNotEmpty) ...[
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  spacing: 8,
-                  children: [
-                    Text(
-                      'Previous Deployments',
-                      style: context.theme.typography.sm.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    ListView.separated(
-                      itemCount: otherDeployments.length,
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      separatorBuilder: (_, _) => const SizedBox(height: 12),
-                      itemBuilder: (context, index) {
-                        final dep = otherDeployments[index];
-                        return FCard(
-                          title: Text(
-                            dep.uuid,
-                            style: context.theme.typography.lg,
-                          ),
-                          subtitle: Text(
-                            '${dep.status} • ${dep.createdAt.formattedDate} • Version ${dep.version}',
-                          ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.end,
-                            children: [
-                              FButton(
-                                onPress: () =>
-                                    _rollback(context, ref, uuid, dep.uuid),
-                                style: FButtonStyle.destructive(),
-                                child: const Text('Rollback'),
-                              ),
-                            ],
-                          ),
-                        );
-                      },
-                    ),
-                  ],
-                ),
-              ],
-            ],
-          ),
-        );
-      },
-      loading: () => const Center(child: CircularProgressIndicator()),
-      error: (e, s) => Center(child: Text('Error: $e')),
-    );
-  }
-
-  Future<void> _rollback(
-    BuildContext context,
-    WidgetRef ref,
-    String funcUuid,
-    String depUuid,
-  ) async {
-    if (!context.mounted) return;
-
-    showFDialog(
-      context: context,
-      builder: (context, style, animation) => _RollbackConfirmDialog(
-        funcUuid: funcUuid,
-        depUuid: depUuid,
-        onConfirm: () async {
-          Navigator.pop(context);
-          try {
-            await ref
-                .read(apiClientProvider)
-                .rollbackFunction(
-                  funcUuid,
-                  depUuid,
-                );
-            if (context.mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Rollback initiated successfully'),
-                ),
-              );
-            }
-            ref.invalidate(functionDeploymentsProvider(funcUuid));
-          } catch (e) {
-            if (context.mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('Error: $e'),
-                ),
-              );
-            }
-          }
-        },
-      ),
-    );
-  }
-}
-
-class _RollbackConfirmDialog extends StatefulWidget {
-  final String funcUuid;
-  final String depUuid;
-  final VoidCallback onConfirm;
-
-  const _RollbackConfirmDialog({
-    required this.funcUuid,
-    required this.depUuid,
-    required this.onConfirm,
-  });
-
-  @override
-  State<_RollbackConfirmDialog> createState() => _RollbackConfirmDialogState();
-}
-
-class _RollbackConfirmDialogState extends State<_RollbackConfirmDialog> {
-  late TextEditingController _funcUuidController;
-  late TextEditingController _depUuidController;
-
-  @override
-  void initState() {
-    super.initState();
-    _funcUuidController = TextEditingController();
-    _depUuidController = TextEditingController();
-  }
-
-  @override
-  void dispose() {
-    _funcUuidController.dispose();
-    _depUuidController.dispose();
-    super.dispose();
-  }
-
-  bool get _isConfirmEnabled =>
-      _funcUuidController.text == widget.funcUuid &&
-      _depUuidController.text == widget.depUuid;
-
-  @override
-  Widget build(BuildContext context) {
-    return FDialog(
-      title: const Text('Confirm Rollback'),
-      body: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        spacing: 12,
-        children: [
-          const Text(
-            'This action will rollback the function to the selected deployment version. This is a destructive action.',
-            style: TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: context.theme.colors.background,
-              border: Border.all(color: context.theme.colors.border),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              spacing: 8,
-              children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  spacing: 4,
-                  children: [
-                    Text(
-                      'Function UUID:',
-                      style: context.theme.typography.xs.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: context.theme.colors.foreground,
-                      ),
-                    ),
-                    SelectableText(
-                      widget.funcUuid,
-                      style: context.theme.typography.sm.copyWith(
-                        fontFamily: 'monospace',
-                        color: context.theme.colors.foreground,
-                      ),
-                    ),
-                  ],
-                ),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  spacing: 4,
-                  children: [
-                    Text(
-                      'Deployment UUID:',
-                      style: context.theme.typography.xs.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: context.theme.colors.foreground,
-                      ),
-                    ),
-                    SelectableText(
-                      widget.depUuid,
-                      style: context.theme.typography.sm.copyWith(
-                        fontFamily: 'monospace',
-                        color: context.theme.colors.foreground,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-          const Text(
-            'To confirm, please re-enter both UUIDs below:',
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            spacing: 8,
-            children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                spacing: 4,
-                children: [
-                  Text(
-                    'Function UUID',
-                    style: context.theme.typography.xs.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  ListenableBuilder(
-                    listenable: _funcUuidController,
-                    builder: (context, _) => FTextField(
-                      controller: _funcUuidController,
-                      hint: 'Enter function UUID',
-                    ),
-                  ),
-                ],
-              ),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                spacing: 4,
-                children: [
-                  Text(
-                    'Deployment UUID',
-                    style: context.theme.typography.xs.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  ListenableBuilder(
-                    listenable: _depUuidController,
-                    builder: (context, _) => FTextField(
-                      controller: _depUuidController,
-                      hint: 'Enter deployment UUID',
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ],
-      ),
-      actions: [
-        FButton(
-          onPress: () => Navigator.pop(context),
-          style: FButtonStyle.secondary(),
-          child: const Text('Cancel'),
-        ),
-        FButton(
-          onPress: _isConfirmEnabled ? widget.onConfirm : null,
-          style: FButtonStyle.destructive(),
-          child: const Text('Confirm Rollback'),
-        ),
-      ],
     );
   }
 }

@@ -3,6 +3,24 @@ import 'package:flutter/widgets.dart'
     show Color, Widget, Container, BoxDecoration, BoxShape;
 import 'package:flutter/material.dart' show Colors;
 
+enum SortDeploy {
+  versionDesc('version_desc', 'Version (Desc)'),
+  versionAsc('version_asc', 'Version (Asc)'),
+  dateDesc('date_desc', 'Date (Newest)'),
+  dateAsc('date_asc', 'Date (Oldest)')
+  ;
+
+  const SortDeploy(this.value, this.text);
+  final String value;
+  final String text;
+
+  List<String> get sortValues => values.map((e) => e.value).toList();
+
+  static SortDeploy fromValue(String name) {
+    return values.firstWhere((e) => e.value == name);
+  }
+}
+
 enum FunctionStatus {
   init(Colors.grey),
   building(Colors.orange),
@@ -37,6 +55,7 @@ enum FunctionStatus {
 extension FunctionStatusExtension on CloudFunction {
   Widget get statusWidget => FunctionStatus.fromString(status).toWidget();
 }
+
 extension DateFormatExtension on DateTime {
   String get formattedDate => dateFormatter.format(this);
 }
