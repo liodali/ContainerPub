@@ -21,6 +21,23 @@ enum SortDeploy {
   }
 }
 
+enum ApiKeyValidity {
+  oneHour('1h', '1 Hour'),
+  oneDay('1d', '1 Day'),
+  oneWeek('1w', '1 Week'),
+  oneMonth('1m', '1 Month'),
+  forever('forever', 'Forever')
+  ;
+
+  const ApiKeyValidity(this.value, this.label);
+  final String value;
+  final String label;
+
+  static ApiKeyValidity fromValue(String val) {
+    return values.firstWhere((e) => e.value == val);
+  }
+}
+
 enum FunctionStatus {
   init(Colors.grey),
   building(Colors.orange),
