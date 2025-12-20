@@ -12,6 +12,7 @@ import 'package:dart_cloud_cli/commands/init_command.dart';
 import 'package:dart_cloud_cli/commands/status_command.dart';
 import 'package:dart_cloud_cli/commands/apikey_command.dart';
 import 'package:dart_cloud_cli/commands/rollback_command.dart';
+import 'package:dart_cloud_cli/common/args_parsers.dart';
 import 'package:dart_cloud_cli/services/cache.dart' show AuthCache;
 
 void main(List<String> arguments) async {
@@ -51,7 +52,7 @@ void main(List<String> arguments) async {
     ..addCommand('logs')
     ..addCommand('delete')
     ..addCommand('invoke', invokeArgs)
-    ..addCommand('apikey')
+    ..addCommand('apikey', apiKeyParser)
     ..addCommand('rollback');
 
   if (arguments.isEmpty) {

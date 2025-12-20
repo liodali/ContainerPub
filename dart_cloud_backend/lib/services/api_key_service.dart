@@ -270,12 +270,41 @@ class ApiKeyService {
   }
 
   /// List all API keys for a function (without private keys)
+  /// Sorted by priority:
+  /// 1. Active keys (valid and enabled)
+  /// 2. Disabled keys (valid but manually disabled)
+  /// 3. Expired keys
   Future<List<ApiKeyEntity>> listApiKeys(String functionUuid) async {
-    return await DatabaseManagers.apiKeys.findAll(
+    final keys = await DatabaseManagers.apiKeys.findAll(
       where: {'function_uuid': functionUuid},
-      orderBy: 'created_at',
-      orderDirection: 'desc',
     );
+
+    return sortApiKeys(keys);
+  }
+
+  /// Helper to sort API keys by priority
+  static List<ApiKeyEntity> sortApiKeys(List<ApiKeyEntity> keys) {
+    keys.sort((a, b) {
+      // Define priority: 0=Active, 1=Disabled, 2=Expired
+      int getPriority(ApiKeyEntity key) {
+        if (key.isExpired) return 2;
+        if (key.isActive) return 0;
+        return 1;
+      }
+
+      final priorityA = getPriority(a);
+      final priorityB = getPriority(b);
+
+      if (priorityA != priorityB) {
+        return priorityA.compareTo(priorityB);
+      }
+
+      // Secondary sort: Created At descending
+      final dateA = a.createdAt ?? DateTime.fromMillisecondsSinceEpoch(0);
+      final dateB = b.createdAt ?? DateTime.fromMillisecondsSinceEpoch(0);
+      return dateB.compareTo(dateA);
+    });
+    return keys;
   }
 
   /// Check if a function has an active API key
@@ -291,7 +320,7 @@ class ApiKeyService {
   }) async {
     final keys = await DatabaseManagers.apiKeys.findAll(
       where: {
-        'function_uuid': uuid,
+        'uuid': uuid,
         'name': name,
       },
     );

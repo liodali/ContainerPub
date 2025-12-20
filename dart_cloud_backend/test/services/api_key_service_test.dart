@@ -206,6 +206,79 @@ void main() {
       });
     });
 
+    group('sortApiKeys', () {
+      test('sorts keys by priority: Active > Disabled > Expired', () {
+        final now = DateTime.now();
+        final expiredKey = ApiKeyEntity(
+          uuid: 'expired',
+          functionUuid: 'f1',
+          publicKey: 'pk',
+          privateKeyHash: 'hash',
+          validity: '1h',
+          expiresAt: now.subtract(Duration(hours: 1)),
+          isActive: true, // expired overrides active
+          createdAt: now,
+        );
+        final disabledKey = ApiKeyEntity(
+          uuid: 'disabled',
+          functionUuid: 'f1',
+          publicKey: 'pk',
+          privateKeyHash: 'hash',
+          validity: 'forever',
+          expiresAt: null,
+          isActive: false,
+          createdAt: now,
+        );
+        final activeKey = ApiKeyEntity(
+          uuid: 'active',
+          functionUuid: 'f1',
+          publicKey: 'pk',
+          privateKeyHash: 'hash',
+          validity: 'forever',
+          expiresAt: null,
+          isActive: true,
+          createdAt: now,
+        );
+
+        final keys = [expiredKey, disabledKey, activeKey];
+        final sorted = ApiKeyService.sortApiKeys(keys);
+
+        expect(sorted[0].uuid, 'active');
+        expect(sorted[1].uuid, 'disabled');
+        expect(sorted[2].uuid, 'expired');
+      });
+
+      test('sorts keys with same priority by creation date descending', () {
+        final now = DateTime.now();
+        final older = ApiKeyEntity(
+          uuid: 'older',
+          functionUuid: 'f1',
+          publicKey: 'pk',
+          privateKeyHash: 'hash',
+          validity: 'forever',
+          expiresAt: null,
+          isActive: true,
+          createdAt: now.subtract(Duration(days: 1)),
+        );
+        final newer = ApiKeyEntity(
+          uuid: 'newer',
+          functionUuid: 'f1',
+          publicKey: 'pk',
+          privateKeyHash: 'hash',
+          validity: 'forever',
+          expiresAt: null,
+          isActive: true,
+          createdAt: now,
+        );
+
+        final keys = [older, newer];
+        final sorted = ApiKeyService.sortApiKeys(keys);
+
+        expect(sorted[0].uuid, 'newer');
+        expect(sorted[1].uuid, 'older');
+      });
+    });
+
     group('hasActiveApiKey', () {
       test('returns true if function has active API key', () async {
         // Test when active key exists

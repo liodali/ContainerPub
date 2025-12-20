@@ -1,6 +1,13 @@
 import 'package:args/args.dart';
 import 'package:dart_cloud_cli/common/api_key_validity.dart';
 
+final apiKeyParser = ArgParser()
+  ..addCommand('generate', apiKeyGenerateParser)
+  ..addCommand('info', apiKeyInfoParser)
+  ..addCommand('revoke', apiKeyRevokeParser)
+  ..addCommand('list', apiKeyListParser)
+  ..addCommand('roll', apiKeyRollParser);
+
 final apiKeyGenerateParser = ArgParser()
   ..addOption(
     'function-id',
