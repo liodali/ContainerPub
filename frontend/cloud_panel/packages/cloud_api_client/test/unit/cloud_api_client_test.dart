@@ -36,22 +36,20 @@ void main() {
 
   group('CloudApiClient - Functions', () {
     test('listFunctions returns list of functions on 200', () async {
-      final mockData = {
-        'functions': [
-          {
-            'uuid': '123',
-            'name': 'test-func',
-            'status': 'deployed',
-            'created_at': DateTime.now().toIso8601String()
-          },
-          {
-            'uuid': '456',
-            'name': 'test-func-2',
-            'status': 'failed',
-            'created_at': DateTime.now().toIso8601String()
-          }
-        ]
-      };
+      final mockData = [
+        {
+          'uuid': '123',
+          'name': 'test-func',
+          'status': 'deployed',
+          'createdAt': DateTime.now().toIso8601String()
+        },
+        {
+          'uuid': '456',
+          'name': 'test-func-2',
+          'status': 'failed',
+          'createdAt': DateTime.now().toIso8601String()
+        }
+      ];
 
       dioAdapter.onGet(
         '/api/functions',
@@ -73,7 +71,7 @@ void main() {
           'uuid': uuid,
           'name': 'test-func',
           'status': 'deployed',
-          'created_at': DateTime.now().toIso8601String()
+          'createdAt': DateTime.now().toIso8601String()
         }
       };
 
@@ -95,7 +93,7 @@ void main() {
           'uuid': '789',
           'name': name,
           'status': 'pending',
-          'created_at': DateTime.now().toIso8601String()
+          'createdAt': DateTime.now().toIso8601String()
         }
       };
 
@@ -131,9 +129,10 @@ void main() {
           {
             'uuid': 'dep1',
             'status': 'success',
+            'is_active': true,
             'function_uuid': funcUuid,
             'version': 1,
-            'created_at': DateTime.now().toIso8601String()
+            'deployed_at': DateTime.now().toIso8601String()
           }
         ]
       };
@@ -147,6 +146,7 @@ void main() {
 
       expect(deployments, hasLength(1));
       expect(deployments[0].uuid, 'dep1');
+      expect(deployments[0].isLatest, true);
     });
 
     test('rollbackFunction completes on 200', () async {
@@ -221,11 +221,24 @@ void main() {
       final keyUuid = 'key-123';
 
       dioAdapter.onDelete(
-        '/api/auth/apikey/$keyUuid',
+        '/api/auth/apikey/$keyUuid/revoke',
         (server) => server.reply(200, {}),
       );
 
       await expectLater(client.revokeApiKey(keyUuid), completes);
+    });
+
+    test('enableApiKey completes on 200 with name', () async {
+      final keyUuid = 'key-123';
+      final name = 'restored-key';
+
+      dioAdapter.onPut(
+        '/api/auth/apikey/$keyUuid/enable',
+        (server) => server.reply(200, {}),
+        data: {'name': name},
+      );
+
+      await expectLater(client.enableApiKey(keyUuid, name: name), completes);
     });
   });
 
@@ -287,10 +300,15 @@ void main() {
 
   group('CloudApiClient - Errors', () {
     test('throws AuthException on 401', () async {
-      dioAdapter.onGet(
-        '/api/functions',
-        (server) => server.reply(401, {'error': 'Unauthorized'}),
-      );
+      dioAdapter
+        ..onGet(
+          '/api/functions',
+          (server) => server.reply(401, {'error': 'Unauthorized'}),
+        )
+        ..onGet(
+          '/api/auth/refresh',
+          (server) => server.reply(404, {'error': 'Unauthorized'}),
+        );
 
       expect(client.listFunctions(), throwsA(isA<AuthException>()));
     });
