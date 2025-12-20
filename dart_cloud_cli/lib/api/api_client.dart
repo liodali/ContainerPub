@@ -105,7 +105,6 @@ class ApiClient {
   static Future<List<dynamic>> listFunctions() async {
     final response = await _client.get(
       Uri.parse('${Config.serverUrl}/api/functions'),
-      headers: {'Authorization': 'Bearer ${Config.token}'},
     );
 
     if (response.statusCode == 200) {
@@ -241,6 +240,17 @@ class ApiClient {
       return jsonDecode(response.body) as Map<String, dynamic>;
     } else {
       throw Exception('Failed to list API keys: ${response.body}');
+    }
+  }
+
+  /// Roll an API key (extend its expiration)
+  static Future<void> rollApiKey(String apiKeyUuid) async {
+    final response = await _client.put(
+      Uri.parse('${Config.serverUrl}/api/auth/apikey/$apiKeyUuid/roll'),
+    );
+
+    if (response.statusCode != 200 && response.statusCode != 204) {
+      throw Exception('Failed to roll API key: ${response.body}');
     }
   }
 
