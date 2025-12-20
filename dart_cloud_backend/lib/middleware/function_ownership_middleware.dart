@@ -9,9 +9,9 @@ Middleware functionOwnershipMiddleware(String keyFunction) {
   return (Handler handler) {
     return (Request request) async {
       try {
-        final userId = request.context['userId'] as String;
+        final userId = request.context['userId'] as int;
         final userUUID = request.context['userUUID'] as String;
-        final functionUuid = request.requestedUri.queryParameters[keyFunction];
+        final functionUuid = (request.context['shelf_router/params'] as Map)[keyFunction] as String;
 
         final functionEntity = await DatabaseManagers.functions.findOne(
           where: {
