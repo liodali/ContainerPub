@@ -61,7 +61,7 @@ class ApiKeyService {
   }
 
   /// Deactivate existing active keys for a function
-  Future<void> _deactivateExistingKeys(String functionUuid) async {
+  Future<void> deactivateExistingKeys(String functionUuid) async {
     final existingKeys = await DatabaseManagers.apiKeys.findAll(
       where: {
         'function_uuid': functionUuid,
@@ -282,6 +282,67 @@ class ApiKeyService {
   Future<bool> hasActiveApiKey(String functionUuid) async {
     final key = await getActiveApiKey(functionUuid);
     return key != null;
+  }
+
+  /// Get API key by  UUID and name
+  Future<ApiKeyEntity?> getApiKeyByName({
+    required String uuid,
+    required String name,
+  }) async {
+    final keys = await DatabaseManagers.apiKeys.findAll(
+      where: {
+        'function_uuid': uuid,
+        'name': name,
+      },
+    );
+
+    if (keys.isEmpty) return null;
+    return keys.first;
+  }
+
+  /// Enable an API key by name
+  Future<bool> enableApiKeyByName({
+    required String uuid,
+    required String name,
+  }) async {
+    final apiKey = await getApiKeyByName(
+      uuid: uuid,
+      name: name,
+    );
+
+    if (apiKey == null) return false;
+
+    // Check if expired
+    if (apiKey.isExpired) {
+      return false; // Cannot enable expired key
+    }
+
+    final results = await DatabaseManagers.apiKeys.update(
+      {'is_active': true},
+      where: {'uuid': apiKey.uuid},
+    );
+
+    return results.isNotEmpty;
+  }
+
+  /// Disable an API key by name
+  Future<bool> disableApiKeyByName({
+    required String uuid,
+    required String name,
+  }) async {
+    final apiKey = await getApiKeyByName(
+      uuid: uuid,
+      name: name,
+    );
+
+    if (apiKey == null) return false;
+
+    final results = await DatabaseManagers.apiKeys.update(
+      {'is_active': false},
+      where: {'uuid': apiKey.uuid},
+    );
+
+    return results.isNotEmpty;
   }
 }
 

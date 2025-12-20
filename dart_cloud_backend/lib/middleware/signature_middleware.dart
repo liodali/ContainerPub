@@ -35,7 +35,10 @@ Middleware get signatureMiddleware {
 
       // Check if function exists
       final functionEntity = await DatabaseManagers.functions.findOne(
-        where: {'uuid': functionUuid, 'status': 'active'},
+        where: {
+          'uuid': functionUuid,
+          'status': 'active',
+        },
       );
 
       if (functionEntity == null) {
@@ -43,13 +46,9 @@ Middleware get signatureMiddleware {
           jsonEncode({'error': 'Function not found'}),
           headers: {'Content-Type': 'application/json'},
         );
-      }
+      } // API key is required - verify signature
 
-      // Check if function has an active API key
-      final hasApiKey = await ApiKeyService.instance.hasActiveApiKey(functionUuid);
-
-      if (!hasApiKey) {
-        // No API key required, pass through
+      if (functionEntity.skipSigning) {
         return handler(
           request.change(
             context: {
@@ -61,12 +60,11 @@ Middleware get signatureMiddleware {
           ),
         );
       }
-
-      // API key is required - verify signature
       final signature = request.headers['x-signature'];
+      final apiKey = request.headers['x-api-key'];
       final timestampStr = request.headers['x-timestamp'];
 
-      if (signature == null || timestampStr == null) {
+      if (signature == null || timestampStr == null || apiKey == null) {
         return Response.forbidden(
           jsonEncode({
             'error': 'This function requires API key signature',
@@ -76,6 +74,21 @@ Middleware get signatureMiddleware {
         );
       }
 
+      final apiKeyEntity = await DatabaseManagers.apiKeys.findOne(
+        where: {
+          'uuid': apiKey,
+          'function_uuid': functionUuid,
+        },
+      );
+      if (apiKeyEntity != null && !apiKeyEntity.isValid) {
+        return Response.forbidden(
+          jsonEncode({
+            'error':
+                'this function cannot be invoked! check your developer portal or contact support',
+          }),
+          headers: {'Content-Type': 'application/json'},
+        );
+      }
       final timestamp = int.tryParse(timestampStr);
       if (timestamp == null) {
         return Response.badRequest(
@@ -106,6 +119,7 @@ Middleware get signatureMiddleware {
 
       final isValid = await ApiKeyService.instance.verifySignature(
         functionUuid: functionUuid,
+        keyUUID: apiKey,
         signature: signature,
         payload: payload,
         timestamp: timestamp,

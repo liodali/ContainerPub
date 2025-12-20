@@ -402,4 +402,78 @@ class ApiKeyHandler {
       );
     }
   }
+
+  /// PUT /api/auth/apikey/<function_id>/enable
+  /// Enable an API key by name
+  /// Body: { "name": "api_key_name" }
+  static Future<Response> enableApiKey(Request request, String apikeyUUID) async {
+    try {
+      final userId = request.context['userId'] as int;
+      final body = jsonDecode(await request.readAsString()) as Map<String, dynamic>;
+      final name = body['name'] as String?;
+
+      if (name == null || name.isEmpty) {
+        return Response.badRequest(
+          body: jsonEncode({'error': 'name is required'}),
+          headers: {'Content-Type': 'application/json'},
+        );
+      }
+      final apiKey = await ApiKeyService.instance.getApiKeyByName(
+        uuid: apikeyUUID,
+        name: name,
+      );
+      if (apiKey == null) {
+        return Response.notFound(
+          jsonEncode({'error': 'API Key not found'}),
+          headers: {'Content-Type': 'application/json'},
+        );
+      }
+      // Verify function exists and user owns it
+      final function = await DatabaseManagers.functions.findOne(
+        where: {
+          FunctionEntityExtension.uuidNameField: apiKey.functionUuid,
+          FunctionEntityExtension.userIdNameField: userId,
+        },
+      );
+
+      if (function == null) {
+        return Response.notFound(
+          jsonEncode({'error': 'Cannot perform this action on this function'}),
+          headers: {'Content-Type': 'application/json'},
+        );
+      }
+
+      // Enable the API key
+      final success = await ApiKeyService.instance.enableApiKeyByName(
+        uuid: apikeyUUID,
+        name: name,
+      );
+
+      if (!success) {
+        return Response.notFound(
+          jsonEncode({
+            'error': 'Failed to enable API key',
+            'message': 'Cannot enable expired API keys',
+          }),
+          headers: {'Content-Type': 'application/json'},
+        );
+      }
+
+      return Response.ok(
+        jsonEncode({'message': 'API key enabled successfully'}),
+        headers: {'Content-Type': 'application/json'},
+      );
+    } catch (e, trace) {
+      LogsUtils.log(LogLevels.error.name, 'enableApiKey', {
+        'error': e,
+        'trace': trace,
+      });
+      return Response.internalServerError(
+        body: jsonEncode({'error': 'Failed to enable API key'}),
+        headers: {'Content-Type': 'application/json'},
+      );
+    }
+  }
+
+
 }

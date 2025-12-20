@@ -111,6 +111,14 @@ extension ExtAuthRouter on Router {
             (req) => ApiKeyHandler.listApiKeys(req, req.params['function_id']!),
           ),
     );
+    put(
+      '/api/auth/apikey/<api_key_uuid>/enable',
+      Pipeline()
+          .addMiddleware(authMiddleware)
+          .addHandler(
+            (req) => ApiKeyHandler.enableApiKey(req, req.params['api_key_uuid']!),
+          ),
+    );
   }
 }
 
