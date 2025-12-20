@@ -143,6 +143,7 @@ class ApiClient {
     String functionId,
     Map<String, dynamic>? data, {
     String? signature,
+    String? keyUUID,
     int? timestamp,
   }) async {
     final body = data != null
@@ -156,8 +157,9 @@ class ApiClient {
     };
 
     // Add signature headers if provided
-    if (signature != null && timestamp != null) {
+    if (signature != null && timestamp != null && keyUUID != null) {
       headers['X-Signature'] = signature;
+      headers['X-Api-Key'] = keyUUID;
       headers['X-Timestamp'] = timestamp.toString();
     }
 

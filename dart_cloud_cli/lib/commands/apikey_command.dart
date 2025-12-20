@@ -1,7 +1,7 @@
 import 'dart:io';
-import 'package:args/args.dart';
 import 'package:dart_cloud_cli/commands/base_command.dart' show BaseCommand;
 import 'package:dart_cloud_cli/api/api_client.dart';
+import 'package:dart_cloud_cli/common/args_parsers.dart';
 import 'package:dart_cloud_cli/common/function_config.dart';
 import 'package:dart_cloud_cli/common/api_key_validity.dart';
 import 'package:dart_cloud_cli/services/api_key_storage.dart';
@@ -66,25 +66,7 @@ class ApiKeyCommand extends BaseCommand {
   }
 
   Future<void> _generateApiKey(List<String> args) async {
-    final parser = ArgParser()
-      ..addOption(
-        'function-id',
-        abbr: 'f',
-        help: 'Function ID (uses current directory config if not provided)',
-      )
-      ..addOption(
-        'validity',
-        abbr: 'v',
-        help: 'Key validity: ${ApiKeyValidity.validOptions.join(', ')}',
-        defaultsTo: '1d',
-      )
-      ..addOption(
-        'name',
-        abbr: 'n',
-        help: 'Optional friendly name for the key',
-      );
-
-    final parsedArgs = parser.parse(args);
+    final parsedArgs = apiKeyGenerateParser.parse(args);
     final validity = parsedArgs['validity'] as String;
     final name = parsedArgs['name'] as String?;
 
@@ -160,7 +142,11 @@ class ApiKeyCommand extends BaseCommand {
 
       // Save to Hive storage
       try {
-        await ApiKeyStorage.storeApiKey(functionId, secretKey);
+        await ApiKeyStorage.storeApiKey(
+          functionId,
+          secretKey,
+          keyUuid,
+        );
         print('✓ Secret key stored securely in Hive database');
       } catch (e) {
         print('✗ Warning: Failed to store secret key in Hive: $e');
@@ -198,14 +184,7 @@ class ApiKeyCommand extends BaseCommand {
   }
 
   Future<void> _getApiKeyInfo(List<String> args) async {
-    final parser = ArgParser()
-      ..addOption(
-        'function-id',
-        abbr: 'f',
-        help: 'Function ID (uses current directory config if not provided)',
-      );
-
-    final parsedArgs = parser.parse(args);
+    final parsedArgs = apiKeyInfoParser.parse(args);
 
     // Get function ID
     String? functionId = parsedArgs['function-id'] as String?;
@@ -255,14 +234,7 @@ class ApiKeyCommand extends BaseCommand {
   }
 
   Future<void> _revokeApiKey(List<String> args) async {
-    final parser = ArgParser()
-      ..addOption(
-        'key-id',
-        abbr: 'k',
-        help: 'API key UUID to revoke',
-      );
-
-    final parsedArgs = parser.parse(args);
+    final parsedArgs = apiKeyRevokeParser.parse(args);
     String? keyId = parsedArgs['key-id'] as String?;
 
     if (keyId == null) {
@@ -320,14 +292,7 @@ class ApiKeyCommand extends BaseCommand {
   }
 
   Future<void> _listApiKeys(List<String> args) async {
-    final parser = ArgParser()
-      ..addOption(
-        'function-id',
-        abbr: 'f',
-        help: 'Function ID (uses current directory config if not provided)',
-      );
-
-    final parsedArgs = parser.parse(args);
+    final parsedArgs = apiKeyListParser.parse(args);
 
     // Get function ID
     String? functionId = parsedArgs['function-id'] as String?;

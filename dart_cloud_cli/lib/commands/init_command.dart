@@ -169,7 +169,7 @@ class InitCommand extends BaseCommand {
         final expiresAt = apiKey['expires_at'] as String?;
 
         // Store secret key in Hive
-        await ApiKeyStorage.storeApiKey(functionId, secretKey);
+        await ApiKeyStorage.storeApiKey(functionId, secretKey, keyUuid);
 
         // Update function config with API key info (no secret key stored here)
         final updatedConfig = functionConfig.copyWith(

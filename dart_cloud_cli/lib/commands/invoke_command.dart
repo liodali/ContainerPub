@@ -3,7 +3,6 @@ import 'dart:convert';
 import 'package:crypto/crypto.dart';
 import 'package:dart_cloud_cli/api/api_client.dart';
 import 'package:dart_cloud_cli/commands/base_command.dart' show BaseCommand;
-import 'package:dart_cloud_cli/common/function_config.dart';
 import 'package:dart_cloud_cli/services/api_key_storage.dart';
 
 class InvokeCommand extends BaseCommand {
@@ -46,23 +45,28 @@ class InvokeCommand extends BaseCommand {
 
     String? signature;
     int? timestamp;
+    ApiKeyStorageData? secretKey;
 
     // Try to sign the request if --sign flag is used
     if (useSignature) {
-      String? secretKey;
-
       // First, try to get from Hive storage using function ID
       try {
         secretKey = await ApiKeyStorage.getApiKey(functionId);
+        if (secretKey != null && secretKey.uuid.isEmpty) {
+          print(
+            'Warning: API key UUID is empty. Please run "dart_cloud apikey generate" first.',
+          );
+          exit(1);
+        }
       } catch (e) {
-        print('Warning: Failed to retrieve API key from Hive: $e');
+        print('Warning: Failed to retrieve API key');
       }
 
-      // Fallback: try to load from function config directory
-      if (secretKey == null) {
-        final currentDir = Directory.current;
-        secretKey = await FunctionConfig.loadPrivateKey(currentDir.path);
-      }
+      // // Fallback: try to load from function config directory
+      // if (secretKey == null) {
+      //   final currentDir = Directory.current;
+      //   secretKey = await FunctionConfig.loadPrivateKey(currentDir.path);
+      // }
 
       if (secretKey == null) {
         print(
@@ -71,11 +75,16 @@ class InvokeCommand extends BaseCommand {
         print(
           'Generate an API key first with: dart_cloud apikey generate',
         );
+        exit(1);
       } else {
         // Create signature
         timestamp = DateTime.now().millisecondsSinceEpoch ~/ 1000;
         final payload = data != null ? jsonEncode(data) : '';
-        signature = _createSignature(secretKey, payload, timestamp);
+        signature = _createSignature(
+          secretKey.privateKey,
+          payload,
+          timestamp,
+        );
         print('✓ Request signed with API key');
       }
     }
@@ -86,6 +95,7 @@ class InvokeCommand extends BaseCommand {
         functionId,
         data,
         signature: signature,
+        keyUUID: secretKey!.uuid,
         timestamp: timestamp,
       );
 
