@@ -100,7 +100,7 @@ extension ExtAuthRouter on Router {
       Pipeline()
           .addMiddleware(authMiddleware)
           .addHandler(
-            (req) => ApiKeyHandler.revokeApiKey(req, req.params['api_key_uuid']!),
+            (req) => ApiKeyHandler.deleteApiKey(req, req.params['api_key_uuid']!),
           ),
     );
     get(

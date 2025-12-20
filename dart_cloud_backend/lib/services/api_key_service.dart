@@ -79,6 +79,16 @@ class ApiKeyService {
     }
   }
 
+  Future<ApiKeyEntity?> getApiKey(String uuid) async {
+    final key = await DatabaseManagers.apiKeys.findOne(
+      where: {
+        'uuid': uuid,
+      },
+    );
+
+    return key;
+  }
+
   /// Get the active API key for a function
   Future<ApiKeyEntity?> getActiveApiKey(String functionUuid) async {
     final keys = await DatabaseManagers.apiKeys.findAll(
@@ -86,6 +96,40 @@ class ApiKeyService {
         'function_uuid': functionUuid,
         'is_active': true,
       },
+    );
+
+    if (keys.isEmpty) return null;
+
+    final key = keys.first;
+
+    // Check if expired
+    if (key.isExpired) {
+      // Deactivate expired key
+      await DatabaseManagers.apiKeys.update(
+        {'is_active': false},
+        where: {'uuid': key.uuid},
+      );
+      return null;
+    }
+
+    return key;
+  }
+
+  /// Get the active API key for a function
+  Future<ApiKeyEntity?> getApiKeyByFunctionUUIDANDUUID(
+    String functionUuid,
+    String uuid, {
+    bool? isActive,
+  }) async {
+    final whereData = <String, dynamic>{
+      'function_uuid': functionUuid,
+      'uuid': uuid,
+    };
+    if (isActive != null) {
+      whereData['is_active'] = isActive;
+    }
+    final keys = await DatabaseManagers.apiKeys.findAll(
+      where: whereData,
     );
 
     if (keys.isEmpty) return null;
@@ -153,11 +197,16 @@ class ApiKeyService {
   /// Returns true if signature is valid
   Future<bool> verifySignature({
     required String functionUuid,
+    required String keyUUID,
     required String signature,
     required String payload,
     required int timestamp,
   }) async {
-    final apiKey = await getActiveApiKey(functionUuid);
+    final apiKey = await getApiKeyByFunctionUUIDANDUUID(
+      functionUuid,
+      keyUUID,
+      isActive: true,
+    );
     if (apiKey == null) {
       return false; // No active API key
     }

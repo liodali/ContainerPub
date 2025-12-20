@@ -147,7 +147,7 @@ class ApiKeyEntity extends Entity {
   /// Check if the API key is expired
   bool get isExpired {
     if (expiresAt == null) return false; // forever keys never expire
-    return DateTime.now().isAfter(expiresAt!);
+    return DateTime.now().toUtc().isAfter(expiresAt!);
   }
 
   /// Check if the API key is valid (active and not expired)
