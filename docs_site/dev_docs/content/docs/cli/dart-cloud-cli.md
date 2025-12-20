@@ -314,6 +314,34 @@ List all API keys for a function.
 dart_cloud apikey list [--function-id <uuid>]
 ```
 
+#### roll
+
+Extend an API key's expiration by its validity period.
+
+```dart
+dart_cloud apikey roll [--key-id <uuid>]
+```
+
+**Options:**
+
+- `--key-id, -k` - API key UUID to roll (uses current directory config if not provided)
+
+**What it does:**
+
+1. Extends the API key's expiration by its validity period
+2. For example, if validity is `1d`, it adds 1 day to the current expiration
+3. Useful for extending active keys without regenerating them
+
+**Examples:**
+
+```dart
+# Roll key from current directory config
+dart_cloud apikey roll
+
+# Roll specific key
+dart_cloud apikey roll --key-id <api-key-uuid>
+```
+
 ### invoke
 
 Invoke a deployed function with optional data and optional signature.
@@ -373,6 +401,13 @@ dart_cloud apikey info --function-id <uuid>
 ```dart
 dart_cloud apikey list
 dart_cloud apikey list --function-id <uuid>
+```
+
+**Roll an API key (extend expiration):**
+
+```dart
+dart_cloud apikey roll
+dart_cloud apikey roll --key-id <api-key-uuid>
 ```
 
 **Revoke an API key:**

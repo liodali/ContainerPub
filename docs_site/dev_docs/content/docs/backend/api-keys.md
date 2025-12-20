@@ -96,6 +96,20 @@ dart_cloud apikey list
 dart_cloud apikey list --function-id <uuid>
 ```
 
+### Roll API Key
+
+Extend an API key's expiration by its validity period:
+
+```dart
+# Roll key from current directory config
+dart_cloud apikey roll
+
+# Roll specific key
+dart_cloud apikey roll --key-id <api-key-uuid>
+```
+
+This is useful for extending the lifetime of an active key without regenerating it. The expiration is extended by the key's validity period (e.g., if validity is `1d`, it adds 1 day to the current expiration).
+
 ### Revoke API Key
 
 Revoke an active API key:
@@ -248,6 +262,31 @@ Authorization: Bearer <access-token>
   }
 }
 ```
+
+### PUT /api/auth/apikey/:api_key_uuid/roll
+
+Extend an API key's expiration by its validity period.
+
+**Headers:**
+
+```dart
+Authorization: Bearer <access-token>
+```
+
+**Response:**
+
+```dart
+{
+  "message": "API key updated successfully"
+}
+```
+
+**What it does:**
+
+- Extends the expiration date by the key's validity period
+- For example, if validity is `1d`, it adds 1 day to the current expiration
+- Useful for extending active keys without regenerating them
+- Does not change the key UUID or secret
 
 ### DELETE /api/auth/apikey/:api_key_uuid
 

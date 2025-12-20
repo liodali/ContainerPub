@@ -89,6 +89,16 @@ dart_cloud stats <function-id>
 # View function logs
 dart_cloud logs <function-id>
 
+# Manage API keys for secure function invocation
+dart_cloud apikey generate --validity 1d
+dart_cloud apikey info
+dart_cloud apikey list
+dart_cloud apikey roll --key-id <uuid>
+dart_cloud apikey revoke --key-id <uuid>
+
+# Invoke a function with API key signature
+dart_cloud invoke <function-id> --data '{"key": "value"}' --sign
+
 # Delete a function
 dart_cloud delete <function-id>
 ```

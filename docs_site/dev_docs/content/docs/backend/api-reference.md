@@ -222,9 +222,9 @@ Authorization: Bearer <access-token>
 }
 ```
 
-### DELETE /api/auth/apikey/:api_key_uuid
+### DELETE /api/auth/apikey/:api_key_uuid/revoke
 
-Revoke an API key.
+Revoke an API key (deactivate but keep in history).
 
 **Headers:**
 
@@ -239,6 +239,37 @@ Authorization: Bearer <access-token>
   "message": "API key revoked successfully"
 }
 ```
+
+**What it does:**
+
+- Marks the API key as inactive
+- Records the revocation timestamp
+- Key remains in database for audit history
+- Cannot be reactivated
+
+### DELETE /api/auth/apikey/:api_key_uuid
+
+Delete an API key (remove from database).
+
+**Headers:**
+
+```dart
+Authorization: Bearer <access-token>
+```
+
+**Response:**
+
+```dart
+{
+  "message": "API key revoked successfully"
+}
+```
+
+**What it does:**
+
+- Permanently removes the API key from the database
+- No audit trail remains
+- Cannot be recovered
 
 ### GET /api/auth/apikey/:function_id/list
 
@@ -264,6 +295,31 @@ Authorization: Bearer <access-token>
   ]
 }
 ```
+
+### PUT /api/auth/apikey/:api_key_uuid/roll
+
+Extend an API key's expiration by its validity period.
+
+**Headers:**
+
+```dart
+Authorization: Bearer <access-token>
+```
+
+**Response:**
+
+```dart
+{
+  "message": "API key updated successfully"
+}
+```
+
+**What it does:**
+
+- Extends the expiration date by the key's validity period
+- For example, if validity is `1d`, it adds 1 day to the current expiration
+- Useful for extending active keys without regenerating them
+- Does not change the key UUID or secret
 
 ## Token Security
 
