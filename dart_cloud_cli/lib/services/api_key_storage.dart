@@ -68,7 +68,7 @@ mixin ApiKeyStorage {
         return (uuid: '', privateKey: utf8.decode(base64.decode(encoded)));
       }
       final data = json.decode(encoded);
-      final privateKey = data['keyUUID'];
+      final privateKey = data['privateKey'];
 
       // Decode the base64-encoded private key
       return (
@@ -76,7 +76,7 @@ mixin ApiKeyStorage {
         privateKey: utf8.decode(base64.decode(privateKey)),
       );
     } catch (e) {
-      throw Exception('Failed to retrieve API key: $e');
+      throw Exception('Failed to retrieve API key');
     }
   }
 
