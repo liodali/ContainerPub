@@ -50,7 +50,7 @@ class TokenAuthInterceptor extends QueuedInterceptor {
       final refreshToken = await _tokenService.refreshToken;
       if (refreshToken == null) {
         onLogout?.call();
-        return;
+        return handler.reject(err);
       }
       final options = err.requestOptions;
       // 1. Create a Completer to hold the request result
