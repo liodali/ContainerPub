@@ -1,3 +1,4 @@
+import 'package:cloud_api_client/cloud_api_client.dart';
 import 'package:cloud_panel/common/commons.dart';
 import 'package:cloud_panel/providers/api_client_provider.dart';
 import 'package:cloud_panel/providers/common_provider.dart';
@@ -36,13 +37,35 @@ class ApiKeysTab extends ConsumerWidget {
                 );
               }
 
+              final sortedKeys = List<ApiKey>.from(keys);
+              sortedKeys.sort((a, b) {
+                int getPriority(ApiKey key) {
+                  final isExpired = key.expiresAt != null &&
+                      key.expiresAt!.isBefore(DateTime.now());
+                  if (isExpired) return 2;
+                  if (key.isActive) return 0;
+                  return 1;
+                }
+
+                final priorityA = getPriority(a);
+                final priorityB = getPriority(b);
+
+                if (priorityA != priorityB) {
+                  return priorityA.compareTo(priorityB);
+                }
+
+                final dateA = a.createdAt;
+                final dateB = b.createdAt;
+                return dateB.compareTo(dateA);
+              });
+
               return Expanded(
                 child: ListView.separated(
-                  itemCount: keys.length,
+                  itemCount: sortedKeys.length,
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   separatorBuilder: (_, _) => const SizedBox(height: 12),
                   itemBuilder: (context, index) {
-                    final key = keys[index];
+                    final key = sortedKeys[index];
 
                     return ApiKeyItemWidget(
                       key: UniqueKey(),
