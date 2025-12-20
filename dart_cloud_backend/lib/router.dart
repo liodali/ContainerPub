@@ -1,3 +1,5 @@
+import 'package:dart_cloud_backend/middleware/function_ownership_middleware.dart';
+import 'package:dart_cloud_backend/routers/api_key_routes.dart';
 import 'package:shelf/shelf.dart';
 import 'package:shelf_router/shelf_router.dart';
 import 'package:dart_cloud_backend/handlers/auth_handler.dart';
@@ -15,7 +17,7 @@ Router createRouter() {
   });
   router.authRoutes();
   router.userRoutes();
-
+  router.apiKeyRoutes();
   // Function routes (protected)
   router.functionRoutes();
   // User Overview Statistics routes (protected) - aggregated across all user's functions
@@ -205,6 +207,7 @@ extension FunctionRouter on Router {
       '/api/functions/<id>/stats',
       Pipeline()
           .addMiddleware(authMiddleware)
+          .addMiddleware(functionOwnershipMiddleware('id'))
           .addHandler((req) => StatisticsHandler.getStats(req, req.params['id']!)),
     );
 
@@ -212,6 +215,7 @@ extension FunctionRouter on Router {
       '/api/functions/<id>/stats/hourly',
       Pipeline()
           .addMiddleware(authMiddleware)
+          .addMiddleware(functionOwnershipMiddleware('id'))
           .addHandler((req) => StatisticsHandler.getHourlyStats(req, req.params['id']!)),
     );
 
@@ -219,6 +223,7 @@ extension FunctionRouter on Router {
       '/api/functions/<id>/stats/daily',
       Pipeline()
           .addMiddleware(authMiddleware)
+          .addMiddleware(functionOwnershipMiddleware('id'))
           .addHandler((req) => StatisticsHandler.getDailyStats(req, req.params['id']!)),
     );
   }
