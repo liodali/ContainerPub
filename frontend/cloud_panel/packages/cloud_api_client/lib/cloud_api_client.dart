@@ -7,4 +7,4 @@ export 'src/auth_service.dart';
 export 'src/interceptors/token_interceptor.dart';
 export 'src/models/models.dart';
 export 'src/exceptions.dart';
-export 'src/common/commons.dart' show dateFormatter,dateWithTimeFormater;
+export 'src/common/commons.dart' show dateFormatter, dateWithTimeFormater;

@@ -16,8 +16,6 @@ class BadExampleMultipleAnnotations extends CloudDartFunction {
     required CloudDartFunctionLogger logger,
     Map<String, String>? env,
   }) async {
-    return CloudResponse.json({
-      'message': 'Multiple annotations',
-    });
+    return CloudResponse.json({'message': 'Multiple annotations'});
   }
 }

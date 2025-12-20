@@ -287,7 +287,6 @@ void main() {
     });
   });
 
-
   group('DatabaseManagerQuery - Pagination', () {
     test('should generate correct pagination query for page 1', () {
       final pageSize = 20;

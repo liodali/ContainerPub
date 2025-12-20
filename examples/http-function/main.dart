@@ -11,14 +11,14 @@ void main() async {
   try {
     // Read HTTP request from environment
     final input = jsonDecode(Platform.environment['FUNCTION_INPUT'] ?? '{}');
-    
+
     // Extract body and query parameters
     final body = input['body'] as Map<String, dynamic>? ?? {};
     final query = input['query'] as Map<String, dynamic>? ?? {};
-    
+
     // Call the handler
     final result = await handler(body, query);
-    
+
     // Return JSON response to stdout
     print(jsonEncode(result));
   } catch (e) {
@@ -39,20 +39,22 @@ Future<Map<String, dynamic>> handler(
 ) async {
   // Get URL from body or query
   final url = body['url'] as String? ?? query['url'] as String?;
-  
+
   if (url == null) {
     return {
       'success': false,
       'error': 'URL parameter is required',
     };
   }
-  
+
   try {
     // Make HTTP GET request (allowed operation)
-    final response = await http.get(
-      Uri.parse(url),
-    ).timeout(const Duration(seconds: 10));
-    
+    final response = await http
+        .get(
+          Uri.parse(url),
+        )
+        .timeout(const Duration(seconds: 10));
+
     return {
       'success': true,
       'statusCode': response.statusCode,

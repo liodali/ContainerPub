@@ -27,7 +27,7 @@ class AuthNotifier extends Notifier<AuthState> {
     try {
       final token = await ref.read(tokenServiceProvider).token;
 
-       state = state.copyWith(
+      state = state.copyWith(
         isAuthenticated: token != null,
       );
     } catch (e, trace) {

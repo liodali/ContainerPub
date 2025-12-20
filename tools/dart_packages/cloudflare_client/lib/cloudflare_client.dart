@@ -7,19 +7,16 @@ class CloudflareClient {
   final String zoneId;
   final String baseUrl = 'https://api.cloudflare.com/client/v4';
 
-  CloudflareClient({
-    required this.apiToken,
-    required this.zoneId,
-  });
+  CloudflareClient({required this.apiToken, required this.zoneId});
 
   /// Get common headers for API requests
   Map<String, String> get _headers => {
-        'Authorization': 'Bearer $apiToken',
-        'Content-Type': 'application/json',
-      };
+    'Authorization': 'Bearer $apiToken',
+    'Content-Type': 'application/json',
+  };
 
   /// Create a new DNS A record
-  /// 
+  ///
   /// [name] - Subdomain name (e.g., 'api' or 'user123.api')
   /// [ipAddress] - Target IP address
   /// [proxied] - Whether to proxy through Cloudflare (default: true)
@@ -62,7 +59,7 @@ class CloudflareClient {
   }
 
   /// Create a CNAME record
-  /// 
+  ///
   /// [name] - Subdomain name
   /// [target] - Target domain
   /// [proxied] - Whether to proxy through Cloudflare (default: true)
@@ -104,7 +101,7 @@ class CloudflareClient {
   }
 
   /// List all DNS records
-  /// 
+  ///
   /// [type] - Filter by record type (e.g., 'A', 'CNAME')
   /// [name] - Filter by record name
   Future<List<Map<String, dynamic>>> listDNSRecords({
@@ -115,8 +112,9 @@ class CloudflareClient {
     if (type != null) queryParams['type'] = type;
     if (name != null) queryParams['name'] = name;
 
-    final url = Uri.parse('$baseUrl/zones/$zoneId/dns_records')
-        .replace(queryParameters: queryParams);
+    final url = Uri.parse(
+      '$baseUrl/zones/$zoneId/dns_records',
+    ).replace(queryParameters: queryParams);
 
     final response = await http.get(url, headers: _headers);
     final data = jsonDecode(response.body) as Map<String, dynamic>;
@@ -218,7 +216,7 @@ class CloudflareClient {
   }
 
   /// Create subdomain for a user (helper method)
-  /// 
+  ///
   /// Creates a subdomain like: username.api.yourdomain.com
   Future<Map<String, dynamic>> createUserSubdomain({
     required String username,
@@ -269,11 +267,7 @@ class CloudflareException implements Exception {
   final int? statusCode;
   final List? errors;
 
-  CloudflareException(
-    this.message, {
-    this.statusCode,
-    this.errors,
-  });
+  CloudflareException(this.message, {this.statusCode, this.errors});
 
   @override
   String toString() {

@@ -48,7 +48,7 @@ class TokenAuthInterceptor extends QueuedInterceptor {
         err.requestOptions.path != CommonsApis.apiRefreshTokenPath) {
       // Avoid infinite loop
       final refreshToken = await _tokenService.refreshToken;
-      if(refreshToken == null){
+      if (refreshToken == null) {
         onLogout?.call();
         return;
       }

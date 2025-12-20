@@ -56,7 +56,6 @@ extension ArchiveUtils on Directory {
 
     // Encode to zip
     final zipData = ZipEncoder().encode(archive);
-    
 
     // Write to file
     final archiveFile = File(archivePath);

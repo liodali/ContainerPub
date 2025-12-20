@@ -31,7 +31,9 @@ class DeploymentValidator {
       // Check 2: Forbidden directories
       final forbiddenDirs = await _checkForbiddenDirectories();
       if (forbiddenDirs.isNotEmpty) {
-        print('Forbidden directories found: ${forbiddenDirs.join(", ")}. Remove these before deployment.');
+        print(
+          'Forbidden directories found: ${forbiddenDirs.join(", ")}. Remove these before deployment.',
+        );
         // errors.add(
         //   'Forbidden directories found: ${forbiddenDirs.join(", ")}. Remove these before deployment.',
         // );
@@ -40,7 +42,9 @@ class DeploymentValidator {
       // Check 3: Forbidden files
       final forbiddenFiles = await _checkForbiddenFiles();
       if (forbiddenFiles.isNotEmpty) {
-        print('Forbidden files found: ${forbiddenFiles.join(", ")}. Remove these before deployment.');
+        print(
+          'Forbidden files found: ${forbiddenFiles.join(", ")}. Remove these before deployment.',
+        );
         // errors.add(
         //   'Forbidden files found: ${forbiddenFiles.join(", ")}. Remove these before deployment.',
         // );

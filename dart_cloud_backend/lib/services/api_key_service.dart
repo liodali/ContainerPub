@@ -27,8 +27,9 @@ class ApiKeyService {
     final now = DateTime.now();
     final expiresAt = validity.getExpirationDate(now);
 
-    // Deactivate any existing active keys for this function
-    await _deactivateExistingKeys(functionUuid);
+    // // Deactivate any existing active keys for this function
+    /// TODO: Deactivate any existing active keys for this function(we should return to this)
+    // await _deactivateExistingKeys(functionUuid);
 
     // Store the API key in database (we store the secret key for verification)
     final apiKeyEntity = await DatabaseManagers.apiKeys.insert(

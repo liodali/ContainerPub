@@ -1,7 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
 
-
 class CloudRequest {
   final String method;
   final String path;

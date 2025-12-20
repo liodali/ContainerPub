@@ -14,8 +14,7 @@ String tryDecode(String encodedData) {
 extension ApiKeyStorageDataExtension on ApiKeyStorageData {
   ApiKeyStorageData setUUID({
     String? uuid,
-    
-  }){
+  }) {
     return (
       uuid: uuid ?? this.uuid,
       privateKey: this.privateKey,

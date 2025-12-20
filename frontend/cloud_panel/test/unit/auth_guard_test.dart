@@ -19,14 +19,19 @@ class MockStackRouter implements StackRouter {
   List<PageRouteInfo>? pushedRoutes;
 
   @override
-  Future<void> replaceAll(List<PageRouteInfo> routes,
-      {OnNavigationFailure? onFailure, bool updateExistingRoutes = true}) async {
+  Future<void> replaceAll(
+    List<PageRouteInfo> routes, {
+    OnNavigationFailure? onFailure,
+    bool updateExistingRoutes = true,
+  }) async {
     pushedRoutes = routes;
   }
 
   @override
-  Future<T?> push<T extends Object?>(PageRouteInfo route,
-      {OnNavigationFailure? onFailure}) async {
+  Future<T?> push<T extends Object?>(
+    PageRouteInfo route, {
+    OnNavigationFailure? onFailure,
+  }) async {
     return null;
   }
 
@@ -56,18 +61,21 @@ void main() {
       expect(router.pushedRoutes, isNull);
     });
 
-    test('should block navigation and redirect to login when unauthenticated', () {
-      // Arrange
-      final guard = AuthGuard(() => false);
+    test(
+      'should block navigation and redirect to login when unauthenticated',
+      () {
+        // Arrange
+        final guard = AuthGuard(() => false);
 
-      // Act
-      guard.onNavigation(resolver, router);
+        // Act
+        guard.onNavigation(resolver, router);
 
-      // Assert
-      expect(resolver.nextCalledWith, isFalse);
-      expect(router.pushedRoutes, isNotNull);
-      expect(router.pushedRoutes!.length, 1);
-      expect(router.pushedRoutes!.first, isA<LoginRoute>());
-    });
+        // Assert
+        expect(resolver.nextCalledWith, isFalse);
+        expect(router.pushedRoutes, isNotNull);
+        expect(router.pushedRoutes!.length, 1);
+        expect(router.pushedRoutes!.first, isA<LoginRoute>());
+      },
+    );
   });
 }

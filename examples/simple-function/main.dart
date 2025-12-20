@@ -10,15 +10,15 @@ void main() async {
   try {
     // Read HTTP request from environment
     final input = jsonDecode(Platform.environment['FUNCTION_INPUT'] ?? '{}');
-    
+
     // Extract body and query parameters
     final body = input['body'] as Map<String, dynamic>? ?? {};
     final query = input['query'] as Map<String, dynamic>? ?? {};
     final method = input['method'] as String? ?? 'POST';
-    
+
     // Call the handler
     final result = await handler(body, query, method);
-    
+
     // Return JSON response to stdout
     print(jsonEncode(result));
   } catch (e) {
@@ -40,7 +40,7 @@ Future<Map<String, dynamic>> handler(
 ) async {
   // Extract name from body or query
   final name = body['name'] as String? ?? query['name'] as String? ?? 'World';
-  
+
   // Return response
   return {
     'success': true,

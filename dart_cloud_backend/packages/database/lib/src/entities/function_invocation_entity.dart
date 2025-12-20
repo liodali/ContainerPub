@@ -217,6 +217,7 @@ class FunctionInvocationEntity extends Entity {
     );
   }
 }
+
 extension ExtFunctionInvocations on FunctionInvocationEntity {
   static const String functionIdNameField = 'function_id';
   static const String uuidNameField = 'uuid';

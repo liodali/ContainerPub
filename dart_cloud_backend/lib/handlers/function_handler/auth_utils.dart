@@ -40,5 +40,3 @@ class AuthUtils {
     return AuthenticatedUser(userEntity.id!);
   }
 }
-
-

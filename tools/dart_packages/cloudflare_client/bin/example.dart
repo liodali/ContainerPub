@@ -11,18 +11,18 @@ void main() async {
     env.load();
   }
 
-  final apiToken = env['CLOUDFLARE_API_TOKEN'] ?? Platform.environment['CLOUDFLARE_API_TOKEN'];
-  final zoneId = env['CLOUDFLARE_ZONE_ID'] ?? Platform.environment['CLOUDFLARE_ZONE_ID'];
+  final apiToken =
+      env['CLOUDFLARE_API_TOKEN'] ??
+      Platform.environment['CLOUDFLARE_API_TOKEN'];
+  final zoneId =
+      env['CLOUDFLARE_ZONE_ID'] ?? Platform.environment['CLOUDFLARE_ZONE_ID'];
 
   if (apiToken == null || zoneId == null) {
     print('Error: CLOUDFLARE_API_TOKEN and CLOUDFLARE_ZONE_ID must be set');
     exit(1);
   }
 
-  final client = CloudflareClient(
-    apiToken: apiToken,
-    zoneId: zoneId,
-  );
+  final client = CloudflareClient(apiToken: apiToken, zoneId: zoneId);
 
   try {
     print('🌐 Cloudflare DNS Management Example\n');
@@ -38,7 +38,9 @@ void main() async {
     final records = await client.listDNSRecords(type: 'A');
     print('Found ${records.length} A records:');
     for (final record in records) {
-      print('  - ${record['name']} → ${record['content']} (${record['proxied'] ? 'Proxied' : 'DNS only'})');
+      print(
+        '  - ${record['name']} → ${record['content']} (${record['proxied'] ? 'Proxied' : 'DNS only'})',
+      );
     }
     print('');
 
@@ -83,7 +85,7 @@ void main() async {
     print('🗑️  Cleaning up test records...');
     await client.deleteDNSRecord(newRecord['id'] as String);
     print('✅ Deleted: ${newRecord['name']}');
-    
+
     await client.deleteDNSRecord(userRecord['id'] as String);
     print('✅ Deleted: ${userRecord['name']}\n');
 

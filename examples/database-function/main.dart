@@ -12,14 +12,14 @@ void main() async {
   try {
     // Read HTTP request from environment
     final input = jsonDecode(Platform.environment['FUNCTION_INPUT'] ?? '{}');
-    
+
     // Extract body and query parameters
     final body = input['body'] as Map<String, dynamic>? ?? {};
     final query = input['query'] as Map<String, dynamic>? ?? {};
-    
+
     // Call the handler
     final result = await handler(body, query);
-    
+
     // Return JSON response to stdout
     print(jsonEncode(result));
   } catch (e) {
@@ -40,25 +40,26 @@ Future<Map<String, dynamic>> handler(
 ) async {
   // Get database URL from environment (provided by platform)
   final databaseUrl = Platform.environment['DATABASE_URL'];
-  
+
   if (databaseUrl == null) {
     return {
       'success': false,
       'error': 'Database access not configured',
     };
   }
-  
+
   // Get timeout from environment (enforced by platform)
   final timeoutMs = int.tryParse(
-    Platform.environment['DB_TIMEOUT_MS'] ?? '5000',
-  ) ?? 5000;
-  
+        Platform.environment['DB_TIMEOUT_MS'] ?? '5000',
+      ) ??
+      5000;
+
   Connection? connection;
-  
+
   try {
     // Parse database URL
     final uri = Uri.parse(databaseUrl);
-    
+
     // Connect with timeout (max 5 seconds as enforced by platform)
     connection = await Connection.open(
       Endpoint(
@@ -73,10 +74,10 @@ Future<Map<String, dynamic>> handler(
         connectTimeout: Duration(milliseconds: timeoutMs),
       ),
     ).timeout(Duration(milliseconds: timeoutMs));
-    
+
     // Example: Query with timeout
     final action = body['action'] as String? ?? 'list';
-    
+
     switch (action) {
       case 'list':
         return await _listItems(connection, timeoutMs);
@@ -122,7 +123,7 @@ Future<Map<String, dynamic>> _listItems(
   final result = await connection
       .execute('SELECT id, name, created_at FROM items LIMIT 10')
       .timeout(Duration(milliseconds: timeoutMs));
-  
+
   final items = result.map((row) {
     return {
       'id': row[0],
@@ -130,7 +131,7 @@ Future<Map<String, dynamic>> _listItems(
       'createdAt': (row[2] as DateTime).toIso8601String(),
     };
   }).toList();
-  
+
   return {
     'success': true,
     'items': items,
@@ -144,20 +145,18 @@ Future<Map<String, dynamic>> _getItem(
   String id,
   int timeoutMs,
 ) async {
-  final result = await connection
-      .execute(
-        'SELECT id, name, created_at FROM items WHERE id = \$1',
-        parameters: [id],
-      )
-      .timeout(Duration(milliseconds: timeoutMs));
-  
+  final result = await connection.execute(
+    'SELECT id, name, created_at FROM items WHERE id = \$1',
+    parameters: [id],
+  ).timeout(Duration(milliseconds: timeoutMs));
+
   if (result.isEmpty) {
     return {
       'success': false,
       'error': 'Item not found',
     };
   }
-  
+
   final row = result.first;
   return {
     'success': true,
@@ -175,13 +174,11 @@ Future<Map<String, dynamic>> _createItem(
   String name,
   int timeoutMs,
 ) async {
-  final result = await connection
-      .execute(
-        'INSERT INTO items (name) VALUES (\$1) RETURNING id, name, created_at',
-        parameters: [name],
-      )
-      .timeout(Duration(milliseconds: timeoutMs));
-  
+  final result = await connection.execute(
+    'INSERT INTO items (name) VALUES (\$1) RETURNING id, name, created_at',
+    parameters: [name],
+  ).timeout(Duration(milliseconds: timeoutMs));
+
   final row = result.first;
   return {
     'success': true,

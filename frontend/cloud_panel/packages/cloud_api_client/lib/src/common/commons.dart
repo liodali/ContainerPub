@@ -1,4 +1,3 @@
-
 import 'package:intl/intl.dart';
 
 const dateWithTimeFormatterStr = 'yyyy-MM-dd HH:mm:ss';

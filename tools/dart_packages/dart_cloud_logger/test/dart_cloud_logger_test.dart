@@ -80,26 +80,26 @@ void main() {
       });
       expect(logger.logs.length, 6);
     });
-    
+
     test('Clear Logs Test', () {
       logger.logs.clear();
       expect(logger.logs.length, 0);
     });
-    
+
     test('New Logs After Clear Test', () {
       logger.printLog(LoggerTypeAction.info, "new info");
       expect(logger.logs[LoggerTypeAction.info.name], "new info");
       expect(logger.logs.length, 1);
     });
-    
+
     test('All Logs Clear Test', () {
       logger.logs.clear();
       expect(logger.logs.length, 0);
-      
+
       logger.error("error after clear");
       logger.debug("debug after clear");
       logger.info("info after clear");
-      
+
       expect(logger.logs.length, 3);
       expect(logger.logs[LoggerTypeAction.error.name], "error after clear");
       expect(logger.logs[LoggerTypeAction.debug.name], "debug after clear");

@@ -37,7 +37,8 @@ class RollbackCommand extends BaseCommand {
         print('Using function ID from config: $functionId');
       } else {
         print(
-            'Error: No function ID provided and no function_config.json found.');
+          'Error: No function ID provided and no function_config.json found.',
+        );
         print('Usage: dart_cloud rollback <function_uuid> [version]');
         exit(1);
       }
@@ -128,7 +129,8 @@ class RollbackCommand extends BaseCommand {
       // Validate target version
       if (targetVersion == activeVersion) {
         print(
-            'Error: Cannot rollback to the currently active version (v$activeVersion).');
+          'Error: Cannot rollback to the currently active version (v$activeVersion).',
+        );
         exit(1);
       }
 
@@ -138,7 +140,8 @@ class RollbackCommand extends BaseCommand {
       if (!targetExists) {
         print('Error: Version $targetVersion not found.');
         print(
-            'Available versions: ${deployments.map((d) => 'v${d['version']}').join(', ')}');
+          'Available versions: ${deployments.map((d) => 'v${d['version']}').join(', ')}',
+        );
         exit(1);
       }
 

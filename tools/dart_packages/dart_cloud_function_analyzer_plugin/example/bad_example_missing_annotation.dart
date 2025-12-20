@@ -14,8 +14,6 @@ class BadExampleMissingAnnotation extends CloudDartFunction {
     required CloudDartFunctionLogger logger,
     Map<String, String>? env,
   }) async {
-    return CloudResponse.json({
-      'message': 'Missing annotation 2',
-    });
+    return CloudResponse.json({'message': 'Missing annotation 2'});
   }
 }

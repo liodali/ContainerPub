@@ -53,7 +53,6 @@ class Organization extends Entity {
     };
   }
 
-
   Organization copyWith({
     int? id,
     String? uuid,

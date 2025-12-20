@@ -266,9 +266,9 @@ class PodmanRuntime implements ContainerRuntime {
       return false;
     }
   }
-  
+
   @override
-  Future<void> prune()async {
+  Future<void> prune() async {
     await Process.run(_executable, ['system', 'prune', '-f']);
   }
 }
