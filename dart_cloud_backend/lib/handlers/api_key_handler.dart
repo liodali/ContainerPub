@@ -1,13 +1,13 @@
 import 'dart:convert';
 import 'dart:math';
+import 'package:characters/characters.dart';
 import 'package:dart_cloud_backend/handlers/logs_utils/log_utils.dart';
 import 'package:dart_cloud_backend/utils/commons.dart';
-import 'package:random_name_generator/random_name_generator.dart';
+import 'package:name_generator/name_generator.dart';
 import 'package:shelf/shelf.dart';
 import 'package:database/database.dart';
 import 'package:dart_cloud_backend/services/api_key_service.dart';
 
-final RandomNames randomNames = RandomNames(Zone.us);
 final Random randomNumbers = Random.secure();
 
 class ApiKeyHandler {
@@ -51,10 +51,11 @@ class ApiKeyHandler {
       }
 
       // Generate the API key pair
+      final randomName = (NameGenerator(16).value.characters.toList()..shuffle()).join();
       final apiKeyPair = await ApiKeyService.instance.generateApiKey(
         functionUuid: functionId,
         validity: validity,
-        name: name ?? '${randomNames.name()}${randomNumbers.nextInt(1000) + 100}',
+        name: name ?? randomName,
       );
 
       return Response.ok(
@@ -165,18 +166,6 @@ class ApiKeyHandler {
         );
       }
 
-      // Verify user owns the function
-      final user = await DatabaseManagers.users.findOne(
-        where: {'uuid': userId},
-      );
-
-      if (user == null || function.userId != user.id) {
-        return Response.forbidden(
-          jsonEncode({'error': 'You do not have permission to revoke this API key'}),
-          headers: {'Content-Type': 'application/json'},
-        );
-      }
-
       // Revoke the key
       final success = await ApiKeyService.instance.revokeApiKey(apiKeyUuid);
 
@@ -198,6 +187,74 @@ class ApiKeyHandler {
       });
       return Response.internalServerError(
         body: jsonEncode({'error': 'Failed to revoke API key: $e'}),
+        headers: {'Content-Type': 'application/json'},
+      );
+    }
+  }
+
+  static Future<Response> deleteApiKey(Request request, String apiKeyUuid) async {
+    try {
+      final userId = request.context['userId'] as int;
+      // Get the API key
+      final apiKey = await DatabaseManagers.apiKeys.findOne(
+        where: {'uuid': apiKeyUuid},
+      );
+
+      if (apiKey == null) {
+        return Response.notFound(
+          jsonEncode({'error': 'API key not found'}),
+          headers: {'Content-Type': 'application/json'},
+        );
+      }
+
+      // Get function to verify ownership
+      final function = await DatabaseManagers.functions.findOne(
+        where: {
+          FunctionEntityExtension.uuidNameField: apiKey.functionUuid,
+          FunctionEntityExtension.userIdNameField: userId,
+        },
+      );
+
+      if (function == null) {
+        return Response.notFound(
+          jsonEncode({'error': 'Cannot Revoke this API key'}),
+          headers: {'Content-Type': 'application/json'},
+        );
+      }
+
+      // Verify user owns the function
+      final user = await DatabaseManagers.users.findOne(
+        where: {'uuid': userId},
+      );
+
+      if (user == null || function.userId != user.id) {
+        return Response.forbidden(
+          jsonEncode({'error': 'You do not have permission to revoke this API key'}),
+          headers: {'Content-Type': 'application/json'},
+        );
+      }
+
+      // Revoke the key
+      final success = await ApiKeyService.instance.deleteApiKey(apiKeyUuid);
+
+      if (!success) {
+        return Response.internalServerError(
+          body: jsonEncode({'error': 'Failed to delete API key'}),
+          headers: {'Content-Type': 'application/json'},
+        );
+      }
+
+      return Response.ok(
+        jsonEncode({'message': 'API key revoked successfully'}),
+        headers: {'Content-Type': 'application/json'},
+      );
+    } catch (e, trace) {
+      LogsUtils.log(LogLevels.error.name, 'deleteApiKey', {
+        'error': e,
+        'trace': trace,
+      });
+      return Response.internalServerError(
+        body: jsonEncode({'error': 'Failed to delete API key: $e'}),
         headers: {'Content-Type': 'application/json'},
       );
     }
@@ -252,9 +309,16 @@ class ApiKeyHandler {
       // Verify function exists
       final userId = request.context['userId'] as int;
 
+      final apiKey = await ApiKeyService.instance.getApiKey(uuid);
+      if (apiKey == null) {
+        return Response.notFound(
+          jsonEncode({'error': 'API Key not found'}),
+          headers: {'Content-Type': 'application/json'},
+        );
+      }
       final function = await DatabaseManagers.functions.findOne(
         where: {
-          FunctionEntityExtension.uuidNameField: uuid,
+          FunctionEntityExtension.uuidNameField: apiKey.functionUuid,
           FunctionEntityExtension.userIdNameField: userId,
         },
       );
@@ -265,9 +329,7 @@ class ApiKeyHandler {
           headers: {'Content-Type': 'application/json'},
         );
       }
-      final apiKey = await ApiKeyService.instance.getActiveApiKey(function.uuid!);
-      final durationAdded = switch (apiKey?.validityEnum) {
-        null => null,
+      final durationAdded = switch (apiKey.validityEnum) {
         ApiKeyValidity.oneHour => const Duration(hours: 1),
         ApiKeyValidity.oneDay => const Duration(days: 1),
         ApiKeyValidity.oneWeek => const Duration(days: 7),
@@ -277,7 +339,7 @@ class ApiKeyHandler {
 
       await ApiKeyService.instance.updateApiKey(
         uuid,
-        expiresAt: durationAdded == null ? null : apiKey?.expiresAt?.add(durationAdded),
+        expiresAt: durationAdded == null ? null : apiKey.expiresAt?.add(durationAdded),
       );
 
       return Response.ok(
@@ -316,7 +378,7 @@ class ApiKeyHandler {
           headers: {'Content-Type': 'application/json'},
         );
       }
-      final body = request.context['body'] as Map<String, Object>;
+      final body = jsonDecode(await request.readAsString()) as Map<String, dynamic>;
 
       await ApiKeyService.instance.updateApiKey(
         uuid,
