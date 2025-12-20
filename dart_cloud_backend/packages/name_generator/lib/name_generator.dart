@@ -4,5 +4,3 @@
 library;
 
 export 'src/name_generator_base.dart';
-
-// TODO: Export any libraries intended for clients of this package.

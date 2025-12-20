@@ -9,6 +9,12 @@ void main() {
 
     test('First Test', () {
       final name = NameGenerator();
+      print(name.value);
+      expect(name.length, 32);
+    });
+    test('Second Test', () {
+      final name = NameGenerator.secure();
+      print(name.value);
       expect(name.length, 32);
     });
   });
