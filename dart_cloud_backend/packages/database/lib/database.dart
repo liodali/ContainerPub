@@ -119,6 +119,7 @@ class Database {
         name VARCHAR(255) NOT NULL,
         status VARCHAR(50) DEFAULT 'active',
         active_deployment_id INTEGER,
+        skip_signing BOOLEAN DEFAULT false,
         analysis_result JSONB,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -150,6 +151,17 @@ class Database {
     // Create index on active_deployment_id for fast lookups
     await _connection.execute('''
       CREATE INDEX IF NOT EXISTS idx_functions_active_deployment ON functions(active_deployment_id)
+    ''');
+
+    // Migration: Add skip_signing column if it doesn't exist
+    await _connection.execute('''
+      DO \$\$ 
+      BEGIN
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns 
+                       WHERE table_name='functions' AND column_name='skip_signing') THEN
+          ALTER TABLE functions ADD COLUMN skip_signing BOOLEAN NOT NULL DEFAULT false;
+        END IF;
+      END \$\$
     ''');
 
     // Function deployments table for versioning and deployment history
