@@ -32,15 +32,8 @@ class StatisticsHandler {
   /// ```
   static Future<Response> getStats(Request request, String functionUuid) async {
     try {
-      // Verify user owns this function
-      final function = await _verifyFunctionOwnership(request, functionUuid);
-      if (function == null) {
-        return Response.notFound(
-          json.encode({'error': 'Function not found'}),
-          headers: {'Content-Type': 'application/json'},
-        );
-      }
 
+      final functionId = request.context['functionId'] as int;
       // Get period from query params
       final period = request.url.queryParameters['period'] ?? '24h';
 
@@ -56,12 +49,15 @@ class StatisticsHandler {
       }
 
       final stats = await StatisticsService.instance.getFunctionStats(
-        functionId: function.id!,
+        functionId: functionId,
         period: period,
       );
 
       return Response.ok(
-        json.encode(stats.toJson()),
+        json.encode({
+          'stats': stats.toJson(),
+          'period': period,
+        }),
         headers: {'Content-Type': 'application/json'},
       );
     } catch (e, trace) {
@@ -247,7 +243,10 @@ class StatisticsHandler {
 
     // Get function by UUID
     final functions = await DatabaseManagers.functions.findAll(
-      where: {'uuid': functionUuid},
+      where: {
+        'uuid': functionUuid,
+        FunctionEntityExtension.userIdNameField: authUser.id,
+      },
     );
 
     if (functions.isEmpty) return null;
@@ -310,7 +309,9 @@ class StatisticsHandler {
       );
 
       return Response.ok(
-        json.encode(stats.toJson()),
+        json.encode({
+          'stats': stats.toJson(),
+        }),
         headers: {'Content-Type': 'application/json'},
       );
     } catch (e, trace) {
