@@ -163,6 +163,13 @@ class CloudApiClient {
     await _handleRequest(() => _dio.put('/api/auth/apikey/$apiKeyUuid/roll'));
   }
 
+  Future<void> enableApiKey(String apiKeyUuid, {String? name}) async {
+    await _handleRequest(() => _dio.put(
+          '/api/auth/apikey/$apiKeyUuid/enable',
+          data: name != null ? {'name': name} : null,
+        ));
+  }
+
   // --- Invocation Helper ---
 
   static Map<String, String> generateSignatureHeaders(
