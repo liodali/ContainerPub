@@ -26,10 +26,11 @@ class LogsUtils {
         'INSERT INTO logs (uuid,action, level, message) VALUES (\$1, \$2, \$3, \$4)',
         parameters: [UuidV4().generate(), action, level, jsonEncode(message)],
       );
-    } catch (e) {
+    } catch (e,trace) {
       // Print to console if database logging fails
       // This ensures we don't lose critical logs
-      print('Failed to log log: $e');
+      print('Failed to error log: $e');
+      print('Failed to trace log: $trace');
     }
   }
 }

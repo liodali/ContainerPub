@@ -67,8 +67,10 @@ class ApiKeyHandler {
         headers: {'Content-Type': 'application/json'},
       );
     } catch (e, trace) {
-      print(e);
-      print(trace);
+     LogsUtils.log(LogLevels.error.name, 'generateApiKey', {
+        'error': e.toString(),
+        'trace': trace.toString(),
+      });
       return Response.internalServerError(
         body: jsonEncode({'error': 'Failed to generate API key'}),
         headers: {'Content-Type': 'application/json'},
@@ -126,9 +128,13 @@ class ApiKeyHandler {
         }),
         headers: {'Content-Type': 'application/json'},
       );
-    } catch (e) {
+    } catch (e, trace) {
+      LogsUtils.log(LogLevels.error.name, 'getApiKeyInfo', {
+        'error': e.toString(),
+        'trace': trace.toString(),
+      });
       return Response.internalServerError(
-        body: jsonEncode({'error': 'Failed to get API key info: $e'}),
+        body: jsonEncode({'error': 'Failed to get API key info'}),
         headers: {'Content-Type': 'application/json'},
       );
     }
@@ -182,11 +188,11 @@ class ApiKeyHandler {
       );
     } catch (e, trace) {
       LogsUtils.log(LogLevels.error.name, 'revokeApiKey', {
-        'error': e,
-        'trace': trace,
+        'error': e.toString(),
+        'trace': trace.toString(),
       });
       return Response.internalServerError(
-        body: jsonEncode({'error': 'Failed to revoke API key: $e'}),
+        body: jsonEncode({'error': 'Failed to revoke API key'}),
         headers: {'Content-Type': 'application/json'},
       );
     }
@@ -221,20 +227,7 @@ class ApiKeyHandler {
           headers: {'Content-Type': 'application/json'},
         );
       }
-
-      // Verify user owns the function
-      final user = await DatabaseManagers.users.findOne(
-        where: {'uuid': userId},
-      );
-
-      if (user == null || function.userId != user.id) {
-        return Response.forbidden(
-          jsonEncode({'error': 'You do not have permission to revoke this API key'}),
-          headers: {'Content-Type': 'application/json'},
-        );
-      }
-
-      // Revoke the key
+      // delete the key
       final success = await ApiKeyService.instance.deleteApiKey(apiKeyUuid);
 
       if (!success) {
@@ -250,11 +243,11 @@ class ApiKeyHandler {
       );
     } catch (e, trace) {
       LogsUtils.log(LogLevels.error.name, 'deleteApiKey', {
-        'error': e,
-        'trace': trace,
+        'error': e.toString(),
+        'trace': trace.toString(),
       });
       return Response.internalServerError(
-        body: jsonEncode({'error': 'Failed to delete API key: $e'}),
+        body: jsonEncode({'error': 'Failed to delete API key'}),
         headers: {'Content-Type': 'application/json'},
       );
     }
@@ -350,8 +343,8 @@ class ApiKeyHandler {
       );
     } catch (e, trace) {
       LogsUtils.log(LogLevels.error.name, 'rollApiKey', {
-        'error': e,
-        'trace': trace,
+        'error': e.toString(),
+        'trace': trace.toString(),
       });
       return Response.internalServerError(
         body: jsonEncode({'error': 'Failed to list API keys'}),
@@ -393,8 +386,8 @@ class ApiKeyHandler {
       );
     } catch (e, trace) {
       LogsUtils.log(LogLevels.error.name, 'updateApiKey', {
-        'error': e,
-        'trace': trace,
+        'error': e.toString(),
+        'trace': trace.toString(),
       });
       return Response.internalServerError(
         body: jsonEncode({'error': 'Failed to list API keys'}),
@@ -465,8 +458,8 @@ class ApiKeyHandler {
       );
     } catch (e, trace) {
       LogsUtils.log(LogLevels.error.name, 'enableApiKey', {
-        'error': e,
-        'trace': trace,
+        'error': e.toString(),
+        'trace': trace.toString(),
       });
       return Response.internalServerError(
         body: jsonEncode({'error': 'Failed to enable API key'}),
@@ -474,6 +467,4 @@ class ApiKeyHandler {
       );
     }
   }
-
-
 }
