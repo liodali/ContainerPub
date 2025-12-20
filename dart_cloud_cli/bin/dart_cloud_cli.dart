@@ -154,6 +154,8 @@ Examples:
   dart_cloud_cli apikey generate --validity 1d
   dart_cloud_cli apikey info
   dart_cloud_cli apikey revoke
+  dart_cloud_cli apikey list
+  dart_cloud_cli apikey roll --key-id <uuid>
   dart_cloud_cli rollback <function-id>          # Interactive version selection
   dart_cloud_cli rollback <function-id> <version> # Direct rollback
 

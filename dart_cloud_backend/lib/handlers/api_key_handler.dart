@@ -325,7 +325,7 @@ class ApiKeyHandler {
 
       if (function == null) {
         return Response.notFound(
-          jsonEncode({'error': 'API Keys not found for this function'}),
+          jsonEncode({'error': 'API Key not found'}),
           headers: {'Content-Type': 'application/json'},
         );
       }

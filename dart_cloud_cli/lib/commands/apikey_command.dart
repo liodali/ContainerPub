@@ -36,6 +36,9 @@ class ApiKeyCommand extends BaseCommand {
       case 'list':
         await _listApiKeys(subArgs);
         break;
+      case 'roll':
+        await _rollApiKey(subArgs);
+        break;
       default:
         print('Unknown subcommand: $subCommand');
         _printUsage();
@@ -52,6 +55,7 @@ class ApiKeyCommand extends BaseCommand {
     print('  info      Get API key info for a function');
     print('  revoke    Revoke an API key');
     print('  list      List all API keys for a function');
+    print('  roll      Extend an API key expiration by its validity period');
     print('');
     print('Examples:');
     print('  dart_cloud apikey generate --validity 1d');
@@ -61,6 +65,7 @@ class ApiKeyCommand extends BaseCommand {
     print('  dart_cloud apikey info');
     print('  dart_cloud apikey revoke --key-id <uuid>');
     print('  dart_cloud apikey list');
+    print('  dart_cloud apikey roll --key-id <uuid>');
     print('');
     print('Validity options: ${ApiKeyValidity.validOptions.join(', ')}');
   }
@@ -347,6 +352,38 @@ class ApiKeyCommand extends BaseCommand {
       print('─' * 80);
     } catch (e) {
       print('✗ Failed to list API keys: $e');
+      exit(1);
+    }
+  }
+
+  Future<void> _rollApiKey(List<String> args) async {
+    final parsedArgs = apiKeyRollParser.parse(args);
+    String? keyId = parsedArgs['key-id'] as String?;
+
+    if (keyId == null) {
+      final currentDir = Directory.current;
+      final existingConfig = await FunctionConfig.load(currentDir.path);
+
+      if (existingConfig?.apiKeyUuid == null) {
+        print(
+          'Error: No key ID provided and no API key found in current directory config.',
+        );
+        print('Use --key-id to specify the API key UUID to roll.');
+        exit(1);
+      }
+
+      keyId = existingConfig!.apiKeyUuid!;
+      print('Rolling API key from config: $keyId');
+    }
+
+    try {
+      await ApiClient.rollApiKey(keyId);
+      print('✓ API key expiration extended successfully.');
+      print('');
+      print('The API key expiration has been extended by its validity period.');
+      print('Use "dart_cloud apikey info" to see the updated expiration.');
+    } catch (e) {
+      print('✗ Failed to roll API key');
       exit(1);
     }
   }

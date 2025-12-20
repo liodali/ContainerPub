@@ -32,8 +32,14 @@ final apiKeyRevokeParser = ArgParser()
     help: 'API key UUID to revoke',
   );
 final apiKeyListParser = ArgParser()
-      ..addOption(
-        'function-id',
-        abbr: 'f',
-        help: 'Function ID (uses current directory config if not provided)',
-      );
+  ..addOption(
+    'function-id',
+    abbr: 'f',
+    help: 'Function ID (uses current directory config if not provided)',
+  );
+final apiKeyRollParser = ArgParser()
+  ..addOption(
+    'key-id',
+    abbr: 'k',
+    help: 'API key UUID to roll',
+  );
