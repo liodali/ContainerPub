@@ -84,6 +84,7 @@
   "showDebugBanner": "Show Debug Banner",
   "showPerformanceOverlay": "Show Performance Overlay",
   "theme": "Theme",
+  "lightMode": "Light Mode",
   "darkMode": "Dark Mode",
   "systemTheme": "System Theme",
   "about": "About",
@@ -195,5 +196,7 @@
   "responseLabel": "Response:",
   "copy": "Copy",
   "copiedToClipboardSimple": "Copied to clipboard!",
-  "deployments":"deployments"
+  "deployments":"deployments",
+  "english":"English",
+  "french":"French"
 }

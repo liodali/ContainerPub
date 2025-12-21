@@ -3,6 +3,7 @@ import 'package:forui/forui.dart';
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cloud_panel/providers/locale_provider.dart';
+import 'package:cloud_panel/providers/theme_provider.dart';
 import 'package:cloud_panel/l10n/app_localizations.dart';
 
 @RoutePage()
@@ -20,29 +21,74 @@ class SettingsView extends ConsumerWidget {
         ),
         const SizedBox(height: 24),
         FCard(
-          title: Text(AppLocalizations.of(context)!.changeLanguage),
-          child: Row(
+          title: Text(AppLocalizations.of(context)!.theme),
+          child: Wrap(
+            spacing: 12,
+            runSpacing: 12,
             children: [
               FButton(
-                style: ref.watch(localeProvider).languageCode == 'en'
+                style: ref.watch(themeProvider) == AppThemeMode.light
                     ? FButtonStyle.primary()
                     : FButtonStyle.outline(),
                 onPress: () => ref
-                    .read(localeProvider.notifier)
-                    .setLocale(const Locale('en')),
-                child: const Text('English'),
+                    .read(themeProvider.notifier)
+                    .setTheme(AppThemeMode.light),
+                prefix: const Icon(FIcons.sun, size: 16),
+                child: Text(
+                  AppLocalizations.of(context)!.lightMode,
+                ),
               ),
-              const SizedBox(width: 12),
               FButton(
-                style: ref.watch(localeProvider).languageCode == 'fr'
+                style: ref.watch(themeProvider) == AppThemeMode.dark
                     ? FButtonStyle.primary()
                     : FButtonStyle.outline(),
                 onPress: () => ref
-                    .read(localeProvider.notifier)
-                    .setLocale(const Locale('fr')),
-                child: const Text('Français'),
+                    .read(themeProvider.notifier)
+                    .setTheme(AppThemeMode.dark),
+                prefix: const Icon(FIcons.moon, size: 16),
+                child: Text(AppLocalizations.of(context)!.darkMode),
+              ),
+              FButton(
+                style: ref.watch(themeProvider) == AppThemeMode.system
+                    ? FButtonStyle.primary()
+                    : FButtonStyle.outline(),
+                onPress: () => ref
+                    .read(themeProvider.notifier)
+                    .setTheme(AppThemeMode.system),
+                prefix: const Icon(FIcons.monitor, size: 16),
+                child: Text(AppLocalizations.of(context)!.systemTheme),
               ),
             ],
+          ),
+        ),
+        const SizedBox(height: 24),
+        FCard(
+          title: Text(AppLocalizations.of(context)!.changeLanguage),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical:8.0),
+            child: Row(
+              children: [
+                FButton(
+                  style: ref.watch(localeProvider).languageCode == 'en'
+                      ? FButtonStyle.primary()
+                      : FButtonStyle.outline(),
+                  onPress: () => ref
+                      .read(localeProvider.notifier)
+                      .setLocale(const Locale('en')),
+                  child:  Text(AppLocalizations.of(context)!.english),
+                ),
+                const SizedBox(width: 12),
+                FButton(
+                  style: ref.watch(localeProvider).languageCode == 'fr'
+                      ? FButtonStyle.primary()
+                      : FButtonStyle.outline(),
+                  onPress: () => ref
+                      .read(localeProvider.notifier)
+                      .setLocale(const Locale('fr')),
+                  child:  Text(AppLocalizations.of(context)!.french),
+                ),
+              ],
+            ),
           ),
         ),
         const SizedBox(height: 24),

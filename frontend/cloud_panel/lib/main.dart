@@ -4,6 +4,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:cloud_panel/l10n/app_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:forui/forui.dart';
+import 'package:cloud_panel/providers/theme_provider.dart';
 import 'providers/auth_provider.dart';
 import 'providers/locale_provider.dart';
 import 'router.dart';
@@ -18,15 +19,16 @@ void main() async {
   );
 }
 
-class InitApp extends StatelessWidget {
+class InitApp extends ConsumerWidget {
   const InitApp({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = ref.watch(fThemeDataProvider);
     return IntializeApp(
-      theme: FThemes.zinc.light,
+      theme: theme,
       builder: (theme) => MyApp(
-        theme: FThemes.zinc.light,
+        theme: theme,
       ),
     );
   }

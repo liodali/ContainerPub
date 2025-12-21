@@ -84,6 +84,7 @@
   "showDebugBanner": "Afficher la bannière de débogage",
   "showPerformanceOverlay": "Afficher la superposition des performances",
   "theme": "Thème",
+  "lightMode": "Mode clair",
   "darkMode": "Mode sombre",
   "systemTheme": "Thème système",
   "about": "À propos",
@@ -160,5 +161,7 @@
   "responseLabel": "Réponse :",
   "copy": "Copier",
   "copiedToClipboardSimple": "Copié dans le presse-papiers !",
-  "deployments":"deployments"
+  "deployments":"deployments",
+  "english":"anglais",
+  "french":"Français"
 }
