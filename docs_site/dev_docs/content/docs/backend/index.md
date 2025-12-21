@@ -24,6 +24,7 @@ The `dart_cloud_backend` is the core platform that:
 
 - [Authentication System](./authentication.md) - Complete authentication flow and token management
 - [API Keys & Signing](./api-keys.md) - Secure function invocations with HMAC signatures
+- [Input Validation Middleware](./validation-middleware.md) - Schema-based request validation with Zard
 - [Statistics & Monitoring](./statistics.md) - Dashboard metrics and performance tracking
 - [Architecture Overview](./architecture.md) - System design and components
 - [Function Execution](./function-execution.md) - How functions are executed

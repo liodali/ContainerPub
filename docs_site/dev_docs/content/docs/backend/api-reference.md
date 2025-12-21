@@ -159,7 +159,7 @@ API keys provide an additional layer of security for function invocations using 
 For detailed documentation on API keys, see [API Keys & Signing](./api-keys.md).
 </Info>
 
-### POST /api/auth/apikey/generate
+### POST /api/apikey/generate
 
 Generate a new API key for a function.
 
@@ -197,7 +197,7 @@ Content-Type: application/json
 }
 ```
 
-### GET /api/auth/apikey/:function_id
+### GET /api/apikey/:function_id
 
 Get API key info for a function.
 
@@ -222,7 +222,7 @@ Authorization: Bearer <access-token>
 }
 ```
 
-### DELETE /api/auth/apikey/:api_key_uuid/revoke
+### DELETE /api/apikey/:api_key_uuid/revoke
 
 Revoke an API key (deactivate but keep in history).
 
@@ -247,7 +247,7 @@ Authorization: Bearer <access-token>
 - Key remains in database for audit history
 - Cannot be reactivated
 
-### DELETE /api/auth/apikey/:api_key_uuid
+### DELETE /api/apikey/:api_key_uuid
 
 Delete an API key (remove from database).
 
@@ -271,7 +271,7 @@ Authorization: Bearer <access-token>
 - No audit trail remains
 - Cannot be recovered
 
-### GET /api/auth/apikey/:function_id/list
+### GET /api/apikey/:function_id/list
 
 List all API keys for a function.
 
@@ -296,7 +296,7 @@ Authorization: Bearer <access-token>
 }
 ```
 
-### PUT /api/auth/apikey/:api_key_uuid/roll
+### PUT /api/apikey/:api_key_uuid/roll
 
 Extend an API key's expiration by its validity period.
 
