@@ -4,6 +4,7 @@ import 'package:dart_cloud_backend/handlers/logs_utils/log_utils.dart';
 import 'package:dart_cloud_backend/utils/commons.dart';
 import 'package:database/database.dart';
 import 'package:shelf/shelf.dart';
+import 'package:shelf_router/shelf_router.dart';
 
 Middleware functionOwnershipMiddleware(String keyFunction) {
   return (Handler handler) {
@@ -11,7 +12,7 @@ Middleware functionOwnershipMiddleware(String keyFunction) {
       try {
         final userId = request.context['userId'] as int;
         final userUUID = request.context['userUUID'] as String;
-        final functionUuid = (request.context['shelf_router/params'] as Map)[keyFunction] as String;
+        final functionUuid = request.params[keyFunction] as String;
 
         final functionEntity = await DatabaseManagers.functions.findOne(
           where: {
