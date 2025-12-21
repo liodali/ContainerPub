@@ -198,5 +198,7 @@
   "copiedToClipboardSimple": "Copied to clipboard!",
   "deployments":"deployments",
   "english":"English",
-  "french":"French"
+  "french":"French",
+  "errorOverviewStats":"Ops!Something went wrong",
+  "errorFetchOverviewStats":"Cannot fetch overview stats"
 }

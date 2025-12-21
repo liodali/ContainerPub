@@ -163,5 +163,7 @@
   "copiedToClipboardSimple": "Copié dans le presse-papiers !",
   "deployments":"deployments",
   "english":"anglais",
-  "french":"Français"
+  "french":"Français",
+  "errorOverviewStats":"Ops!Quelque chose a mal tourné",
+  "errorFetchOverviewStats":"Impossible de récupérer les statistiques d’aperçu"
 }
