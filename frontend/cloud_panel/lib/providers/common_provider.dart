@@ -1,10 +1,9 @@
 import 'package:cloud_api_client/cloud_api_client.dart';
+import 'package:cloud_panel/providers/api_client_provider.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:hive_ce_flutter/hive_flutter.dart';
 
 final initializeAppProvider = FutureProvider.autoDispose<bool>((ref) async {
-  await Hive.initFlutter();
   await ApiKeyStorage.instance.init();
   await TokenService.tokenService.init();
   return true;
@@ -25,3 +24,10 @@ final dioProvider = Provider<Dio>(
     ),
   ),
 );
+final overviewStatsProvider = FutureProvider.family<OverviewStats, String>((
+  ref,
+  period,
+) async {
+  final client = ref.watch(apiClientProvider);
+  return client.getOverviewStats(period);
+});
