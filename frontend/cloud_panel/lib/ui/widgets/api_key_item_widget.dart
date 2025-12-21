@@ -37,8 +37,9 @@ class ApiKeyItemWidgetState extends ConsumerState<ApiKeyItemWidget> {
 
   String getStatusText() {
     if (isExpired) return AppLocalizations.of(context)!.expired;
-    if (widget.apiKeyModel.isActive)
+    if (widget.apiKeyModel.isActive) {
       return AppLocalizations.of(context)!.active;
+    }
     return AppLocalizations.of(context)!.inactive;
   }
 
@@ -79,7 +80,7 @@ class ApiKeyItemWidgetState extends ConsumerState<ApiKeyItemWidget> {
   @override
   Widget build(BuildContext context) {
     return FCard(
-      title: Text(
+      title: SelectableText(
         widget.apiKeyModel.name ?? AppLocalizations.of(context)!.unnamedKey,
       ),
       subtitle: Column(
@@ -117,13 +118,15 @@ class ApiKeyItemWidgetState extends ConsumerState<ApiKeyItemWidget> {
           ),
           Text(
             creationText,
-            style: const TextStyle(fontSize: 12),
+            style: context.theme.typography.lg.copyWith(
+              fontSize: 12,
+            ),
           ),
           Text(
             expirationText,
-            style: TextStyle(
+            style: context.theme.typography.lg.copyWith(
               fontSize: 12,
-              color: isExpired ? Colors.red : null,
+              color: isExpired ? context.theme.colors.error : null,
               fontWeight: isExpired ? FontWeight.bold : null,
             ),
           ),
