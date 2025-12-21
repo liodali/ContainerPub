@@ -44,3 +44,42 @@ class FunctionStats extends Equatable {
         maxLatency,
       ];
 }
+
+class OverviewStats extends Equatable {
+  final int totalFunctions;
+  final int invocationsCount;
+  final int successCount;
+  final int errorCount;
+  final double averageLatencyMs;
+  final String period;
+
+  const OverviewStats({
+    this.totalFunctions = 0,
+    this.invocationsCount = 0,
+    this.successCount = 0,
+    this.errorCount = 0,
+    this.averageLatencyMs = 0.0,
+    this.period = '',
+  });
+
+  factory OverviewStats.fromJson(Map<String, dynamic> json) {
+    return OverviewStats(
+      totalFunctions: json['total_functions'] as int? ?? 0,
+      invocationsCount: json['invocations_count'] as int? ?? 0,
+      successCount: json['success_count'] as int? ?? 0,
+      errorCount: json['error_count'] as int? ?? 0,
+      averageLatencyMs: (json['average_latency_ms'] as num?)?.toDouble() ?? 0.0,
+      period: json['period'] as String? ?? '',
+    );
+  }
+
+  @override
+  List<Object?> get props => [
+        totalFunctions,
+        invocationsCount,
+        successCount,
+        errorCount,
+        averageLatencyMs,
+        period,
+      ];
+}
