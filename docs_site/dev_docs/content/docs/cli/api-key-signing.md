@@ -143,14 +143,14 @@ When you invoke a function with `--sign`:
 
 ### Signature Algorithm
 
-```
+```dart
 dataToSign = "<timestamp>:<jsonPayload>"
 signature = base64(HMAC-SHA256(secretKey, dataToSign))
 ```
 
 ### Request Headers
 
-```
+```dart
 X-Signature: <base64-encoded-signature>
 X-Timestamp: <unix-timestamp-in-seconds>
 Content-Type: application/json
@@ -158,7 +158,7 @@ Content-Type: application/json
 
 ### Example Request
 
-```bash
+```dart
 curl -X POST https://api.containerpub.com/invoke/<function-id> \
   -H "X-Signature: abc123def456..." \
   -H "X-Timestamp: 1702816200" \
@@ -220,21 +220,21 @@ dart_cloud invoke <function-id> --data '{"name": "John"}' --sign
 
 **Missing API Key:**
 
-```
+```dart
 Error: No API key configured for this function
 Run: dart_cloud apikey generate
 ```
 
 **Invalid Signature:**
 
-```
+```dart
 Error: Invalid signature
 The request signature does not match
 ```
 
 **Expired Timestamp:**
 
-```
+```dart
 Error: Request timestamp too old
 Timestamp must be within 5 minutes of server time
 ```
@@ -250,7 +250,7 @@ dart_cloud apikey info --function-id <uuid>
 
 **Output:**
 
-```
+```dart
 API Key Information:
   UUID: abc123xyz789
   Validity: 1 day
@@ -447,7 +447,7 @@ dart_cloud invoke <function-id> \
 
 ### Example 2: Automated Invocation
 
-```bash
+```dart
 #!/bin/bash
 # Script to invoke function with signature
 
@@ -461,7 +461,7 @@ dart_cloud invoke $FUNCTION_ID \
 
 ### Example 3: Key Rotation
 
-```bash
+```dart
 #!/bin/bash
 # Rotate API keys monthly
 

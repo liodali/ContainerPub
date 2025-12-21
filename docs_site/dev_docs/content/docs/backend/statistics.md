@@ -31,7 +31,7 @@ Display aggregated metrics for all user's functions.
 
 **Response:**
 
-```json
+```dart
 {
   "total_functions": 5,
   "invocations_count": 1250,
@@ -44,7 +44,7 @@ Display aggregated metrics for all user's functions.
 
 **Example:**
 
-```bash
+```dart
 curl -H "Authorization: Bearer <token>" \
   "https://api.containerpub.com/api/stats/overview?period=24h"
 ```
@@ -59,7 +59,7 @@ Get hourly request distribution for all functions (for chart visualization).
 
 **Response:**
 
-```json
+```dart
 {
   "data": [
     {
@@ -98,7 +98,7 @@ Get daily request distribution for all functions (for chart visualization).
 
 **Response:**
 
-```json
+```dart
 {
   "data": [
     {
@@ -142,7 +142,7 @@ Display metrics for a specific function.
 
 **Response:**
 
-```json
+```dart
 {
   "invocations_count": 250,
   "success_count": 248,
@@ -163,7 +163,7 @@ Get hourly breakdown for a specific function.
 
 **Response:**
 
-```json
+```dart
 {
   "data": [
     {
@@ -189,7 +189,7 @@ Get daily breakdown for a specific function.
 
 **Response:**
 
-```json
+```dart
 {
   "data": [
     {
@@ -242,7 +242,7 @@ Each data point in hourly/daily charts includes:
 
 Get overall stats for the last 24 hours:
 
-```bash
+```dart
 curl -H "Authorization: Bearer <token>" \
   "https://api.containerpub.com/api/stats/overview?period=24h"
 ```
@@ -251,7 +251,7 @@ curl -H "Authorization: Bearer <token>" \
 
 Get daily stats for the last 7 days:
 
-```bash
+```dart
 curl -H "Authorization: Bearer <token>" \
   "https://api.containerpub.com/api/stats/overview/daily?days=7"
 ```
@@ -260,7 +260,7 @@ curl -H "Authorization: Bearer <token>" \
 
 Get specific function stats for the last hour:
 
-```bash
+```dart
 curl -H "Authorization: Bearer <token>" \
   "https://api.containerpub.com/api/functions/{uuid}/stats?period=1h"
 ```
@@ -269,7 +269,7 @@ curl -H "Authorization: Bearer <token>" \
 
 Get hourly breakdown for chart visualization:
 
-```bash
+```dart
 curl -H "Authorization: Bearer <token>" \
   "https://api.containerpub.com/api/stats/overview/hourly?hours=24"
 ```
@@ -290,7 +290,7 @@ Statistics are collected automatically from the `function_invocations` table:
 
 Statistics are computed on-demand using PostgreSQL aggregation:
 
-```sql
+```dart
 SELECT
   COUNT(*) as total_invocations,
   COUNT(*) FILTER (WHERE success = true) as success_count,

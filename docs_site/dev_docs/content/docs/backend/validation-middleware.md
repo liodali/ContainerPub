@@ -321,7 +321,7 @@ Future<Response> _processData(Request request) async {
 
 When validation fails, the middleware returns a 400 response with error details:
 
-```json
+```dart
 {
   "error": "Validation failed"
 }
@@ -329,7 +329,7 @@ When validation fails, the middleware returns a 400 response with error details:
 
 Errors are automatically logged with the `LogsUtils` system for debugging:
 
-```
+```dart
 [ERROR] InputValidationMiddleware: {
   "errors": "[username: String must be at least 3 characters, email: Invalid email format]"
 }
