@@ -1,5 +1,8 @@
 # Style Guide
 
+**Last Updated**: 2025-12-21  
+**Owner**: Frontend Lead
+
 ## UI Library: Forui
 
 We exclusively use the [Forui](https://forui.dev/) library for all UI components to maintain a consistent design system.
@@ -62,3 +65,34 @@ Use `FButton`:
 Access typography via `context.theme.typography`:
 - `context.theme.typography.h1` ... `h4` for headings.
 - `context.theme.typography.base` or `lg`, `sm` for body text.
+
+## Localization
+
+- All user-visible strings must come from `AppLocalizations` (`lib/l10n/app_*.arb`).
+- Do not hard-code English strings in widgets.
+- When adding a new string:
+  - Add key to `lib/l10n/app_en.arb` and `lib/l10n/app_fr.arb`
+  - Use `AppLocalizations.of(context)!.<key>` in UI
+
+## Accessibility
+
+- Ensure interactive elements have:
+  - Sufficient hit target sizes
+  - Clear focus states (keyboard navigation on web)
+  - Readable contrast in light/dark themes
+- Prefer semantic widgets when available and avoid purely visual state without text.
+- For forms:
+  - Provide labels and clear error messaging
+  - Avoid using placeholder text as the only label
+
+## Widget Conventions
+
+- Prefer dedicated widget classes over helper functions that return `Widget` for non-trivial UI pieces.
+- Keep stateful logic close to the UI it drives (e.g., a tab owns its own controllers).
+
+## Notifications and Errors
+
+- Prefer `forui` patterns for user feedback:
+  - `showFToast` for transient success/failure feedback
+  - `FAlert` or `ErrorCardComponent` for persistent page-level errors
+- Avoid using Material `SnackBar` unless there is a documented reason and it is wrapped to match styling.
