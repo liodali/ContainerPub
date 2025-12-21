@@ -68,46 +68,73 @@ class CloudApiClient {
         () => _dio.get(CommonsApis.apiGetFunctionsPath(uuid)));
     return CloudFunction.fromJson(data['function'] ?? data);
   }
-
+Future<OverviewStats> getOverviewStats(String period) async {
+    final data = await _handleRequest(
+      () => _dio.get(
+        CommonsApis.apiGetOverviewStatsPath,
+        queryParameters: {'period': period},
+      ),
+    );
+    return OverviewStats.fromJson(data['stats'] ?? data);
+  }
   Future<FunctionStats> getStats(String uuid) async {
-    final data =
-        await _handleRequest(() => _dio.get('/api/functions/$uuid/stats'));
+    final data = await _handleRequest(
+      () => _dio.get(
+        CommonsApis.apiGetFunctionStatsPath(uuid),
+      ),
+    );
     return FunctionStats.fromJson(data['stats'] ?? data);
   }
 
   Future<HourlyStatsResponse> getHourlyStats(String uuid,
       {int hours = 24}) async {
-    final data = await _handleRequest(() => _dio.get(
-        '/api/functions/$uuid/stats/hourly',
-        queryParameters: {'hours': hours}));
+    final data = await _handleRequest(
+      () => _dio.get(
+        CommonsApis.apiGetFunctionHourlyStatsPath(uuid),
+        queryParameters: {'hours': hours},
+      ),
+    );
     return HourlyStatsResponse.fromJson(data);
   }
 
   Future<DailyStatsResponse> getDailyStats(String uuid, {int days = 30}) async {
-    final data = await _handleRequest(() => _dio.get(
-        '/api/functions/$uuid/stats/daily',
-        queryParameters: {'days': days}));
+    final data = await _handleRequest(
+      () => _dio.get(
+        CommonsApis.apiGetFunctionDailyStatsPath(uuid),
+        queryParameters: {'days': days},
+      ),
+    );
     return DailyStatsResponse.fromJson(data);
   }
 
   Future<CloudFunction> createFunction(String name) async {
     final data = await _handleRequest(
-        () => _dio.post(CommonsApis.apiCreateFunctionPath, data: {
-              'name': name,
-            }));
+      () => _dio.post(
+        CommonsApis.apiCreateFunctionPath,
+        data: {
+          'name': name,
+        },
+      ),
+    );
     return CloudFunction.fromJson(data['function'] ?? data);
   }
 
   Future<void> deleteFunction(String uuid) async {
     await _handleRequest(
-        () => _dio.delete(CommonsApis.apiDeleteFunctionPath(uuid)));
+      () => _dio.delete(
+        CommonsApis.apiDeleteFunctionPath(uuid),
+      ),
+    );
   }
 
   // --- Deployments ---
 
   Future<List<FunctionDeployment>> getDeployments(String functionUuid) async {
     final data = await _handleRequest(
-        () => _dio.get(CommonsApis.apiGetDeploymentsPath(functionUuid)));
+      () => _dio.get(
+        CommonsApis.apiGetDeploymentsPath(functionUuid),
+      ),
+    );
     if (data is Map) {
       return (data['deployments'] as List)
           .map((e) => FunctionDeployment.fromJson(e))
