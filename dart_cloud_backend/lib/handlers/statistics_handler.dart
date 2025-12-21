@@ -24,15 +24,16 @@ class StatisticsHandler {
   /// ```json
   /// {
   ///   "invocations_count": 1250,
-  ///   "success_count": 1245,
-  ///   "error_count": 5,
-  ///   "average_latency_ms": 120,
-  ///   "period": "24h"
+  ///   "errors": 5,
+  ///   "error_rate": 0.4,
+  ///   "avg_latency": 120,
+  ///   "min_latency": 50,
+  ///   "max_latency": 250,
+  ///   "last_invocation": "2024-01-15T10:30:00Z"
   /// }
   /// ```
   static Future<Response> getStats(Request request, String functionUuid) async {
     try {
-
       final functionId = request.context['functionId'] as int;
       // Get period from query params
       final period = request.url.queryParameters['period'] ?? '24h';
@@ -56,7 +57,6 @@ class StatisticsHandler {
       return Response.ok(
         json.encode({
           'stats': stats.toJson(),
-          'period': period,
         }),
         headers: {'Content-Type': 'application/json'},
       );

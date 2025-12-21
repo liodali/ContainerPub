@@ -29,7 +29,10 @@ class StatisticsService {
         COUNT(*) as total_invocations,
         COUNT(*) FILTER (WHERE success = true) as success_count,
         COUNT(*) FILTER (WHERE success = false OR success IS NULL) as error_count,
-        COALESCE(AVG(duration_ms) FILTER (WHERE duration_ms IS NOT NULL), 0) as avg_latency_ms
+        COALESCE(AVG(duration_ms) FILTER (WHERE duration_ms IS NOT NULL), 0) as avg_latency_ms,
+        COALESCE(MIN(duration_ms) FILTER (WHERE duration_ms IS NOT NULL), 0) as min_latency_ms,
+        COALESCE(MAX(duration_ms) FILTER (WHERE duration_ms IS NOT NULL), 0) as max_latency_ms,
+        MAX(timestamp) as last_invocation
       FROM function_invocations
       WHERE function_id = @function_id
         AND timestamp >= NOW() - INTERVAL '$interval'
@@ -41,11 +44,19 @@ class StatisticsService {
       return FunctionStats.empty(period);
     }
 
+    final totalInvocations = (result['total_invocations'] as int?) ?? 0;
+    final errorCount = (result['error_count'] as int?) ?? 0;
+    final errorRate = totalInvocations > 0 ? (errorCount / totalInvocations) * 100 : 0.0;
+
     return FunctionStats(
-      invocationsCount: (result['total_invocations'] as int?) ?? 0,
+      invocationsCount: totalInvocations,
       successCount: (result['success_count'] as int?) ?? 0,
-      errorCount: (result['error_count'] as int?) ?? 0,
-      averageLatencyMs: (double.tryParse(result['avg_latency_ms']) ?? 0.0),
+      errorCount: errorCount,
+      averageLatencyMs: (double.tryParse(result['avg_latency_ms'].toString()) ?? 0.0),
+      minLatencyMs: (double.tryParse(result['min_latency_ms'].toString()) ?? 0.0),
+      maxLatencyMs: (double.tryParse(result['max_latency_ms'].toString()) ?? 0.0),
+      errorRate: errorRate,
+      lastInvocation: result['last_invocation'] as DateTime?,
       period: period,
     );
   }
@@ -382,6 +393,10 @@ class FunctionStats {
   final int successCount;
   final int errorCount;
   final double averageLatencyMs;
+  final double minLatencyMs;
+  final double maxLatencyMs;
+  final double errorRate;
+  final DateTime? lastInvocation;
   final String period;
 
   FunctionStats({
@@ -389,6 +404,10 @@ class FunctionStats {
     required this.successCount,
     required this.errorCount,
     required this.averageLatencyMs,
+    required this.minLatencyMs,
+    required this.maxLatencyMs,
+    required this.errorRate,
+    this.lastInvocation,
     required this.period,
   });
 
@@ -398,6 +417,10 @@ class FunctionStats {
       successCount: 0,
       errorCount: 0,
       averageLatencyMs: 0.0,
+      minLatencyMs: 0.0,
+      maxLatencyMs: 0.0,
+      errorRate: 0.0,
+      lastInvocation: null,
       period: period,
     );
   }
@@ -407,7 +430,13 @@ class FunctionStats {
       'invocations_count': invocationsCount,
       'success_count': successCount,
       'error_count': errorCount,
+      'errors': errorCount,
+      'error_rate': errorRate,
+      'avg_latency': averageLatencyMs.round(),
       'average_latency_ms': averageLatencyMs.round(),
+      'min_latency': minLatencyMs.round(),
+      'max_latency': maxLatencyMs.round(),
+      'last_invocation': lastInvocation?.toIso8601String(),
       'period': period,
     };
   }
