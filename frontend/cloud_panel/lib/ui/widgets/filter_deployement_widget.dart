@@ -1,6 +1,7 @@
 import 'package:cloud_panel/common/commons.dart';
 import 'package:flutter/widgets.dart';
 import 'package:forui/forui.dart';
+import 'package:cloud_panel/l10n/app_localizations.dart';
 
 class TitleSectionOtherDeployementWidget extends StatelessWidget {
   final ValueNotifier<String> sortByNotifier;
@@ -16,7 +17,7 @@ class TitleSectionOtherDeployementWidget extends StatelessWidget {
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Text(
-          'Previous Deployments',
+          AppLocalizations.of(context)!.previousDeployments,
           style: context.theme.typography.sm.copyWith(
             fontWeight: FontWeight.bold,
           ),
@@ -59,7 +60,7 @@ class FilterOtherDeployementWidget extends StatelessWidget {
               <String, String>{},
               (previousValue, element) => previousValue
                 ..addAll({
-                  element.text: element.value,
+                  element.localized(context): element.value,
                 }),
             ),
           ),

@@ -1,6 +1,7 @@
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:forui/forui.dart';
+import 'package:cloud_panel/l10n/app_localizations.dart';
 
 @RoutePage()
 class ContainersView extends StatelessWidget {
@@ -19,7 +20,7 @@ class ContainersView extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           Text(
-            'Containers',
+            AppLocalizations.of(context)!.containers,
             style: context.theme.typography.lg.copyWith(
               fontSize: 18,
               fontWeight: FontWeight.bold,
@@ -27,7 +28,7 @@ class ContainersView extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            'Container management coming soon',
+            AppLocalizations.of(context)!.containerManagementComingSoon,
             style: context.theme.typography.sm.copyWith(
               color: Colors.grey,
             ),

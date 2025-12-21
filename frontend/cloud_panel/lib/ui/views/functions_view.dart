@@ -10,6 +10,7 @@ import 'package:flutter/services.dart' show Clipboard, ClipboardData;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:forui/forui.dart';
 import 'package:auto_route/auto_route.dart';
+import 'package:cloud_panel/l10n/app_localizations.dart';
 
 @RoutePage()
 class FunctionsView extends ConsumerStatefulWidget {
@@ -40,12 +41,12 @@ class _FunctionsViewState extends ConsumerState<FunctionsView> {
 
     return FScaffold(
       header: HeaderWithAction(
-        title: 'Functions',
+        title: AppLocalizations.of(context)!.functions,
         actions: [
           FButton(
             onPress: () => _showCreateDialog(context),
             prefix: Icon(Icons.add, size: 16),
-            child: Text('Create'),
+            child: Text(AppLocalizations.of(context)!.create),
           ),
         ],
         hideAction:
@@ -95,15 +96,15 @@ class _FunctionsViewState extends ConsumerState<FunctionsView> {
                       Clipboard.setData(ClipboardData(text: func.uuid));
                       showClipboardToast(
                         context,
-                        '${func.uuid} Copied to Clipboard',
+                        AppLocalizations.of(
+                          context,
+                        )!.copiedToClipboard(func.uuid),
                       );
                     },
                   ),
-                  child: const Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: [
-                      Icon(Icons.chevron_right),
-                    ],
+                  child: const Align(
+                    alignment: Alignment.bottomRight,
+                    child: Icon(Icons.chevron_right),
                   ),
                 ),
               );
@@ -115,11 +116,11 @@ class _FunctionsViewState extends ConsumerState<FunctionsView> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text('Opps!Error to Load Functions'),
+              Text(AppLocalizations.of(context)!.oppsErrorToLoadFunctions),
               const SizedBox(height: 16),
               FButton(
                 onPress: () => ref.refresh(functionsProvider),
-                child: const Text('Retry'),
+                child: Text(AppLocalizations.of(context)!.retry),
               ),
             ],
           ),
@@ -156,7 +157,9 @@ class _CreateFunctionCardState extends ConsumerState<CreateFunctionCard> {
           context,
         ).showSnackBar(
           SnackBar(
-            content: Text('Opps!Error to Create Function'),
+            content: Text(
+              AppLocalizations.of(context)!.oppsErrorToCreateFunction,
+            ),
           ),
         );
       }
@@ -168,14 +171,14 @@ class _CreateFunctionCardState extends ConsumerState<CreateFunctionCard> {
   @override
   Widget build(BuildContext context) {
     return FCard(
-      title: const Text('Create Function'),
+      title: Text(AppLocalizations.of(context)!.createFunction),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           FTextField(
             controller: _nameController,
-            label: const Text('Function Name'),
+            label: Text(AppLocalizations.of(context)!.functionName),
             hint: 'my-function',
           ),
           const SizedBox(height: 24),
@@ -184,14 +187,14 @@ class _CreateFunctionCardState extends ConsumerState<CreateFunctionCard> {
             children: [
               FButton.raw(
                 onPress: () => Navigator.of(context).pop(),
-                child: const Text('Cancel'),
+                child: Text(AppLocalizations.of(context)!.cancel),
               ),
               const SizedBox(width: 8),
               FButton(
                 onPress: _isLoading ? null : _create,
                 child: _isLoading
-                    ? const Text('Creating...')
-                    : const Text('Create'),
+                    ? Text(AppLocalizations.of(context)!.creating)
+                    : Text(AppLocalizations.of(context)!.create),
               ),
             ],
           ),
@@ -222,24 +225,24 @@ class FunctionsEmptyWidget extends StatelessWidget {
           ),
           Padding(
             padding: const EdgeInsets.only(top: 16, bottom: 8),
-            child: const Text(
-              'No functions found',
-              style: TextStyle(
+            child: Text(
+              AppLocalizations.of(context)!.noFunctionsFound,
+              style: const TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
               ),
             ),
           ),
-          const Text(
-            'Create your first function to get started',
-            style: TextStyle(color: Colors.grey),
+          Text(
+            AppLocalizations.of(context)!.createFirstFunction,
+            style: const TextStyle(color: Colors.grey),
           ),
           const SizedBox(height: 24),
           FButton(
             onPress: () => openCreateDialog(context),
             style: FButtonStyle.primary(),
             mainAxisSize: MainAxisSize.min,
-            child: const Text('Create Function'),
+            child: Text(AppLocalizations.of(context)!.createFunction),
           ),
         ],
       ),

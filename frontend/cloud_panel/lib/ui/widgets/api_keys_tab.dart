@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:forui/forui.dart';
+import 'package:cloud_panel/l10n/app_localizations.dart';
 
 class ApiKeysTab extends ConsumerWidget {
   final String uuid;
@@ -26,21 +27,22 @@ class ApiKeysTab extends ConsumerWidget {
             padding: const EdgeInsets.all(16.0),
             child: FButton(
               onPress: () => _generateKey(context, ref),
-              child: const Text('Generate New API Key'),
+              child: Text(AppLocalizations.of(context)!.generateNewApiKey),
             ),
           ),
           keysAsync.when(
             data: (keys) {
               if (keys.isEmpty) {
-                return const Center(
-                  child: Text('No API keys'),
+                return Center(
+                  child: Text(AppLocalizations.of(context)!.noApiKeys),
                 );
               }
 
               final sortedKeys = List<ApiKey>.from(keys);
               sortedKeys.sort((a, b) {
                 int getPriority(ApiKey key) {
-                  final isExpired = key.expiresAt != null &&
+                  final isExpired =
+                      key.expiresAt != null &&
                       key.expiresAt!.isBefore(DateTime.now());
                   if (isExpired) return 2;
                   if (key.isActive) return 0;
@@ -79,8 +81,10 @@ class ApiKeysTab extends ConsumerWidget {
             loading: () => const Center(child: FCircularProgress()),
             error: (e, s) => Center(
               child: FAlert(
-                title: const Text('Oppssy!! Cannot load apikey function'),
-                subtitle: Text('Something went wrong'),
+                title: Text(AppLocalizations.of(context)!.oppsErrorLoadApiKey),
+                subtitle: Text(
+                  AppLocalizations.of(context)!.somethingWentWrong,
+                ),
                 style: FAlertStyle.destructive(),
               ),
             ),
@@ -120,13 +124,13 @@ class ApiKeysTab extends ConsumerWidget {
           context: context,
           builder: (ctx, style, _) => FDialog(
             style: (_) => style,
-            title: const Text('API Key Generated'),
+            title: Text(AppLocalizations.of(context)!.apiKeyGenerated),
             body: Column(
               mainAxisSize: MainAxisSize.min,
               spacing: 10,
               children: [
-                const Text(
-                  'Please copy your secret key. It will not be shown again.',
+                Text(
+                  AppLocalizations.of(context)!.copySecretKeyWarning,
                 ),
                 SelectableText(
                   apiKey.secretKey,
@@ -137,9 +141,13 @@ class ApiKeysTab extends ConsumerWidget {
                     Clipboard.setData(ClipboardData(text: apiKey.secretKey));
                     ScaffoldMessenger.of(
                       ctx,
-                    ).showSnackBar(const SnackBar(content: Text('Copied!')));
+                    ).showSnackBar(
+                      SnackBar(
+                        content: Text(AppLocalizations.of(context)!.copied),
+                      ),
+                    );
                   },
-                  child: const Text('Copy to Clipboard'),
+                  child: Text(AppLocalizations.of(context)!.copyToClipboard),
                 ),
               ],
             ),
@@ -147,7 +155,7 @@ class ApiKeysTab extends ConsumerWidget {
               FButton(
                 onPress: () => Navigator.pop(ctx),
                 style: FButtonStyle.ghost(),
-                child: const Text('Skip'),
+                child: Text(AppLocalizations.of(context)!.skip),
               ),
               FButton(
                 onPress: () {
@@ -160,7 +168,7 @@ class ApiKeysTab extends ConsumerWidget {
                   );
                 },
                 style: FButtonStyle.secondary(),
-                child: const Text('Save Locally'),
+                child: Text(AppLocalizations.of(context)!.saveLocally),
               ),
             ],
           ),
@@ -173,7 +181,9 @@ class ApiKeysTab extends ConsumerWidget {
           context,
         ).showSnackBar(
           SnackBar(
-            content: Text('Error: $e'),
+            content: Text(
+              AppLocalizations.of(context)!.errorWithPlaceholder(e.toString()),
+            ),
           ),
         );
       }
@@ -215,13 +225,17 @@ class ApiKeysTab extends ConsumerWidget {
         showFToast(
           context: context,
           alignment: FToastAlignment.bottomCenter,
-          title: const Text('API key saved to local storage'),
+          title: Text(AppLocalizations.of(context)!.apiKeySavedLocally),
         );
       }
     } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e')),
+          SnackBar(
+            content: Text(
+              AppLocalizations.of(context)!.errorWithPlaceholder(e.toString()),
+            ),
+          ),
         );
       }
     }
@@ -260,7 +274,7 @@ class _KeyNameDialogState extends State<_KeyNameDialog> {
   Widget build(BuildContext context) {
     return FDialog(
       style: (_) => widget.style,
-      title: const Text('Generate API Key'),
+      title: Text(AppLocalizations.of(context)!.generateApiKey),
       body: Padding(
         padding: const EdgeInsets.only(bottom: 8.0),
         child: Column(
@@ -272,15 +286,18 @@ class _KeyNameDialogState extends State<_KeyNameDialog> {
               crossAxisAlignment: CrossAxisAlignment.start,
               spacing: 4,
               children: [
-                const Text(
-                  'Key Name',
-                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                Text(
+                  AppLocalizations.of(context)!.keyName,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
                 ListenableBuilder(
                   listenable: widget.controller,
                   builder: (context, _) => FTextField(
                     controller: widget.controller,
-                    hint: 'e.g., Production Key',
+                    hint: AppLocalizations.of(context)!.keyNameHint,
                     autofocus: true,
                   ),
                 ),
@@ -290,9 +307,12 @@ class _KeyNameDialogState extends State<_KeyNameDialog> {
               crossAxisAlignment: CrossAxisAlignment.start,
               spacing: 6,
               children: [
-                const Text(
-                  'Validity',
-                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                Text(
+                  AppLocalizations.of(context)!.validity,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
                 Wrap(
                   spacing: 6,
@@ -320,7 +340,7 @@ class _KeyNameDialogState extends State<_KeyNameDialog> {
                           borderRadius: BorderRadius.circular(6),
                         ),
                         child: Text(
-                          validity.label,
+                          validity.localized(context),
                           style: TextStyle(
                             fontSize: 12,
                             color: isSelected
@@ -342,7 +362,7 @@ class _KeyNameDialogState extends State<_KeyNameDialog> {
         FButton(
           onPress: () => Navigator.pop(context),
           style: FButtonStyle.secondary(),
-          child: const Text('Cancel'),
+          child: Text(AppLocalizations.of(context)!.cancel),
         ),
         ListenableBuilder(
           listenable: widget.controller,
@@ -356,7 +376,7 @@ class _KeyNameDialogState extends State<_KeyNameDialog> {
                     ),
                   )
                 : null,
-            child: const Text('Generate'),
+            child: Text(AppLocalizations.of(context)!.generate),
           ),
         ),
       ],

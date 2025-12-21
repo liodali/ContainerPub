@@ -4,6 +4,7 @@ import 'package:cloud_panel/providers/function_details_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:forui/forui.dart';
+import 'package:cloud_panel/l10n/app_localizations.dart';
 
 class ApiKeyItemWidget extends ConsumerStatefulWidget {
   const ApiKeyItemWidget({
@@ -35,9 +36,10 @@ class ApiKeyItemWidgetState extends ConsumerState<ApiKeyItemWidget> {
   }
 
   String getStatusText() {
-    if (isExpired) return 'Expired';
-    if (widget.apiKeyModel.isActive) return 'Active';
-    return 'Inactive';
+    if (isExpired) return AppLocalizations.of(context)!.expired;
+    if (widget.apiKeyModel.isActive)
+      return AppLocalizations.of(context)!.active;
+    return AppLocalizations.of(context)!.inactive;
   }
 
   @override
@@ -46,10 +48,21 @@ class ApiKeyItemWidgetState extends ConsumerState<ApiKeyItemWidget> {
     isExpired =
         widget.apiKeyModel.expiresAt != null &&
         widget.apiKeyModel.expiresAt!.isBefore(DateTime.now());
-    expirationText = widget.apiKeyModel.expiresAt != null
+
+    final formattedExpiration = widget.apiKeyModel.expiresAt != null
         ? dateFormatter.format(widget.apiKeyModel.expiresAt!)
-        : 'Never';
-    creationText = dateFormatter.format(widget.apiKeyModel.createdAt);
+        : AppLocalizations.of(context)!.never;
+
+    expirationText = AppLocalizations.of(
+      context,
+    )!.expiresWithPlaceholder(formattedExpiration);
+
+    final formattedCreation = dateFormatter.format(
+      widget.apiKeyModel.createdAt,
+    );
+    creationText = AppLocalizations.of(
+      context,
+    )!.createdWithPlaceholder(formattedCreation);
 
     statusColor = getStatusColor();
     statusText = getStatusText();
@@ -66,7 +79,9 @@ class ApiKeyItemWidgetState extends ConsumerState<ApiKeyItemWidget> {
   @override
   Widget build(BuildContext context) {
     return FCard(
-      title: Text(widget.apiKeyModel.name ?? 'Unnamed Key'),
+      title: Text(
+        widget.apiKeyModel.name ?? AppLocalizations.of(context)!.unnamedKey,
+      ),
       subtitle: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         spacing: 4,
@@ -75,7 +90,9 @@ class ApiKeyItemWidgetState extends ConsumerState<ApiKeyItemWidget> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                'Prefix: ${widget.apiKeyModel.uuid.substring(0, 8)}...',
+                AppLocalizations.of(context)!.prefixWithPlaceholder(
+                  widget.apiKeyModel.uuid.substring(0, 8),
+                ),
               ),
               Container(
                 padding: const EdgeInsets.symmetric(
@@ -99,11 +116,11 @@ class ApiKeyItemWidgetState extends ConsumerState<ApiKeyItemWidget> {
             ],
           ),
           Text(
-            'Created: $creationText',
+            creationText,
             style: const TextStyle(fontSize: 12),
           ),
           Text(
-            'Expires: $expirationText',
+            expirationText,
             style: TextStyle(
               fontSize: 12,
               color: isExpired ? Colors.red : null,
@@ -121,10 +138,11 @@ class ApiKeyItemWidgetState extends ConsumerState<ApiKeyItemWidget> {
               context,
               ref,
               widget.apiKeyModel.uuid,
-              widget.apiKeyModel.name ?? 'Unnamed Key',
+              widget.apiKeyModel.name ??
+                  AppLocalizations.of(context)!.unnamedKey,
             ),
             style: FButtonStyle.destructive(),
-            child: const Text('Delete'),
+            child: Text(AppLocalizations.of(context)!.delete),
           ),
           if (widget.apiKeyModel.isActive && !isExpired) ...[
             ValueListenableBuilder(
@@ -140,7 +158,7 @@ class ApiKeyItemWidgetState extends ConsumerState<ApiKeyItemWidget> {
                   style: FButtonStyle.secondary(),
                   child: isLoading
                       ? const FCircularProgress()
-                      : const Text('Revoke'),
+                      : Text(AppLocalizations.of(context)!.revoke),
                 );
               },
             ),
@@ -157,7 +175,7 @@ class ApiKeyItemWidgetState extends ConsumerState<ApiKeyItemWidget> {
                           ),
                     style: FButtonStyle.primary(),
                     prefix: isLoading ? const FCircularProgress() : null,
-                    child: const Text('Roll'),
+                    child: Text(AppLocalizations.of(context)!.roll),
                   );
                 },
               ),
@@ -176,7 +194,7 @@ class ApiKeyItemWidgetState extends ConsumerState<ApiKeyItemWidget> {
                         ),
                   style: FButtonStyle.primary(),
                   prefix: isLoading ? const FCircularProgress() : null,
-                  child: const Text('Activate'),
+                  child: Text(AppLocalizations.of(context)!.activate),
                 );
               },
             ),
@@ -226,7 +244,7 @@ class ApiKeyItemWidgetState extends ConsumerState<ApiKeyItemWidget> {
             ),
           ),
           title: Text(
-            'API key activated successfully',
+            AppLocalizations.of(context)!.apiKeyActivatedSuccessfully,
             style: context.theme.typography.sm.copyWith(
               color: context.theme.colors.background,
             ),
@@ -244,7 +262,7 @@ class ApiKeyItemWidgetState extends ConsumerState<ApiKeyItemWidget> {
               borderRadius: BorderRadius.circular(6),
             ),
           ),
-          title: const Text('Oppssy!! Cannot activate apikey function'),
+          title: Text(AppLocalizations.of(context)!.oppsErrorActivateApiKey),
           alignment: FToastAlignment.bottomCenter,
         );
       }
@@ -273,7 +291,7 @@ class ApiKeyItemWidgetState extends ConsumerState<ApiKeyItemWidget> {
             ),
           ),
           title: Text(
-            'Oppssy!! Cannot revoke apikey function',
+            AppLocalizations.of(context)!.oppsErrorRevokeApiKey,
             style: context.theme.typography.sm.copyWith(
               color: context.theme.colors.error,
             ),
@@ -304,7 +322,7 @@ class ApiKeyItemWidgetState extends ConsumerState<ApiKeyItemWidget> {
             ),
           ),
           title: Text(
-            'API key rolled successfully',
+            AppLocalizations.of(context)!.apiKeyRolledSuccessfully,
             style: context.theme.typography.sm.copyWith(
               color: context.theme.colors.background,
             ),
@@ -322,7 +340,7 @@ class ApiKeyItemWidgetState extends ConsumerState<ApiKeyItemWidget> {
               borderRadius: BorderRadius.circular(6),
             ),
           ),
-          title: const Text('Oppssy!! Cannot roll apikey function'),
+          title: Text(AppLocalizations.of(context)!.oppsErrorRollApiKey),
           alignment: FToastAlignment.bottomCenter,
         );
       }
@@ -362,13 +380,17 @@ class ApiKeyItemWidgetState extends ConsumerState<ApiKeyItemWidget> {
         showFToast(
           context: context,
           alignment: FToastAlignment.bottomCenter,
-          title: const Text('API key deleted successfully'),
+          title: Text(AppLocalizations.of(context)!.apiKeyDeletedSuccessfully),
         );
       }
     } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e')),
+          SnackBar(
+            content: Text(
+              AppLocalizations.of(context)!.errorWithPlaceholder(e.toString()),
+            ),
+          ),
         );
       }
     }
@@ -398,7 +420,7 @@ class _DeleteKeyDialogState extends State<_DeleteKeyDialog> {
     return FDialog(
       style: (_) => widget.style,
       direction: Axis.horizontal,
-      title: const Text('Delete API Key'),
+      title: Text(AppLocalizations.of(context)!.deleteApiKey),
       body: Padding(
         padding: const EdgeInsets.only(bottom: 8.0),
         child: Column(
@@ -406,9 +428,9 @@ class _DeleteKeyDialogState extends State<_DeleteKeyDialog> {
           spacing: 12,
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text(
-              'This action cannot be undone. To confirm deletion, please enter the API key name:',
-              style: TextStyle(fontSize: 13),
+            Text(
+              AppLocalizations.of(context)!.deleteApiKeyWarning,
+              style: const TextStyle(fontSize: 13),
             ),
             Container(
               padding: const EdgeInsets.all(8),
@@ -418,7 +440,9 @@ class _DeleteKeyDialogState extends State<_DeleteKeyDialog> {
                 borderRadius: BorderRadius.circular(4),
               ),
               child: Text(
-                'Key Name: ${widget.keyName}',
+                AppLocalizations.of(
+                  context,
+                )!.keyNameWithPlaceholder(widget.keyName),
                 style: const TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.bold,
@@ -429,7 +453,7 @@ class _DeleteKeyDialogState extends State<_DeleteKeyDialog> {
               listenable: widget.controller,
               builder: (context, _) => FTextField(
                 controller: widget.controller,
-                hint: 'Enter key name to confirm',
+                hint: AppLocalizations.of(context)!.enterKeyNameConfirm,
                 autofocus: true,
               ),
             ),
@@ -440,14 +464,14 @@ class _DeleteKeyDialogState extends State<_DeleteKeyDialog> {
         FButton(
           onPress: () => Navigator.pop(context, false),
           style: FButtonStyle.secondary(),
-          child: const Text('Cancel'),
+          child: Text(AppLocalizations.of(context)!.cancel),
         ),
         ListenableBuilder(
           listenable: widget.controller,
           builder: (context, _) => FButton(
             onPress: _isValid ? () => Navigator.pop(context, true) : null,
             style: FButtonStyle.destructive(),
-            child: const Text('Delete'),
+            child: Text(AppLocalizations.of(context)!.delete),
           ),
         ),
       ],
@@ -475,7 +499,7 @@ class _EnableKeyDialog extends StatelessWidget {
         verticalStyle: (style) => style.copyWith(),
       ),
       direction: Axis.horizontal,
-      title: const Text('Enable API Key'),
+      title: Text(AppLocalizations.of(context)!.enableApiKey),
       body: Padding(
         padding: const EdgeInsets.only(bottom: 8.0),
         child: Column(
@@ -483,9 +507,9 @@ class _EnableKeyDialog extends StatelessWidget {
           spacing: 12,
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text(
-              'Please enter the API key name to enable it:',
-              style: TextStyle(fontSize: 13),
+            Text(
+              AppLocalizations.of(context)!.enableApiKeyPrompt,
+              style: const TextStyle(fontSize: 13),
             ),
             ListenableBuilder(
               listenable: controller,
@@ -502,7 +526,7 @@ class _EnableKeyDialog extends StatelessWidget {
         FButton(
           onPress: () => Navigator.pop(context, null),
           style: FButtonStyle.secondary(),
-          child: const Text('Cancel'),
+          child: Text(AppLocalizations.of(context)!.cancel),
         ),
         ListenableBuilder(
           listenable: controller,
@@ -511,7 +535,7 @@ class _EnableKeyDialog extends StatelessWidget {
                 ? () => Navigator.pop(context, controller.text.trim())
                 : null,
             style: FButtonStyle.primary(),
-            child: const Text('Enable'),
+            child: Text(AppLocalizations.of(context)!.enable),
           ),
         ),
       ],

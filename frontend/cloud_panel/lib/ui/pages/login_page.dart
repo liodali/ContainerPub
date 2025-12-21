@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:forui/forui.dart';
 import 'package:auto_route/auto_route.dart';
+import 'package:cloud_panel/l10n/app_localizations.dart';
 
 @RoutePage()
 class LoginPage extends ConsumerStatefulWidget {
@@ -78,8 +79,8 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                 const SizedBox(height: 32),
 
                 FCard(
-                  title: const Text('Login'),
-                  subtitle: const Text('Welcome back to Cloud Panel'),
+                  title: Text(AppLocalizations.of(context)!.login),
+                  subtitle: Text(AppLocalizations.of(context)!.welcomeBack),
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -93,45 +94,49 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                       ],
                       FTextField(
                         controller: _emailController,
-                        label: const Text('Email'),
-                        hint: 'Enter your email',
+                        label: Text(AppLocalizations.of(context)!.email),
+                        hint: AppLocalizations.of(context)!.enterEmail,
                       ),
                       const SizedBox(height: 16),
                       FTextField(
                         controller: _passwordController,
-                        label: const Text('Password'),
+                        label: Text(AppLocalizations.of(context)!.password),
                         obscureText: true,
-                        hint: 'Enter your password',
+                        hint: AppLocalizations.of(context)!.enterPassword,
                       ),
                       const SizedBox(height: 24),
                       FButton(
                         onPress: _isLoading ? null : _login,
                         child: _isLoading
-                            ? const Text('Logging in...')
-                            : const Text('Login'),
+                            ? Text(AppLocalizations.of(context)!.loggingIn)
+                            : Text(AppLocalizations.of(context)!.login),
                       ),
                       const SizedBox(height: 24),
-                      const Row(
+                      Row(
                         children: [
-                          Expanded(child: Divider()),
+                          const Expanded(child: Divider()),
                           Padding(
-                            padding: EdgeInsets.symmetric(horizontal: 8),
-                            child: Text("OR"),
+                            padding: const EdgeInsets.symmetric(horizontal: 8),
+                            child: Text(AppLocalizations.of(context)!.or),
                           ),
-                          Expanded(child: Divider()),
+                          const Expanded(child: Divider()),
                         ],
                       ),
                       const SizedBox(height: 24),
                       FButton(
                         style: FButtonStyle.outline(),
                         onPress: () {},
-                        child: const Text('Continue with Google'),
+                        child: Text(
+                          AppLocalizations.of(context)!.continueWithGoogle,
+                        ),
                       ),
                       const SizedBox(height: 12),
                       FButton(
                         style: FButtonStyle.outline(),
                         onPress: () {},
-                        child: const Text('Continue with GitHub'),
+                        child: Text(
+                          AppLocalizations.of(context)!.continueWithGitHub,
+                        ),
                       ),
                     ],
                   ),

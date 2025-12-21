@@ -1,7 +1,7 @@
 import 'package:cloud_api_client/cloud_api_client.dart';
-import 'package:flutter/widgets.dart'
-    show Color, Widget, Container, BoxDecoration, BoxShape;
+import 'package:flutter/widgets.dart';
 import 'package:flutter/material.dart' show Colors;
+import 'package:cloud_panel/l10n/app_localizations.dart';
 
 enum SortDeploy {
   versionDesc('version_desc', 'Version (Desc)'),
@@ -19,6 +19,20 @@ enum SortDeploy {
   static SortDeploy fromValue(String name) {
     return values.firstWhere((e) => e.value == name);
   }
+
+  String localized(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    switch (this) {
+      case SortDeploy.versionDesc:
+        return l10n.versionDesc;
+      case SortDeploy.versionAsc:
+        return l10n.versionAsc;
+      case SortDeploy.dateDesc:
+        return l10n.dateNewest;
+      case SortDeploy.dateAsc:
+        return l10n.dateOldest;
+    }
+  }
 }
 
 enum ApiKeyValidity {
@@ -35,6 +49,22 @@ enum ApiKeyValidity {
 
   static ApiKeyValidity fromValue(String val) {
     return values.firstWhere((e) => e.value == val);
+  }
+
+  String localized(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    switch (this) {
+      case ApiKeyValidity.oneHour:
+        return l10n.oneHour;
+      case ApiKeyValidity.oneDay:
+        return l10n.oneDay;
+      case ApiKeyValidity.oneWeek:
+        return l10n.oneWeek;
+      case ApiKeyValidity.oneMonth:
+        return l10n.oneMonth;
+      case ApiKeyValidity.forever:
+        return l10n.forever;
+    }
   }
 }
 

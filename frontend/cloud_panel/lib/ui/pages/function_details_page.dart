@@ -8,6 +8,7 @@ import 'package:cloud_panel/ui/widgets/invoke_tab.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:forui/forui.dart';
+import 'package:cloud_panel/l10n/app_localizations.dart';
 
 class FunctionDetailsPage extends ConsumerStatefulWidget {
   final String uuid;
@@ -53,7 +54,7 @@ class _FunctionDetailsPageState extends ConsumerState<FunctionDetailsPage>
                     fontSize: 20,
                   ),
                 ),
-                ?funcAsync.value?.statusWidget,
+                if (funcAsync.value != null) funcAsync.value!.statusWidget,
               ],
             ),
             SelectableText(
@@ -93,21 +94,21 @@ class _FunctionDetailsPageState extends ConsumerState<FunctionDetailsPage>
             controller: _tabController,
             children: [
               FTabEntry(
-                label: Text('Overview'),
+                label: Text(AppLocalizations.of(context)!.overview),
                 child: OverviewTab(func: func),
               ),
               FTabEntry(
-                label: Text('Deployments'),
+                label: Text(AppLocalizations.of(context)!.deployments),
                 child: DeploymentsTab(
                   uuid: func.uuid,
                 ),
               ),
               FTabEntry(
-                label: Text('API Keys'),
+                label: Text(AppLocalizations.of(context)!.apiKeys),
                 child: ApiKeysTab(uuid: func.uuid),
               ),
               FTabEntry(
-                label: Text('Invoke'),
+                label: Text(AppLocalizations.of(context)!.invoke),
                 child: InvokeTab(uuid: func.uuid),
               ),
             ],
@@ -116,8 +117,10 @@ class _FunctionDetailsPageState extends ConsumerState<FunctionDetailsPage>
         loading: () => const Center(child: FCircularProgress()),
         error: (err, stack) => Center(
           child: FAlert(
-            title: const Text('Oppssy!! Cannot load function details'),
-            subtitle: Text('Something went wrong'),
+            title: Text(
+              AppLocalizations.of(context)!.oppsErrorLoadFunctionDetails,
+            ),
+            subtitle: Text(AppLocalizations.of(context)!.somethingWentWrong),
             style: FAlertStyle.destructive(),
           ),
         ),

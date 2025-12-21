@@ -4,6 +4,7 @@ import 'package:cloud_panel/router.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:forui/forui.dart';
+import 'package:cloud_panel/l10n/app_localizations.dart';
 
 @RoutePage()
 class DashboardPage extends ConsumerWidget {
@@ -62,35 +63,35 @@ class SideBarDashboard extends StatelessWidget {
                 children: [
                   _SidebarItem(
                     icon: Icons.dashboard,
-                    label: 'Overview',
+                    label: AppLocalizations.of(context)!.dashboard,
                     isSelected: tabsRouter.activeIndex == 0,
                     onTap: () => tabsRouter.setActiveIndex(0),
                   ),
                   const SizedBox(height: 8),
                   _SidebarItem(
                     icon: Icons.functions,
-                    label: 'Functions',
+                    label: AppLocalizations.of(context)!.functions,
                     isSelected: tabsRouter.activeIndex == 1,
                     onTap: () => tabsRouter.setActiveIndex(1),
                   ),
                   const SizedBox(height: 8),
                   _SidebarItem(
                     icon: Icons.layers,
-                    label: 'Containers',
+                    label: AppLocalizations.of(context)!.containers,
                     isSelected: tabsRouter.activeIndex == 2,
                     onTap: () => tabsRouter.setActiveIndex(2),
                   ),
                   const SizedBox(height: 8),
                   _SidebarItem(
                     icon: Icons.webhook,
-                    label: 'Webhooks',
+                    label: AppLocalizations.of(context)!.webhooks,
                     isSelected: tabsRouter.activeIndex == 3,
                     onTap: () => tabsRouter.setActiveIndex(3),
                   ),
                   const SizedBox(height: 8),
                   _SidebarItem(
                     icon: Icons.settings,
-                    label: 'Settings',
+                    label: AppLocalizations.of(context)!.settings,
                     isSelected: tabsRouter.activeIndex == 4,
                     onTap: () => tabsRouter.setActiveIndex(4),
                   ),
@@ -109,12 +110,12 @@ class SideBarDashboard extends StatelessWidget {
                       // Router will handle redirect via AuthGuard or simple check in main.dart
                       // But since we use manual router, main.dart checks authState.
                     },
-                    child: const Row(
+                    child: Row(
                       mainAxisAlignment: MainAxisAlignment.start,
                       children: [
-                        Icon(Icons.logout, size: 18),
-                        SizedBox(width: 8),
-                        Text('Logout'),
+                        const Icon(Icons.logout, size: 18),
+                        const SizedBox(width: 8),
+                        Text(AppLocalizations.of(context)!.logout),
                       ],
                     ),
                   );

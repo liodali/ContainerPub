@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:forui/forui.dart';
 import 'package:cloud_api_client/cloud_api_client.dart';
+import 'package:cloud_panel/l10n/app_localizations.dart';
 import '../component/stat_card.dart';
 
 class OverviewTab extends StatelessWidget {
@@ -45,28 +46,28 @@ class _StatsSection extends ConsumerWidget {
         runSpacing: 12,
         children: [
           StatCard(
-            label: 'Invocations',
+            label: AppLocalizations.of(context)!.invocations,
             value: stats.invocations.toString(),
             context: context,
           ),
           StatCard(
-            label: 'Errors',
+            label: AppLocalizations.of(context)!.errors,
             value: stats.errors.toString(),
             context: context,
           ),
           StatCard(
-            label: 'Error Rate',
+            label: AppLocalizations.of(context)!.errorRate,
             value: '${(stats.errorRate * 100).toStringAsFixed(2)}%',
             context: context,
           ),
           StatCard(
-            label: 'Avg Latency',
+            label: AppLocalizations.of(context)!.avgLatency,
             value: '${stats.avgLatency}ms',
             context: context,
           ),
           if (stats.lastInvocation != null) ...[
             StatCard(
-              label: 'Last Invocation',
+              label: AppLocalizations.of(context)!.lastInvocation,
               value: _formatDateTime(stats.lastInvocation!),
               context: context,
             ),
@@ -76,8 +77,8 @@ class _StatsSection extends ConsumerWidget {
       loading: () => const Center(child: FCircularProgress()),
       error: (e, s) => Center(
         child: FAlert(
-          title: const Text('Oppssy!! Cannot load function stats'),
-          subtitle: Text('Something went wrong'),
+          title: Text(AppLocalizations.of(context)!.errorLoadStatsTitle),
+          subtitle: Text(AppLocalizations.of(context)!.errorLoadStatsSubtitle),
           style: FAlertStyle.destructive(),
         ),
       ),

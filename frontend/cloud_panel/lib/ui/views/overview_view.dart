@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:forui/forui.dart';
 import 'package:auto_route/auto_route.dart';
+import 'package:cloud_panel/l10n/app_localizations.dart';
 
 @RoutePage()
 class OverviewView extends StatelessWidget {
@@ -11,17 +12,34 @@ class OverviewView extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'Overview',
-          style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+        Text(
+          AppLocalizations.of(context)!.overview,
+          style: const TextStyle(
+            fontSize: 24,
+            fontWeight: FontWeight.bold,
+          ),
         ),
         const SizedBox(height: 24),
         Row(
           children: [
             Expanded(
               child: FCard(
-                title: const Text('Total Functions'),
-                subtitle: const Text('Active functions running'),
+                title: Text(AppLocalizations.of(context)!.totalFunctions),
+                subtitle: Text(AppLocalizations.of(context)!.activeFunctionsRunning),
+                child: const Text(
+                  '0',
+                  style: TextStyle(
+                    fontSize: 32,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: FCard(
+                title: Text(AppLocalizations.of(context)!.totalInvocations),
+                subtitle: Text(AppLocalizations.of(context)!.inTheLast30Days),
                 child: const Text(
                   '0',
                   style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
@@ -31,19 +49,8 @@ class OverviewView extends StatelessWidget {
             const SizedBox(width: 16),
             Expanded(
               child: FCard(
-                title: const Text('Total Invocations'),
-                subtitle: const Text('In the last 30 days'),
-                child: const Text(
-                  '0',
-                  style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
-                ),
-              ),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: FCard(
-                title: const Text('Errors'),
-                subtitle: const Text('In the last 24 hours'),
+                title: Text(AppLocalizations.of(context)!.errors),
+                subtitle: Text(AppLocalizations.of(context)!.inTheLast24Hours),
                 child: const Text(
                   '0',
                   style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold),

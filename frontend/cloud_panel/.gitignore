@@ -46,3 +46,4 @@ app.*.map.json
 web
 linux
 macos
+app_localizations*.dart

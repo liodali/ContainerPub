@@ -1,0 +1,199 @@
+{
+  "appTitle": "ContainerPub Cloud Panel",
+  "dashboard": "Dashboard",
+  "overview": "Overview",
+  "functions": "Functions",
+  "containers": "Containers",
+  "webhooks": "Webhooks",
+  "settings": "Settings",
+  "login": "Login",
+  "logout": "Logout",
+  "email": "Email",
+  "password": "Password",
+  "noDeployments": "No deployments",
+  "activeDeployment": "Active Deployment",
+  "active": "Active",
+  "rollback": "Rollback",
+  "rollbackInitiated": "Rollback initiated successfully",
+  "rollbackFailed": "Ops!Rollback failed",
+  "invocations": "Invocations",
+  "errors": "Errors",
+  "errorRate": "Error Rate",
+  "avgLatency": "Avg Latency",
+  "lastInvocation": "Last Invocation",
+  "previousDeployments": "Previous Deployments",
+  "version": "Version",
+  "date": "Date",
+  "versionDesc": "Version (Desc)",
+  "versionAsc": "Version (Asc)",
+  "dateNewest": "Date (Newest)",
+  "dateOldest": "Date (Oldest)",
+  "oneHour": "1 Hour",
+  "oneDay": "1 Day",
+  "oneWeek": "1 Week",
+  "oneMonth": "1 Month",
+  "forever": "Forever",
+  "errorLoadStatsTitle": "Oppssy!! Cannot load function stats",
+  "errorLoadStatsSubtitle": "Something went wrong",
+  "developerSettings": "Developer Settings",
+  "manageApiKeys": "Manage API Keys",
+  "billing": "Billing",
+  "changeLanguage": "Change Language",
+  "welcomeBack": "Welcome back to Cloud Panel",
+  "enterEmail": "Enter your email",
+  "enterPassword": "Enter your password",
+  "loggingIn": "Logging in...",
+  "or": "OR",
+  "continueWithGoogle": "Continue with Google",
+  "continueWithGitHub": "Continue with GitHub",
+  "confirmRollback": "Confirm Rollback",
+  "rollbackWarning": "This action will rollback the function to the selected deployment version. This is a destructive action.",
+  "functionUuid": "Function UUID",
+  "deploymentUuid": "Deployment UUID",
+  "reEnterUuids": "To confirm, please re-enter both UUIDs below:",
+  "enterFunctionUuid": "Enter function UUID",
+  "enterDeploymentUuid": "Enter deployment UUID",
+  "cancel": "Cancel",
+  "totalFunctions": "Total Functions",
+  "activeFunctionsRunning": "Active functions running",
+  "totalInvocations": "Total Invocations",
+  "inTheLast30Days": "In the last 30 days",
+  "inTheLast24Hours": "In the last 24 hours",
+  "create": "Create",
+  "copiedToClipboard": "{value} Copied to Clipboard",
+  "@copiedToClipboard": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "oppsErrorToLoadFunctions": "Oops! Error loading functions",
+  "retry": "Retry",
+  "createFunction": "Create Function",
+  "functionName": "Function Name",
+  "creating": "Creating...",
+  "oppsErrorToCreateFunction": "Oops! Error creating function",
+  "noFunctionsFound": "No functions found",
+  "createFirstFunction": "Create your first function to get started",
+  "containerManagementComingSoon": "Container management coming soon",
+  "webhookManagementComingSoon": "Webhook management coming soon",
+  "undo": "Undo",
+  "dontHaveAccount": "Don't have an account?",
+  "signUp": "Sign Up",
+  "showDebugBanner": "Show Debug Banner",
+  "showPerformanceOverlay": "Show Performance Overlay",
+  "theme": "Theme",
+  "darkMode": "Dark Mode",
+  "systemTheme": "System Theme",
+  "about": "About",
+  "privacyPolicy": "Privacy Policy",
+  "termsOfService": "Terms of Service",
+  "generateNewApiKey": "Generate New API Key",
+  "noApiKeys": "No API keys",
+  "oppsErrorLoadApiKey": "Oops! Cannot load API keys",
+  "requestBodyJson": "Request Body (JSON)",
+  "invalidJson": "Invalid JSON: {error}",
+  "@invalidJson": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "somethingWentWrong": "Something went wrong",
+  "apiKeys": "API Keys",
+  "invoke": "Invoke",
+  "oppsErrorLoadFunctionDetails": "Oppssy!! Cannot load function details",
+  "unnamedKey": "Unnamed Key",
+  "prefixWithPlaceholder": "Prefix: {prefix}...",
+  "@prefixWithPlaceholder": {
+    "placeholders": {
+      "prefix": {
+        "type": "String"
+      }
+    }
+  },
+  "expired": "Expired",
+  "inactive": "Inactive",
+  "never": "Never",
+  "createdWithPlaceholder": "Created: {date}",
+  "@createdWithPlaceholder": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "expiresWithPlaceholder": "Expires: {date}",
+  "@expiresWithPlaceholder": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "delete": "Delete",
+  "revoke": "Revoke",
+  "roll": "Roll",
+  "activate": "Activate",
+  "apiKeyActivatedSuccessfully": "API key activated successfully",
+  "oppsErrorActivateApiKey": "Oppssy!! Cannot activate apikey function",
+  "oppsErrorRevokeApiKey": "Oppssy!! Cannot revoke apikey function",
+  "apiKeyRolledSuccessfully": "API key rolled successfully",
+  "oppsErrorRollApiKey": "Oppssy!! Cannot roll apikey function",
+  "apiKeyDeletedSuccessfully": "API key deleted successfully",
+  "errorWithPlaceholder": "Error: {error}",
+  "@errorWithPlaceholder": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "deleteApiKey": "Delete API Key",
+  "deleteApiKeyWarning": "This action cannot be undone. To confirm deletion, please enter the API key name:",
+  "keyNameWithPlaceholder": "Key Name: {name}",
+  "@keyNameWithPlaceholder": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "enterKeyNameConfirm": "Enter key name to confirm",
+  "enableApiKey": "Enable API Key",
+  "enableApiKeyPrompt": "Please enter the API key name to enable it:",
+  "enable": "Enable",
+  "apiKeyGenerated": "API Key Generated",
+  "copySecretKeyWarning": "Please copy your secret key. It will not be shown again.",
+  "copyToClipboard": "Copy to Clipboard",
+  "copied": "Copied!",
+  "skip": "Skip",
+  "saveLocally": "Save Locally",
+  "apiKeySavedLocally": "API key saved to local storage",
+  "generateApiKey": "Generate API Key",
+  "keyName": "Key Name",
+  "keyNameHint": "e.g., Production Key",
+  "validity": "Validity",
+  "setApiKeyPassword": "Set Password for API Key",
+  "setApiKeyPasswordDesc": "Enter a password to encrypt and store this API key locally. You will need to enter this password to use the key for signing.",
+  "confirmPassword": "Confirm Password",
+  "enterPasswordPrompt": "Enter a password",
+  "passwordsMatch": "Passwords match ✓",
+  "passwordsDoNotMatch": "Passwords do not match",
+  "enterApiKeySecret": "Enter API Key Secret",
+  "enterApiKeySecretDesc": "Paste the secret key that was shown when you generated the API key:",
+  "pasteSecretKeyHint": "Paste secret key here",
+  "save": "Save",
+  "generate": "Generate",
+  "signingLabel": "Signing (--sign)",
+  "secretKeyLabel": "Secret Key (for signed requests)",
+  "enterSecretKeyHint": "Enter your API secret key",
+  "invoking": "Invoking...",
+  "invokeFunction": "Invoke Function",
+  "responseLabel": "Response:",
+  "copy": "Copy",
+  "copiedToClipboardSimple": "Copied to clipboard!",
+  "deployments":"deployments"
+}

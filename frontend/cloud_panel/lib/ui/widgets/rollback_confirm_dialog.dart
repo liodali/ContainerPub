@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:forui/forui.dart';
+import 'package:cloud_panel/l10n/app_localizations.dart';
 
 class RollbackConfirmDialog extends StatefulWidget {
   final String funcUuid;
@@ -42,14 +43,14 @@ class _RollbackConfirmDialogState extends State<RollbackConfirmDialog> {
   @override
   Widget build(BuildContext context) {
     return FDialog(
-      title: const Text('Confirm Rollback'),
+      title: Text(AppLocalizations.of(context)!.confirmRollback),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         spacing: 12,
         children: [
-          const Text(
-            'This action will rollback the function to the selected deployment version. This is a destructive action.',
-            style: TextStyle(
+          Text(
+            AppLocalizations.of(context)!.rollbackWarning,
+            style: const TextStyle(
               fontSize: 13,
               fontWeight: FontWeight.w500,
             ),
@@ -70,7 +71,7 @@ class _RollbackConfirmDialogState extends State<RollbackConfirmDialog> {
                   spacing: 4,
                   children: [
                     Text(
-                      'Function UUID:',
+                      "${AppLocalizations.of(context)!.functionUuid}:",
                       style: context.theme.typography.xs.copyWith(
                         fontWeight: FontWeight.bold,
                         color: context.theme.colors.foreground,
@@ -90,7 +91,7 @@ class _RollbackConfirmDialogState extends State<RollbackConfirmDialog> {
                   spacing: 4,
                   children: [
                     Text(
-                      'Deployment UUID:',
+                      "${AppLocalizations.of(context)!.deploymentUuid}:",
                       style: context.theme.typography.xs.copyWith(
                         fontWeight: FontWeight.bold,
                         color: context.theme.colors.foreground,

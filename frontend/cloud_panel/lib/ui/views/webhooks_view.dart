@@ -1,6 +1,7 @@
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:forui/forui.dart';
+import 'package:cloud_panel/l10n/app_localizations.dart';
 
 @RoutePage()
 class WebhooksView extends StatelessWidget {
@@ -20,7 +21,7 @@ class WebhooksView extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.only(top: 16.0),
             child: Text(
-              'Webhooks',
+              AppLocalizations.of(context)!.webhooks,
               style: context.theme.typography.lg.copyWith(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
@@ -30,7 +31,7 @@ class WebhooksView extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.only(top: 8.0),
             child: Text(
-              'Webhook management coming soon',
+              AppLocalizations.of(context)!.webhookManagementComingSoon,
               style: context.theme.typography.sm.copyWith(
                 color: Colors.grey,
               ),

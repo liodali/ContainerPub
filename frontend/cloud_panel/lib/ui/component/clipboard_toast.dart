@@ -1,3 +1,4 @@
+import 'package:cloud_panel/l10n/app_localizations.dart';
 import 'package:flutter/widgets.dart';
 import 'package:forui/forui.dart';
 
@@ -34,7 +35,7 @@ void showClipboardToast(
                 )
                 .call,
             onPress: entry.dismiss,
-            child: const Text('Undo'),
+            child: Text(AppLocalizations.of(context)!.undo),
           ),
         ),
   );

@@ -1,5 +1,6 @@
 import 'package:cloud_api_client/cloud_api_client.dart';
 import 'package:cloud_panel/common/commons.dart';
+import 'package:cloud_panel/l10n/app_localizations.dart';
 import 'package:cloud_panel/providers/api_client_provider.dart';
 import 'package:cloud_panel/providers/function_details_provider.dart';
 import 'package:cloud_panel/ui/widgets/filter_deployement_widget.dart';
@@ -56,8 +57,8 @@ class _DeploymentsTabState extends ConsumerState<DeploymentsTab> {
     return deploymentsAsync.when(
       data: (deployments) {
         if (deployments.isEmpty) {
-          return const Center(
-            child: Text('No deployments'),
+          return Center(
+            child: Text(AppLocalizations.of(context)!.noDeployments),
           );
         }
 
@@ -82,7 +83,7 @@ class _DeploymentsTabState extends ConsumerState<DeploymentsTab> {
                 spacing: 8,
                 children: [
                   Text(
-                    'Active Deployment',
+                    AppLocalizations.of(context)!.activeDeployment,
                     style: context.theme.typography.sm.copyWith(
                       fontWeight: FontWeight.bold,
                       color: Colors.green,
@@ -94,7 +95,7 @@ class _DeploymentsTabState extends ConsumerState<DeploymentsTab> {
                       style: context.theme.typography.lg,
                     ),
                     subtitle: Text(
-                      '${activeDeployment.status} • ${activeDeployment.createdAt.formattedDate} • Version ${activeDeployment.version}',
+                      '${activeDeployment.status} • ${activeDeployment.createdAt.formattedDate} • ${AppLocalizations.of(context)!.version} ${activeDeployment.version}',
                     ),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.end,
@@ -102,7 +103,7 @@ class _DeploymentsTabState extends ConsumerState<DeploymentsTab> {
                         FButton(
                           onPress: null,
                           style: FButtonStyle.secondary(),
-                          child: const Text('Active'),
+                          child: Text(AppLocalizations.of(context)!.active),
                         ),
                       ],
                     ),
@@ -134,7 +135,7 @@ class _DeploymentsTabState extends ConsumerState<DeploymentsTab> {
                                 style: context.theme.typography.lg,
                               ),
                               subtitle: Text(
-                                '${dep.status} • ${dep.createdAt.formattedDate} • Version ${dep.version}',
+                                '${dep.status} • ${dep.createdAt.formattedDate} • ${AppLocalizations.of(context)!.version} ${dep.version}',
                               ),
                               child: Row(
                                 mainAxisAlignment: MainAxisAlignment.end,
@@ -147,7 +148,9 @@ class _DeploymentsTabState extends ConsumerState<DeploymentsTab> {
                                       dep.uuid,
                                     ),
                                     style: FButtonStyle.destructive(),
-                                    child: const Text('Rollback'),
+                                    child: Text(
+                                      AppLocalizations.of(context)!.rollback,
+                                    ),
                                   ),
                                 ],
                               ),
@@ -164,7 +167,8 @@ class _DeploymentsTabState extends ConsumerState<DeploymentsTab> {
         );
       },
       loading: () => const Center(child: FCircularProgress()),
-      error: (e, s) => Center(child: Text('Error: $e')),
+      error: (e, s) =>
+          Center(child: Text('${AppLocalizations.of(context)!.errors}: $e')),
     );
   }
 
@@ -194,7 +198,7 @@ class _DeploymentsTabState extends ConsumerState<DeploymentsTab> {
               showFToast(
                 context: context,
                 alignment: FToastAlignment.bottomCenter,
-                title: Text('Rollback initiated successfully'),
+                title: Text(AppLocalizations.of(context)!.rollbackInitiated),
               );
             }
             ref.invalidate(functionDeploymentsProvider(funcUuid));
@@ -203,7 +207,7 @@ class _DeploymentsTabState extends ConsumerState<DeploymentsTab> {
               showFToast(
                 context: context,
                 alignment: FToastAlignment.bottomCenter,
-                title: Text('Ops!Rollback failed'),
+                title: Text(AppLocalizations.of(context)!.rollbackFailed),
               );
             }
           }

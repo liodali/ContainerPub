@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:forui/forui.dart';
+import 'package:cloud_panel/l10n/app_localizations.dart';
 
 class InvokeTab extends ConsumerStatefulWidget {
   final String uuid;
@@ -38,7 +39,7 @@ class _InvokeTabState extends ConsumerState<InvokeTab> {
           body = jsonDecode(_bodyController.text) as Map<String, dynamic>;
         } catch (e) {
           setState(() {
-            _response = 'Invalid JSON: $e';
+            _response = AppLocalizations.of(context)!.invalidJson(e.toString());
             _isError = true;
             _isLoading = false;
           });
@@ -81,9 +82,9 @@ class _InvokeTabState extends ConsumerState<InvokeTab> {
             crossAxisAlignment: CrossAxisAlignment.start,
             spacing: 8,
             children: [
-              const Text(
-                'Request Body (JSON)',
-                style: TextStyle(fontWeight: FontWeight.bold),
+              Text(
+                AppLocalizations.of(context)!.requestBodyJson,
+                style: const TextStyle(fontWeight: FontWeight.bold),
               ),
               FTextField(
                 controller: _bodyController,
@@ -99,9 +100,9 @@ class _InvokeTabState extends ConsumerState<InvokeTab> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text(
-                    'Signing (--sign)',
-                    style: TextStyle(fontWeight: FontWeight.bold),
+                  Text(
+                    AppLocalizations.of(context)!.signingLabel,
+                    style: const TextStyle(fontWeight: FontWeight.bold),
                   ),
                   FSwitch(
                     value: _useSigning,
@@ -112,14 +113,14 @@ class _InvokeTabState extends ConsumerState<InvokeTab> {
                 ],
               ),
               if (_useSigning) ...[
-                const Text(
-                  'Secret Key (for signed requests)',
-                  style: TextStyle(fontSize: 12),
+                Text(
+                  AppLocalizations.of(context)!.secretKeyLabel,
+                  style: const TextStyle(fontSize: 12),
                 ),
                 FTextField(
                   controller: _secretController,
                   obscureText: true,
-                  hint: 'Enter your API secret key',
+                  hint: AppLocalizations.of(context)!.enterSecretKeyHint,
                 ),
               ],
             ],
@@ -127,8 +128,8 @@ class _InvokeTabState extends ConsumerState<InvokeTab> {
           FButton(
             onPress: _isLoading ? null : _invoke,
             child: _isLoading
-                ? const Text('Invoking...')
-                : const Text('Invoke Function'),
+                ? Text(AppLocalizations.of(context)!.invoking)
+                : Text(AppLocalizations.of(context)!.invokeFunction),
           ),
           if (_response != null) ...[
             Column(
@@ -138,19 +139,25 @@ class _InvokeTabState extends ConsumerState<InvokeTab> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text(
-                      'Response:',
-                      style: TextStyle(fontWeight: FontWeight.bold),
+                    Text(
+                      AppLocalizations.of(context)!.responseLabel,
+                      style: const TextStyle(fontWeight: FontWeight.bold),
                     ),
                     FButton(
                       onPress: () {
                         Clipboard.setData(ClipboardData(text: _response!));
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Copied to clipboard!')),
+                          SnackBar(
+                            content: Text(
+                              AppLocalizations.of(
+                                context,
+                              )!.copiedToClipboardSimple,
+                            ),
+                          ),
                         );
                       },
                       style: FButtonStyle.ghost(),
-                      child: const Text('Copy'),
+                      child: Text(AppLocalizations.of(context)!.copy),
                     ),
                   ],
                 ),
