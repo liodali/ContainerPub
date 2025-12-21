@@ -2,10 +2,8 @@ import 'package:cloud_panel/providers/auth_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:forui/forui.dart';
-import 'package:auto_route/auto_route.dart';
 import 'package:cloud_panel/l10n/app_localizations.dart';
 
-@RoutePage()
 class LoginPage extends ConsumerStatefulWidget {
   const LoginPage({super.key});
 

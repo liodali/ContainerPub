@@ -12,7 +12,6 @@ import 'package:forui/forui.dart';
 import 'package:auto_route/auto_route.dart';
 import 'package:cloud_panel/l10n/app_localizations.dart';
 
-@RoutePage()
 class FunctionsView extends ConsumerStatefulWidget {
   const FunctionsView({super.key});
 

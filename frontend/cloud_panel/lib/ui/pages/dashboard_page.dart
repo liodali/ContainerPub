@@ -6,7 +6,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:forui/forui.dart';
 import 'package:cloud_panel/l10n/app_localizations.dart';
 
-@RoutePage()
 class DashboardPage extends ConsumerWidget {
   const DashboardPage({super.key});
 

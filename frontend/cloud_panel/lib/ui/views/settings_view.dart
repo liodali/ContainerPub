@@ -1,12 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:forui/forui.dart';
-import 'package:auto_route/auto_route.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cloud_panel/providers/locale_provider.dart';
 import 'package:cloud_panel/providers/theme_provider.dart';
 import 'package:cloud_panel/l10n/app_localizations.dart';
 
-@RoutePage()
 class SettingsView extends ConsumerWidget {
   const SettingsView({super.key});
 
