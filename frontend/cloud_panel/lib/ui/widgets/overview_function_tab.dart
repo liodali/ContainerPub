@@ -1,4 +1,5 @@
 import 'package:cloud_panel/providers/function_details_provider.dart';
+import 'package:cloud_panel/ui/component/error_card_component.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -76,10 +77,9 @@ class _StatsSection extends ConsumerWidget {
       ),
       loading: () => const Center(child: FCircularProgress()),
       error: (e, s) => Center(
-        child: FAlert(
-          title: Text(AppLocalizations.of(context)!.errorLoadStatsTitle),
-          subtitle: Text(AppLocalizations.of(context)!.errorLoadStatsSubtitle),
-          style: FAlertStyle.destructive(),
+        child: ErrorCardComponent(
+          title: AppLocalizations.of(context)!.errorLoadStatsTitle,
+          subtitle: AppLocalizations.of(context)!.errorLoadStatsSubtitle,
         ),
       ),
     );
