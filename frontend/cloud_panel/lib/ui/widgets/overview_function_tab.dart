@@ -40,53 +40,37 @@ class _StatsSection extends ConsumerWidget {
     final statsAsync = ref.watch(functionStatsProvider(funcUuid));
 
     return statsAsync.when(
-      data: (stats) => Column(
+      data: (stats) => Wrap(
         spacing: 12,
+        runSpacing: 12,
         children: [
-          Row(
-            spacing: 12,
-            children: [
-              Expanded(
-                child: StatCard(
-                  label: 'Invocations',
-                  value: stats.invocations.toString(),
-                  context: context,
-                ),
-              ),
-              Expanded(
-                child: StatCard(
-                  label: 'Errors',
-                  value: stats.errors.toString(),
-                  context: context,
-                ),
-              ),
-            ],
+          StatCard(
+            label: 'Invocations',
+            value: stats.invocations.toString(),
+            context: context,
           ),
-          Row(
-            spacing: 12,
-            children: [
-              Expanded(
-                child: StatCard(
-                  label: 'Error Rate',
-                  value: '${(stats.errorRate * 100).toStringAsFixed(2)}%',
-                  context: context,
-                ),
-              ),
-              Expanded(
-                child: StatCard(
-                  label: 'Avg Latency',
-                  value: '${stats.avgLatency}ms',
-                  context: context,
-                ),
-              ),
-            ],
+          StatCard(
+            label: 'Errors',
+            value: stats.errors.toString(),
+            context: context,
           ),
-          if (stats.lastInvocation != null)
+          StatCard(
+            label: 'Error Rate',
+            value: '${(stats.errorRate * 100).toStringAsFixed(2)}%',
+            context: context,
+          ),
+          StatCard(
+            label: 'Avg Latency',
+            value: '${stats.avgLatency}ms',
+            context: context,
+          ),
+          if (stats.lastInvocation != null) ...[
             StatCard(
               label: 'Last Invocation',
               value: _formatDateTime(stats.lastInvocation!),
               context: context,
             ),
+          ],
         ],
       ),
       loading: () => const Center(child: FCircularProgress()),
@@ -230,7 +214,7 @@ class _HourlyChart extends ConsumerWidget {
           data: response.data
               .map(
                 (e) => _ChartDataPoint(
-                  label: '${e.hour.hour}:00',
+                  label: '${e.hour.hour}',
                   value: e.totalRequests.toDouble(),
                   successCount: e.successCount,
                   errorCount: e.errorCount,

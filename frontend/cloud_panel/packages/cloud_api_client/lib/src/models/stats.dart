@@ -21,7 +21,7 @@ class FunctionStats extends Equatable {
 
   factory FunctionStats.fromJson(Map<String, dynamic> json) {
     return FunctionStats(
-      invocations: json['invocations'] as int? ?? 0,
+      invocations: json['invocations_count'] as int? ?? 0,
       errors: json['errors'] as int? ?? 0,
       errorRate: (json['error_rate'] as num?)?.toDouble() ?? 0.0,
       avgLatency: json['avg_latency'] as int? ?? 0,
