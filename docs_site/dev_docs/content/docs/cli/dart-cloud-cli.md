@@ -355,20 +355,35 @@ dart_cloud invoke <function-id> [--data '{"key": "value"}'] [--sign]
 - `--data` - JSON data to pass to the function
 - `--sign` - Sign the request with stored API key
 
-**With API Key Signature:**
+**Basic Invocation:**
+
+```dart
+# Invoke without data
+dart_cloud invoke <function-id>
+
+# Invoke with JSON data
+dart_cloud invoke <function-id> --data '{"key": "value"}'
+```
+
+**Signed Invocation (with API Key):**
 
 If your function has an API key configured, use the `--sign` flag to sign the request:
 
 ```dart
+dart_cloud invoke <function-id> --sign
+
+# With data and signature
 dart_cloud invoke <function-id> --data '{"key": "value"}' --sign
 ```
 
 This will:
 
-1. Load the private key from Hive database
+1. Load the secret key from Hive database
 2. Create a timestamp and HMAC-SHA256 signature
 3. Send request with `X-Signature` and `X-Timestamp` headers
-4. Include `X-Signature` and `X-Timestamp` headers in the request
+4. Backend validates signature before executing function
+
+**See [API Key Signing & Secure Invocation](./api-key-signing.md) for detailed signing documentation.**
 
 ### apikey
 

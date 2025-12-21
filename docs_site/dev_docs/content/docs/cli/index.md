@@ -23,6 +23,7 @@ The `dart_cloud_cli` tool enables developers to:
 
 - [dart_cloud_cli](./dart-cloud-cli.md) - Complete CLI reference and usage guide
 - [dart_cloud_function Package](./dart-cloud-function.md) - Function development package
+- [API Key Signing & Secure Invocation](./api-key-signing.md) - Sign function invocations with HMAC-SHA256
 
 ## Key Features
 
@@ -46,6 +47,14 @@ The `dart_cloud_cli` tool enables developers to:
 - **Invoke Functions** - Test functions with custom data
 - **View Logs** - Real-time and historical logs
 - **Delete Functions** - Remove functions when no longer needed
+
+### API Key Signing
+
+- **Generate API Keys** - Create HMAC-SHA256 signing keys
+- **Secure Invocation** - Sign requests with `--sign` flag
+- **Key Management** - Rotate, revoke, and extend keys
+- **Timestamp Validation** - Prevent replay attacks
+- **Hive Storage** - Secure local key storage
 
 ## Installation
 
@@ -86,6 +95,17 @@ dart_cloud logout
   - All commands and options
   - Authentication flow
   - Configuration files
+  - Troubleshooting
+
+### API Key Signing
+
+- **[API Key Signing & Secure Invocation](./api-key-signing.md)** - Secure function invocations
+  - Generating API keys
+  - Secret key storage
+  - HMAC-SHA256 signing algorithm
+  - Signed invocation with `--sign` flag
+  - Key management (rotate, revoke, extend)
+  - Security best practices
   - Troubleshooting
 
 ### Function Package
@@ -230,6 +250,7 @@ dart_cloud delete <function-id>
 ## Next Steps
 
 - Read [dart_cloud_cli Guide](./dart-cloud-cli.md) for detailed CLI usage
+- Learn [API Key Signing](./api-key-signing.md) for secure function invocations
 - Check [dart_cloud_function Package](./dart-cloud-function.md) for function development
 - Explore [Backend API Reference](../backend/api-reference.md) for API details
 - Review [Backend Architecture](../backend/architecture.md) for system design
