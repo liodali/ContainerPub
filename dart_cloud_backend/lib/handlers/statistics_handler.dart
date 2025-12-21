@@ -281,14 +281,7 @@ class StatisticsHandler {
   /// ```
   static Future<Response> getOverviewStats(Request request) async {
     try {
-      final authUser = await AuthUtils.getAuthenticatedUser(request);
-      if (authUser == null) {
-        return Response.forbidden(
-          json.encode({'error': 'Unauthorized'}),
-          headers: {'Content-Type': 'application/json'},
-        );
-      }
-
+      final userId = request.context['userId'] as int;
       // Get period from query params
       final period = request.url.queryParameters['period'] ?? '24h';
 
@@ -304,7 +297,7 @@ class StatisticsHandler {
       }
 
       final stats = await StatisticsService.instance.getUserOverviewStats(
-        userId: authUser.id,
+        userId: userId,
         period: period,
       );
 
