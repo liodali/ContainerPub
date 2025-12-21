@@ -188,7 +188,7 @@ class ApiClient {
     };
 
     final response = await _client.post(
-      Uri.parse('${Config.serverUrl}/api/auth/apikey/generate'),
+      Uri.parse('${Config.serverUrl}/api/apikey/generate'),
       headers: {
         'Authorization': 'Bearer ${Config.token}',
         'Content-Type': 'application/json',
@@ -206,7 +206,7 @@ class ApiClient {
   /// Get API key info for a function
   static Future<Map<String, dynamic>> getApiKeyInfo(String functionId) async {
     final response = await _client.get(
-      Uri.parse('${Config.serverUrl}/api/auth/apikey/$functionId'),
+      Uri.parse('${Config.serverUrl}/api/apikey/$functionId'),
       headers: {'Authorization': 'Bearer ${Config.token}'},
     );
 
@@ -220,7 +220,7 @@ class ApiClient {
   /// Revoke an API key
   static Future<void> revokeApiKey(String apiKeyUuid) async {
     final response = await _client.delete(
-      Uri.parse('${Config.serverUrl}/api/auth/apikey/$apiKeyUuid'),
+      Uri.parse('${Config.serverUrl}/api/apikey/$apiKeyUuid'),
       headers: {'Authorization': 'Bearer ${Config.token}'},
     );
 
@@ -232,7 +232,7 @@ class ApiClient {
   /// List all API keys for a function
   static Future<Map<String, dynamic>> listApiKeys(String functionId) async {
     final response = await _client.get(
-      Uri.parse('${Config.serverUrl}/api/auth/apikey/$functionId/list'),
+      Uri.parse('${Config.serverUrl}/api/apikey/$functionId/list'),
       headers: {'Authorization': 'Bearer ${Config.token}'},
     );
 
@@ -246,7 +246,7 @@ class ApiClient {
   /// Roll an API key (extend its expiration)
   static Future<void> rollApiKey(String apiKeyUuid) async {
     final response = await _client.put(
-      Uri.parse('${Config.serverUrl}/api/auth/apikey/$apiKeyUuid/roll'),
+      Uri.parse('${Config.serverUrl}/api/apikey/$apiKeyUuid/roll'),
     );
 
     if (response.statusCode != 200 && response.statusCode != 204) {
