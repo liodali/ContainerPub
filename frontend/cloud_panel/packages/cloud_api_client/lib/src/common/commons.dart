@@ -31,6 +31,16 @@ class CommonsApis {
   static String apiInvokeFunctionPath(String uuid) =>
       '${CommonsApis.apiFunctionsPath}/$uuid/invoke';
 
+  ///stats
+  static String get apiGetOverviewStatsPath =>
+      '${CommonsApis.apiBaseUrl}/stats/overview';
+  static String apiGetFunctionStatsPath(String uuid) =>
+      '${CommonsApis.apiFunctionsPath}/$uuid/stats';
+  static String apiGetFunctionHourlyStatsPath(String uuid) =>
+      '${CommonsApis.apiFunctionsPath}/$uuid/stats/hourly';
+  static String apiGetFunctionDailyStatsPath(String uuid) =>
+      '${CommonsApis.apiFunctionsPath}/$uuid/stats/daily';
+
   ///apiKey function
   static const String apiGetApiKeyPath =
       '${CommonsApis.apiBaseUrl}/functions/api_key';
