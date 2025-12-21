@@ -5,6 +5,7 @@ import 'package:cloud_panel/l10n/app_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:forui/forui.dart';
 import 'package:cloud_panel/providers/theme_provider.dart';
+import 'package:hive_ce_flutter/hive_flutter.dart';
 import 'providers/auth_provider.dart';
 import 'providers/locale_provider.dart';
 import 'router.dart';
@@ -12,6 +13,7 @@ import 'common/web_url_platform/platform_url.dart';
 
 void main() async {
   PlatformUrl.useWebUrlStrategy();
+  await Hive.initFlutter();
   runApp(
     const ProviderScope(
       child: InitApp(),
