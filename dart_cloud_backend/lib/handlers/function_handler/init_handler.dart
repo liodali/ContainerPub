@@ -71,11 +71,25 @@ class InitHandler {
       );
 
       if (existingFunction != null) {
-        return Response.badRequest(
-          body: jsonEncode({
-            'error': 'Function with this name already exists',
-            'function_id': existingFunction.uuid,
+        final activeDeploymentEntity = await DatabaseManagers.functionDeployments.findOne(
+          where: {
+            'id': existingFunction.activeDeploymentId,
+            'function_id': existingFunction.id,
+            'status': DeployStatus.active.name,
+            'is_active': true,
+          },
+        );
+        // Function already exists - return existing function info
+        return Response.ok(
+           jsonEncode({
+            'message': 'Function already exists',
+            'id': existingFunction.uuid,
+            'name': existingFunction.name,
             'status': existingFunction.status,
+            'skip_signing': existingFunction.skipSigning,
+            'deployment_version': activeDeploymentEntity?.version,
+            'created_at': existingFunction.createdAt?.toIso8601String(),
+            'already_exists': true,
           }),
           headers: {'Content-Type': 'application/json'},
         );
