@@ -57,6 +57,17 @@ class DeployCommand extends BaseCommand {
       exit(1);
     }
 
+    // Check if function configuration exists
+    final existingConfig = await FunctionConfig.load(functionDir.path);
+    if (existingConfig?.functionId == null) {
+      print('');
+      print('✗ Function not initialized.');
+      print(
+        '  Please run "dart_cloud init" first to initialize your function.',
+      );
+      exit(1);
+    }
+
     // Validate function structure
     final pubspecFile = File(path.join(functionDir.path, 'pubspec.yaml'));
     if (!pubspecFile.existsSync()) {
@@ -82,19 +93,6 @@ class DeployCommand extends BaseCommand {
     final functionName =
         pubspec['name'] as String? ?? path.basename(functionDir.path);
     print('Preparing to deploy function: $functionName');
-
-    // Load existing config to get function ID
-    final existingConfig = await FunctionConfig.load(functionDir.path);
-
-    // Check if function is initialized (has function ID)
-    if (existingConfig?.functionId == null) {
-      print('');
-      print('✗ Function not initialized.');
-      print(
-        '  Please run "dart_cloud init" first to initialize your function.',
-      );
-      exit(1);
-    }
 
     final functionId = existingConfig!.functionId!;
     print('Function ID: $functionId');
