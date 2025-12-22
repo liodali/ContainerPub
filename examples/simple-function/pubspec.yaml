@@ -6,3 +6,11 @@ environment:
   sdk: '>=3.0.0 <4.0.0'
 
 dependencies:
+  dart_cloud_function: ^0.2.0
+  dart_cloud_logger: ^0.2.1
+
+  #path: ../../tools/dart_packages/dart_cloud_function
+
+dev_dependencies:
+  dart_cloud_cli:
+    path: ../../dart_cloud_cli
