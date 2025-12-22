@@ -53,6 +53,7 @@ class InitHandler {
 
       final body = jsonDecode(bodyString) as Map<String, dynamic>;
       final functionName = body['name'] as String?;
+      final skipSigning = body['skip_signing'] as bool? ?? false;
 
       if (functionName == null || functionName.trim().isEmpty) {
         return Response.badRequest(
@@ -90,6 +91,7 @@ class InitHandler {
           uuid: functionUUID,
           userId: userId,
           status: DeploymentStatus.init.name,
+          skipSigning: skipSigning,
         ).toDBMap(),
       );
 
@@ -114,6 +116,7 @@ class InitHandler {
           'id': functionUUID,
           'name': functionName,
           'status': DeploymentStatus.init.name,
+          'skip_signing': skipSigning,
           'created_at': DateTime.now().toIso8601String(),
         }),
         headers: {'Content-Type': 'application/json'},

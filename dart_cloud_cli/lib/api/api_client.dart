@@ -63,14 +63,21 @@ class ApiClient {
   /// Initialize a new function on the backend
   ///
   /// Creates a function record with status 'init' and returns the UUID
-  static Future<Map<String, dynamic>> initFunction(String functionName) async {
+  /// [skipSigning]: If true, disables API key signing for this function
+  static Future<Map<String, dynamic>> initFunction(
+    String functionName, {
+    bool skipSigning = false,
+  }) async {
     final response = await http.post(
       Uri.parse('${Config.serverUrl}/api/functions/init'),
       headers: {
         'Authorization': 'Bearer ${Config.token}',
         'Content-Type': 'application/json',
       },
-      body: jsonEncode({'name': functionName}),
+      body: jsonEncode({
+        'name': functionName,
+        'skip_signing': skipSigning,
+      }),
     );
 
     if (response.statusCode == 200 || response.statusCode == 201) {

@@ -29,11 +29,17 @@ class InitCommand extends BaseCommand {
         'revoke',
         help: 'Revoke existing API key and generate new one with same validity',
         negatable: false,
+      )
+      ..addFlag(
+        'no-signing',
+        help: 'Disable API key signing for this function',
+        negatable: false,
       );
 
     final parsedArgs = parser.parse(args);
     final apiKeyValidity = parsedArgs['apikey'] as String?;
     final revokeApiKey = parsedArgs['revoke'] as bool;
+    final noSigning = parsedArgs['no-signing'] as bool;
 
     // Validate --apikey and --revoke usage
     if (revokeApiKey && apiKeyValidity == null) {
@@ -99,12 +105,15 @@ class InitCommand extends BaseCommand {
           print(
             '  To revoke and regenerate, use: dart_cloud init --apikey <validity> --revoke',
           );
-          return;
+          exit(0);
         }
       } else {
         // Initialize function on the backend
         print('Initializing function: $projectName');
-        final response = await ApiClient.initFunction(projectName);
+        final response = await ApiClient.initFunction(
+          projectName,
+          skipSigning: noSigning,
+        );
 
         functionId = response['id'] as String;
         final status = response['status'] as String;
