@@ -117,30 +117,48 @@ class InitCommand extends BaseCommand {
 
         functionId = response['id'] as String;
         final status = response['status'] as String;
+        final alreadyExists = response['already_exists'] as bool? ?? false;
 
         // Create function config with path and function ID
         functionConfig = FunctionConfig(
           functionName: projectName,
           functionId: functionId,
-          createdAt: DateTime.now().toIso8601String(),
+          createdAt: response['created_at'] as String? ??
+              DateTime.now().toIso8601String(),
           functionPath: currentDir.path,
+          deployVersion: response['deployment_version'] as int? ?? 1,
         );
 
         // Save the config
         await functionConfig.save(currentDir.path);
 
         print('');
-        print('✓ Function initialized successfully!');
-        print('');
-        print('  Function ID: $functionId');
-        print('  Function name: $projectName');
-        print('  Status: $status');
-        print('  Function path: ${currentDir.path}');
-        print(
-          '  Entry point: ${binMainFile.existsSync() ? 'bin/main.dart' : 'lib/main.dart'}',
-        );
-        print('');
-        print('  Config saved to: .dart_tool/function_config.json');
+        if (alreadyExists) {
+          print('✓ Function already exists on backend - config file created');
+          print('');
+          print('  Function ID: $functionId');
+          print('  Function name: $projectName');
+          print('  Status: $status');
+          print('  Function path: ${currentDir.path}');
+          print('');
+          print('  Config saved to: .dart_tool/function_config.json');
+          print('');
+          print('  The function was already registered on the backend.');
+          print(
+              '  Local config file has been created to link to the existing function.');
+        } else {
+          print('✓ Function initialized successfully!');
+          print('');
+          print('  Function ID: $functionId');
+          print('  Function name: $projectName');
+          print('  Status: $status');
+          print('  Function path: ${currentDir.path}');
+          print(
+            '  Entry point: ${binMainFile.existsSync() ? 'bin/main.dart' : 'lib/main.dart'}',
+          );
+          print('');
+          print('  Config saved to: .dart_tool/function_config.json');
+        }
       }
 
       // Handle API key generation/revocation if requested
@@ -223,6 +241,7 @@ class InitCommand extends BaseCommand {
           print('  3. Use "dart_cloud invoke --sign" to invoke with signature');
         }
       }
+      exit(0);
     } catch (e) {
       print('✗ Initialization failed: $e');
       exit(1);

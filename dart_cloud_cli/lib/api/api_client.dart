@@ -68,7 +68,7 @@ class ApiClient {
     String functionName, {
     bool skipSigning = false,
   }) async {
-    final response = await http.post(
+    final response = await _client.post(
       Uri.parse('${Config.serverUrl}/api/functions/init'),
       headers: {
         'Authorization': 'Bearer ${Config.token}',

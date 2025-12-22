@@ -88,6 +88,9 @@ class FunctionConfig {
       final configFile = File(
         path.join(dartToolDir.path, 'function_config.json'),
       );
+      if (configFile.existsSync()) {
+        return;
+      }
 
       configFile.writeAsStringSync(
         jsonEncode(toJson()),
