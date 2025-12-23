@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'dart:io';
 import 'package:args/args.dart';
 import 'package:dart_cloud_cli/commands/deploy_command.dart';
@@ -22,15 +21,7 @@ void main(List<String> arguments) async {
     ..addOption('email', abbr: 'e', help: 'Email address')
     ..addOption('password', abbr: 'p', help: 'Password', hide: true);
 
-  final invokeArgs = ArgParser()
-    ..addOption(
-      'data',
-      abbr: 'd',
-      help: 'Data to send to the function',
-      mandatory: false,
-      defaultsTo: json.encode({}),
-    )
-    ..addFlag('sign', abbr: 's', help: 'Sign the request');
+
 
   final parser = ArgParser()
     ..addFlag('help', abbr: 'h', negatable: false, help: 'Show help')
