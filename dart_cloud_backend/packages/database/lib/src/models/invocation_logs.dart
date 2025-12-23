@@ -325,6 +325,9 @@ class ExecutionMetadata {
   /// Memory limit used (MB)
   final int? memoryLimitMb;
 
+  /// Memory usage (MB)
+  final int? memoryUsage;
+
   /// Timeout used (ms)
   final int? timeoutMs;
 
@@ -334,6 +337,7 @@ class ExecutionMetadata {
     this.startTime,
     this.endTime,
     this.memoryLimitMb,
+    this.memoryUsage,
     this.timeoutMs,
   });
 
@@ -344,6 +348,7 @@ class ExecutionMetadata {
       if (startTime != null) 'start_time': startTime,
       if (endTime != null) 'end_time': endTime,
       if (memoryLimitMb != null) 'memory_limit_mb': memoryLimitMb,
+      if (memoryUsage != null) 'memory_usage': memoryUsage,
       if (timeoutMs != null) 'timeout_ms': timeoutMs,
     };
   }
@@ -355,6 +360,7 @@ class ExecutionMetadata {
       startTime: json['start_time'] as String?,
       endTime: json['end_time'] as String?,
       memoryLimitMb: json['memory_limit_mb'] as int?,
+      memoryUsage: json['memory_usage'] as int?,
       timeoutMs: json['timeout_ms'] as int?,
     );
   }
