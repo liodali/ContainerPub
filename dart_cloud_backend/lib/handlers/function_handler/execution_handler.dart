@@ -159,6 +159,8 @@ class ExecutionHandler {
           endTime: DateTime.now().toIso8601String(),
           timeoutMs: Config.functionTimeoutSeconds * 1000,
           memoryLimitMb: Config.functionMaxMemoryMb,
+          memoryUsage:
+              executionResult['logs']['memory_usage'] ?? Config.functionMaxMemoryMb,
         ),
       );
 
