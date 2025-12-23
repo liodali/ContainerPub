@@ -68,7 +68,8 @@ class CloudApiClient {
         () => _dio.get(CommonsApis.apiGetFunctionsPath(uuid)));
     return CloudFunction.fromJson(data['function'] ?? data);
   }
-Future<OverviewStats> getOverviewStats(String period) async {
+
+  Future<OverviewStats> getOverviewStats(String period) async {
     final data = await _handleRequest(
       () => _dio.get(
         CommonsApis.apiGetOverviewStatsPath,
@@ -77,6 +78,7 @@ Future<OverviewStats> getOverviewStats(String period) async {
     );
     return OverviewStats.fromJson(data['stats'] ?? data);
   }
+
   Future<FunctionStats> getStats(String uuid) async {
     final data = await _handleRequest(
       () => _dio.get(
@@ -158,8 +160,8 @@ Future<OverviewStats> getOverviewStats(String period) async {
   // --- API Keys ---
 
   Future<List<ApiKey>> listApiKeys(String functionUuid) async {
-    final data = await _handleRequest(
-        () => _dio.get('/api/auth/apikey/$functionUuid/list'));
+    final data =
+        await _handleRequest(() => _dio.get('/api/apikey/$functionUuid/list'));
     if (data is Map && data.containsKey('api_keys')) {
       return (data['api_keys'] as List).map((e) => ApiKey.fromJson(e)).toList();
     }
@@ -168,8 +170,8 @@ Future<OverviewStats> getOverviewStats(String period) async {
 
   Future<GeneratedApiKey> generateApiKey(String functionUuid,
       {String validity = 'forever', String? name}) async {
-    final data = await _handleRequest(
-        () => _dio.post('/api/auth/apikey/generate', data: {
+    final data =
+        await _handleRequest(() => _dio.post('/api/apikey/generate', data: {
               'function_id': functionUuid,
               'validity': validity,
               'name': name,
@@ -178,16 +180,15 @@ Future<OverviewStats> getOverviewStats(String period) async {
   }
 
   Future<void> revokeApiKey(String apiKeyUuid) async {
-    await _handleRequest(
-        () => _dio.delete('/api/auth/apikey/$apiKeyUuid/revoke'));
+    await _handleRequest(() => _dio.delete('/api/apikey/$apiKeyUuid/revoke'));
   }
 
   Future<void> deleteApiKey(String apiKeyUuid) async {
-    await _handleRequest(() => _dio.delete('/api/auth/apikey/$apiKeyUuid'));
+    await _handleRequest(() => _dio.delete('/api/apikey/$apiKeyUuid'));
   }
 
   Future<void> rollApiKey(String apiKeyUuid) async {
-    await _handleRequest(() => _dio.put('/api/auth/apikey/$apiKeyUuid/roll'));
+    await _handleRequest(() => _dio.put('/api/apikey/$apiKeyUuid/roll'));
   }
 
   Future<void> enableApiKey(String apiKeyUuid, {String? name}) async {

@@ -58,7 +58,7 @@ class _StatsSection extends ConsumerWidget {
           ),
           StatCard(
             label: AppLocalizations.of(context)!.errorRate,
-            value: '${(stats.errorRate * 100).toStringAsFixed(2)}%',
+            value: '${(stats.errorRate).toStringAsFixed(2)}%',
             context: context,
           ),
           StatCard(
