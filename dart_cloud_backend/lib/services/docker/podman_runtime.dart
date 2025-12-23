@@ -2,6 +2,8 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:dart_cloud_backend/services/docker/container_data.dart';
+
 import 'container_runtime.dart';
 
 /// Podman implementation of ContainerRuntime
@@ -133,10 +135,11 @@ class PodmanRuntime implements ContainerRuntime {
     Map<String, String> environment = const {},
     String? envFilePath,
     List<String> volumeMounts = const [],
-    int memoryMb = 128,
+    int memoryMb = 20,
+    String memoryUnit = 'm',
     double cpus = 0.5,
     String network = 'none',
-    Duration timeout = const Duration(seconds: 30),
+    Duration timeout = const Duration(seconds: 10),
   }) async {
     final args = [
       'run',
@@ -144,9 +147,13 @@ class PodmanRuntime implements ContainerRuntime {
       '--name',
       containerName,
       '--memory',
-      '${memoryMb}m',
+      '${memoryMb}$memoryUnit',
+      '--memory-swap',
+      '${memoryMb}$memoryUnit',
       '--cpus',
       cpus.toString(),
+      '--storage-opt',
+      'size=50M',
       if (network != 'none') ...[
         '--network',
         network,
@@ -180,13 +187,17 @@ class PodmanRuntime implements ContainerRuntime {
       final lines = data.split("\n").where((e) => e.isNotEmpty).toList();
       final stdOutStr = lines.last;
       lines.removeLast();
-      stdout.addAll({'stdout': stdOutStr, 'logs': jsonEncode(lines)});
+      stdout.addAll(
+        {
+          'stdout': stdOutStr,
+          'logs': jsonEncode(lines),
+        },
+      );
     });
 
     process.stderr.transform(utf8.decoder).listen((data) {
       stderrBuffer.write(data);
     });
-
     final exitCode = await process.exitCode.timeout(
       timeout,
       onTimeout: () async {
@@ -199,11 +210,18 @@ class PodmanRuntime implements ContainerRuntime {
       exitCode: exitCode,
       stdout: stdout,
       stderr: stderrBuffer.toString(),
+      isTimeout: exitCode == -1,
+      containerConfiguration: {
+        'memory_usage': memoryMb,
+      },
     );
   }
 
   @override
-  Future<ProcessResult> removeImage(String imageTag, {bool force = true}) async {
+  Future<ProcessResult> removeImage(
+    String imageTag, {
+    bool force = true,
+  }) async {
     final args = ['rmi'];
     if (force) args.add('-f');
     args.add(imageTag);
@@ -269,6 +287,22 @@ class PodmanRuntime implements ContainerRuntime {
 
   @override
   Future<void> prune() async {
-    await Process.run(_executable, ['system', 'prune', '-f']);
+    await Process.run(_executable, ['image', 'prune', '-f']);
+  }
+
+  @override
+  Future<ImageSizeData> getImageSize(String imageTag) async {
+    final cmdResult = await Process.run(_executable, [
+      'images',
+      '--format',
+      '"{{.Size}}"',
+      imageTag,
+    ]);
+    final sizeData = cmdResult.stdout as String;
+    final size = sizeData.split(' ')[0];
+    return (
+      size: double.parse(size.trim().replaceAll('\"', '')),
+      unit: UniteSize.fromString(sizeData.split(' ')[1]),
+    );
   }
 }
