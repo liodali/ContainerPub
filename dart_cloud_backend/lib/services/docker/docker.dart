@@ -36,3 +36,4 @@ export 'docker_service.dart';
 export 'dockerfile_generator.dart';
 export 'file_system.dart';
 export 'podman_runtime.dart';
+export 'container_data.dart';

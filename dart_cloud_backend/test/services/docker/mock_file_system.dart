@@ -100,6 +100,11 @@ class MockFileSystem extends FileSystem {
   Future<void> deleteFile(String filePath) async {
     files.remove(filePath);
   }
+
+  @override
+  String joinPaths(String part1, List<String> part2) {
+    return [part1, ...part2].join('/');
+  }
 }
 
 /// Mock Directory implementation
