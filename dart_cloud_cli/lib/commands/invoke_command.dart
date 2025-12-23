@@ -30,6 +30,10 @@ class InvokeCommand extends BaseCommand {
     if (args.contains('--sign')) {
       useSignature = true;
     }
+    // Parse optional arguments
+    if (args.contains('--skip-sign')) {
+      useSignature = false;
+    }
 
     if (args.contains('--data')) {
       final dataIndex = args.indexOf('--data');
@@ -46,7 +50,6 @@ class InvokeCommand extends BaseCommand {
     String? signature;
     int? timestamp;
     ApiKeyStorageData? secretKey;
-
     // Try to sign the request if --sign flag is used
     if (useSignature) {
       // First, try to get from Hive storage using function ID
@@ -95,7 +98,7 @@ class InvokeCommand extends BaseCommand {
         functionId,
         data,
         signature: signature,
-        keyUUID: secretKey!.uuid,
+        keyUUID: useSignature ? secretKey!.uuid : null,
         timestamp: timestamp,
       );
 
@@ -104,8 +107,9 @@ class InvokeCommand extends BaseCommand {
       print(const JsonEncoder.withIndent('  ').convert(response));
       print('─' * 80);
       exit(0);
-    } catch (e) {
+    } catch (e, trace) {
       print('✗ Failed to invoke function: $e');
+      print(trace);
       exit(1);
     }
   }
