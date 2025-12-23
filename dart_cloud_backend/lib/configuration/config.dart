@@ -68,7 +68,7 @@ class Config {
     functionMaxMemoryMb = int.parse(
       env['FUNCTION_MAX_MEMORY_MB'] ??
           Platform.environment['FUNCTION_MAX_MEMORY_MB'] ??
-          '128',
+          '20',
     );
 
     functionMaxConcurrentExecutions = int.parse(
