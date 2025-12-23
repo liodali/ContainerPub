@@ -276,7 +276,7 @@ class DeploymentHandler {
         functionDir.path,
         injectionResult.entrypoint,
       );
-
+      await DockerService.pruneIntermediateImages();
       await FunctionUtils.logDeploymentFunction(
         functionUUID,
         'info',
