@@ -29,6 +29,9 @@ abstract class FileSystem {
 
   /// Join path segments
   String joinPath(String part1, String part2);
+
+  /// Join path segments
+  String joinPaths(String part1, List<String> part2);
 }
 
 /// Real file system implementation using dart:io
@@ -67,6 +70,11 @@ class RealFileSystem implements FileSystem {
 
   @override
   Future<void> deleteFile(String filePath) => File(filePath).delete();
+
+  @override
+  String joinPaths(String part1, List<String> part2) {
+    return path.joinAll([part1, ...part2]);
+  }
 }
 
 /// Helper class for managing request files
@@ -79,12 +87,24 @@ class RequestFileManager {
   ///
   /// Returns the path to the created file and the temp directory
   Future<({String filePath, String tempDirPath})> createRequestFile(
+    String tempDir,
     Map<String, dynamic> input,
   ) async {
-    final tempDir = _fileSystem.createTempDirectory('dart_cloud_request_');
-    final filePath = _fileSystem.joinPath(tempDir.path, 'request.json');
+    final filePath = _fileSystem.joinPath(tempDir, 'request.json');
     await _fileSystem.writeFile(filePath, jsonEncode(input));
-    return (filePath: filePath, tempDirPath: tempDir.path);
+    return (filePath: filePath, tempDirPath: tempDir);
+  }
+
+  /// Create a request file with the given input data
+  ///
+  /// Returns the path to the created file and the temp directory
+  Future<({String filePath, String tempDirPath})> createLogsFile(
+    String tempDir,
+    Map<String, dynamic> input,
+  ) async {
+    final filePath = _fileSystem.joinPath(tempDir, 'logs.json');
+    await _fileSystem.writeFile(filePath, jsonEncode(input));
+    return (filePath: filePath, tempDirPath: tempDir);
   }
 
   /// Clean up a temporary directory

@@ -2,6 +2,8 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:dart_cloud_backend/configuration/config.dart';
+import 'package:dart_cloud_backend/handlers/logs_utils/log_utils.dart';
+import 'package:dart_cloud_backend/utils/commons.dart';
 
 import 'container_runtime.dart';
 import 'dockerfile_generator.dart';
@@ -182,22 +184,26 @@ class DockerService {
     String? tempDirPath;
 
     try {
-      // Create request file
-      final requestInfo = await _requestFileManager.createRequestFile(input);
-      tempDirPath = requestInfo.tempDirPath;
-
-      // Prepare environment variables and create .env.config file
-      final environment = _buildEnvironment(timeoutMs);
-      final envConfigPath = await _createEnvConfigFile(tempDirPath, environment);
+      // Create request file for container
+      // final requestInfo = await _requestFileManager.createRequestFile(
+      //   containerName,
+      //   input,
+      // );
+      // tempDirPath = requestInfo.tempDirPath;
+      // // Create logs temporary file for container
+      // final logsInfo = await _requestFileManager.createLogsFile(tempDirPath, input);
 
       // Create result directory at deployment location: functionsDir/functionUUID/version/
-      final resultDir = _fileSystem.joinPath(
-        _fileSystem.joinPath(Config.functionsDir, functionUUID),
+      final resultDir = _fileSystem.joinPaths(Config.functionsDir, [
+        functionUUID,
         'v$version',
-      );
+        containerName,
+      ]);
+      tempDirPath = resultDir;
       // Ensure result directory exists
       await Directory(resultDir).create(recursive: true);
-
+      // Create request.json file (empty, will be written by function)
+      final reqFilePath = await _requestFileManager.createRequestFile(resultDir, input);
       // Create result.json file (empty, will be written by function)
       final resultFilePath = _fileSystem.joinPath(resultDir, 'result.json');
       await _fileSystem.writeFile(resultFilePath, '');
@@ -205,21 +211,31 @@ class DockerService {
       // Create logs.json file (empty, will be written by function logger)
       final logsFilePath = _fileSystem.joinPath(resultDir, 'logs.json');
       await _fileSystem.writeFile(logsFilePath, '');
+      // // Create env.json file (empty, will be written by function logger)
+      // final envFilePath = _fileSystem.joinPath(resultDir, 'env.json');
+      // await _fileSystem.writeFile(envFilePath, '');
+      // Prepare environment variables and create .env.config file
+      final envConfigPath = await _createEnvConfigFile(
+        resultDir,
+        _buildEnvironment(timeoutMs),
+      );
 
       // Prepare volume mounts (request.json, .env.config, result.json, and logs.json)
       final volumeMounts = [
-        '${requestInfo.filePath}:/request.json:ro',
+        '${reqFilePath.filePath}:/request.json:ro',
         '$envConfigPath:/.env.config:ro',
         '$resultFilePath:/result.json:rw', // Writable for function to write result
         '$logsFilePath:/logs.json:rw', // Writable for function to write logs
       ];
 
+      final imageSize = await _runtime.getImageSize(imageTag);
       // Run the container with env file mounted as volume
       final result = await _runtime.runContainer(
         imageTag: imageTag,
         containerName: containerName,
         volumeMounts: volumeMounts,
-        memoryMb: Config.functionMaxMemoryMb,
+        memoryMb: (imageSize.size / 2).toInt(),
+        memoryUnit: imageSize.unit.memoryUnit,
         cpus: 0.5,
         network: 'none',
         timeout: Duration(milliseconds: timeoutMs),
@@ -230,8 +246,10 @@ class DockerService {
         'stderr': result.stderr,
         'exit_code': result.exitCode,
         'timestamp': DateTime.now().toIso8601String(),
+        'memory_usage':
+            (result as ContainerProcessResult).containerConfiguration['memory_usage'],
       };
-      containerLogs.addAll((result as ContainerProcessResult).stdout);
+      containerLogs.addAll(result.stdout);
 
       // Read function logs from logs.json (written by CloudLogger)
       Map<String, dynamic>? functionLogs;
@@ -269,7 +287,12 @@ class DockerService {
           parsedResult = jsonDecode(resultContent);
         }
         await _fileSystem.deleteFile(resultFilePath);
-      } catch (e) {
+      } catch (e, stackTrace) {
+        LogsUtils.logError(
+          'runContainer',
+          e.toString(),
+          stackTrace.toString(),
+        );
         // If result.json is empty or invalid, check if function failed
         if (!result.isSuccess) {
           return ExecutionResult(
@@ -281,7 +304,7 @@ class DockerService {
         // Function succeeded but no result file - unexpected
         return ExecutionResult(
           success: false,
-          error: 'Function completed but result.json is empty or invalid: $e',
+          error: 'Function completed but no result found',
           logs: containerLogs,
         );
       }
@@ -301,7 +324,15 @@ class DockerService {
         result: parsedResult['body'],
         logs: containerLogs,
       );
-    } catch (e) {
+    } catch (e, trace) {
+      LogsUtils.log(
+        LogLevels.error.name,
+        'runContainer',
+        {
+          'trace': trace.toString(),
+          'error': e.toString(),
+        },
+      );
       return ExecutionResult(
         success: false,
         error: 'Container execution error: $e',
@@ -434,6 +465,9 @@ class DockerService {
       _instance.isImageExist(imageTag);
 
   Future<bool> isImageExist(String imageTag) => _runtime.imageExists(imageTag);
+
+  static Future<void> pruneIntermediateImages() => _instance.prune();
+  Future<void> prune() => _runtime.prune();
 
   /// Static method to remove image (delegates to singleton)
   ///
