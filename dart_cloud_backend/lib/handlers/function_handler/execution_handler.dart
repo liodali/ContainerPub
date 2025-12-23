@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:dart_cloud_backend/handlers/logs_utils/functions_utils.dart';
+import 'package:dart_cloud_backend/handlers/logs_utils/log_utils.dart';
 import 'package:shelf/shelf.dart';
 import 'package:dart_cloud_backend/configuration/config.dart';
 import 'package:database/database.dart';
@@ -150,7 +151,9 @@ class ExecutionHandler {
       var invocationLogs = InvocationLogs.fromContainerLogs(
         executionResult['logs'] as Map<String, dynamic>?,
       );
-
+      final memUsage = executionResult.containsKey('logs')
+          ? executionResult['logs']['memory_usage'] ?? Config.functionMaxMemoryMb
+          : Config.functionMaxMemoryMb;
       // Add execution metadata
       invocationLogs = invocationLogs.withMetadata(
         ExecutionMetadata(
@@ -159,8 +162,7 @@ class ExecutionHandler {
           endTime: DateTime.now().toIso8601String(),
           timeoutMs: Config.functionTimeoutSeconds * 1000,
           memoryLimitMb: Config.functionMaxMemoryMb,
-          memoryUsage:
-              executionResult['logs']['memory_usage'] ?? Config.functionMaxMemoryMb,
+          memoryUsage: memUsage,
         ),
       );
 
@@ -234,10 +236,11 @@ class ExecutionHandler {
           headers: {'Content-Type': 'application/json'},
         );
       }
-    } catch (e) {
+    } catch (e, trace) {
+      LogsUtils.logError('invoke', e.toString(), trace.toString());
       // Handle unexpected errors during invocation
       return Response.internalServerError(
-        body: jsonEncode({'error': 'Failed to invoke function: $e'}),
+        body: jsonEncode({'error': 'Failed to invoke function'}),
         headers: {'Content-Type': 'application/json'},
       );
     }
