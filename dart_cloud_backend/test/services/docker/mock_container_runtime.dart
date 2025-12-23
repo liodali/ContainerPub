@@ -128,6 +128,7 @@ class MockContainerRuntime extends ContainerRuntime {
     String? envFilePath,
     List<String> volumeMounts = const [],
     int memoryMb = 128,
+    String memoryUnit = 'MB',
     double cpus = 0.5,
     String network = 'none',
     Duration timeout = const Duration(seconds: 30),
@@ -142,6 +143,7 @@ class MockContainerRuntime extends ContainerRuntime {
           'envFilePath': envFilePath,
           'volumeMounts': volumeMounts,
           'memoryMb': memoryMb,
+          'memoryUnit': memoryUnit,
           'cpus': cpus,
           'network': network,
           'timeout': timeout,
@@ -252,6 +254,12 @@ class MockContainerRuntime extends ContainerRuntime {
   Future<void> prune() {
     methodCalls.add(MethodCall('prune', {}));
     return Future.value();
+  }
+
+  @override
+  Future<ImageSizeData> getImageSize(String imageTag) {
+    methodCalls.add(MethodCall('getImageSize', {'imageTag': imageTag}));
+    return Future.value((size: 10.0, unit: UniteSize.G));
   }
 }
 

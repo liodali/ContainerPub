@@ -1,5 +1,7 @@
 import 'dart:async';
 
+import 'package:dart_cloud_backend/services/docker/container_data.dart';
+
 /// Result of a process execution
 sealed class ProcessResult {
   final int exitCode;
@@ -27,11 +29,15 @@ class ImageProcessResult extends ProcessResult {
 
 class ContainerProcessResult extends ProcessResult {
   final Map<String, dynamic> stdout;
+  final Map<String, dynamic> containerConfiguration;
+  final bool isTimeout;
 
   const ContainerProcessResult({
     required this.stdout,
+    this.containerConfiguration = const <String, dynamic>{},
     required super.exitCode,
     required super.stderr,
+    this.isTimeout = false,
   });
 
   bool get isSuccess => exitCode == 0;
@@ -94,6 +100,7 @@ abstract class ContainerRuntime {
   /// - [envFilePath]: Path to .env.config file to inject into container
   /// - [volumeMounts]: Volume mounts (host:container:mode)
   /// - [memoryMb]: Memory limit in MB
+  /// - [memoryUnit]: Memory unit m/MB/G
   /// - [cpus]: CPU limit
   /// - [network]: Network mode
   /// - [timeout]: Execution timeout
@@ -104,6 +111,7 @@ abstract class ContainerRuntime {
     String? envFilePath,
     List<String> volumeMounts = const [],
     int memoryMb = 128,
+    String memoryUnit = 'm',
     double cpus = 0.5,
     String network = 'none',
     Duration timeout = const Duration(seconds: 30),
@@ -126,9 +134,12 @@ abstract class ContainerRuntime {
     ArchitecturePlatform targetPlatform,
   );
 
+  Future<ImageSizeData> getImageSize(String imageTag);
+
   /// Kill a running container
   Future<ProcessResult> killContainer(String containerName);
 
+  /// remove <unnamed> images which could be the intermediate image
   Future<void> prune();
 
   /// Check if the runtime is available
@@ -136,64 +147,4 @@ abstract class ContainerRuntime {
 
   /// Get runtime version
   Future<String?> getVersion();
-}
-
-/// Configuration for container execution
-class ContainerConfig {
-  final String imageTag;
-  final String containerName;
-  final Map<String, String> environment;
-  final List<String> volumeMounts;
-  final int memoryMb;
-  final double cpus;
-  final String network;
-  final Duration timeout;
-
-  const ContainerConfig({
-    required this.imageTag,
-    required this.containerName,
-    this.environment = const {},
-    this.volumeMounts = const [],
-    this.memoryMb = 128,
-    this.cpus = 0.5,
-    this.network = 'none',
-    this.timeout = const Duration(seconds: 30),
-  });
-
-  ContainerConfig copyWith({
-    String? imageTag,
-    String? containerName,
-    Map<String, String>? environment,
-    List<String>? volumeMounts,
-    int? memoryMb,
-    double? cpus,
-    String? network,
-    Duration? timeout,
-  }) {
-    return ContainerConfig(
-      imageTag: imageTag ?? this.imageTag,
-      containerName: containerName ?? this.containerName,
-      environment: environment ?? this.environment,
-      volumeMounts: volumeMounts ?? this.volumeMounts,
-      memoryMb: memoryMb ?? this.memoryMb,
-      cpus: cpus ?? this.cpus,
-      network: network ?? this.network,
-      timeout: timeout ?? this.timeout,
-    );
-  }
-}
-
-/// Configuration for image build
-class BuildConfig {
-  final String imageTag;
-  final String dockerfilePath;
-  final String contextDir;
-  final Duration timeout;
-
-  const BuildConfig({
-    required this.imageTag,
-    required this.dockerfilePath,
-    required this.contextDir,
-    this.timeout = const Duration(minutes: 5),
-  });
 }
