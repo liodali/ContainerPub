@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:args/args.dart';
 import 'package:dart_cloud_cli/common/api_key_validity.dart';
 
@@ -50,3 +52,13 @@ final apiKeyRollParser = ArgParser()
     abbr: 'k',
     help: 'API key UUID to roll',
   );
+final invokeArgs = ArgParser()
+  ..addOption(
+    'data',
+    abbr: 'd',
+    help: 'Data to send to the function',
+    mandatory: false,
+    defaultsTo: json.encode({}),
+  )
+  ..addFlag('sign', abbr: 's', help: 'Sign the request')
+  ..addFlag('skip-sign', abbr: 'n', help: 'Skip signing');
