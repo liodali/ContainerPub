@@ -5,10 +5,10 @@ import 'package:http/http.dart' as http;
 import 'package:s3_native_http_client/src/s3_configuration.dart';
 import 'package:xml/xml.dart';
 
-class S3Service {
+class S3NativeHttpClient {
   final S3RequestConfiguration configuration;
 
-  S3Service({required this.configuration});
+  S3NativeHttpClient({required this.configuration});
 
   // 1. Check if Object Exists (HEAD Request)
   Future<bool> exists(String objectKey) async {
@@ -65,9 +65,30 @@ class S3Service {
     }
     return null;
   }
+    // 3. Download Object (GET Request)
+  Future<bool> downloadToFile(String objectKey, String filePath) async {
+    final request = AWSHttpRequest(
+      method: AWSHttpMethod.get,
+      uri: Uri.parse('${configuration.uri}/$objectKey'),
+    );
+
+    final signedRequest = await _sign(request);
+    final response = await http.get(
+      signedRequest.uri,
+      headers: signedRequest.headers,
+    );
+
+    if (response.statusCode == 200) {
+      final bytes = response.bodyBytes;
+      final file = File(filePath);
+      await file.writeAsBytes(bytes);
+      return true;
+    }
+    return false;
+  }
 
   // 4. Delete Object (DELETE Request)
-  Future<bool> delete(String objectKey) async {
+  Future<bool> deleteObject(String objectKey) async {
     final request = AWSHttpRequest(
       method: AWSHttpMethod.delete,
       uri: Uri.parse('${configuration.uri}/$objectKey'),

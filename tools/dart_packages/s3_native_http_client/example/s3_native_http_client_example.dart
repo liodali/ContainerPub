@@ -16,7 +16,7 @@ void main() async {
     bucket: secret['S3_BUCKET_NAME'],
   );
 
-  final s3Mock = S3Service(configuration: config);
+  final s3Mock = S3NativeHttpClient(configuration: config);
 
   try {
     // Example 1: Upload bytes
@@ -63,7 +63,7 @@ void main() async {
 
     // Example 9: Delete object
     print('🗑️ Example 9: Deleting object...');
-    final deleteSuccess = await s3Mock.delete('example/test.txt');
+    final deleteSuccess = await s3Mock.deleteObject('example/test.txt');
     print('Delete result: $deleteSuccess');
     final existsAfterDelete = await s3Mock.exists('example/test.txt');
     print('Object exists after delete: $existsAfterDelete\n');
