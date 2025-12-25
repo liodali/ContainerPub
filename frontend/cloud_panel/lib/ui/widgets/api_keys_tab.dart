@@ -63,10 +63,18 @@ class ApiKeysTab extends ConsumerWidget {
 
               return Expanded(
                 child: ListView.separated(
-                  itemCount: sortedKeys.length,
+                  itemCount: sortedKeys.length + 1,
                   padding: const EdgeInsets.symmetric(horizontal: 16),
-                  separatorBuilder: (_, _) => const SizedBox(height: 12),
+                  separatorBuilder: (_, index) {
+                    if (index == sortedKeys.length)
+                      return const SizedBox.shrink();
+                    return const SizedBox(height: 12);
+                  },
                   itemBuilder: (context, index) {
+                    if (index == sortedKeys.length) {
+                      return _StoredApiKeysSection(uuid: uuid);
+                    }
+
                     final key = sortedKeys[index];
 
                     return ApiKeyItemWidget(
@@ -139,12 +147,9 @@ class ApiKeysTab extends ConsumerWidget {
                 FButton(
                   onPress: () {
                     Clipboard.setData(ClipboardData(text: apiKey.secretKey));
-                    ScaffoldMessenger.of(
-                      ctx,
-                    ).showSnackBar(
-                      SnackBar(
-                        content: Text(AppLocalizations.of(context)!.copied),
-                      ),
+                    showFToast(
+                      context: context,
+                      title: Text(AppLocalizations.of(context)!.copied),
                     );
                   },
                   child: Text(AppLocalizations.of(context)!.copyToClipboard),
@@ -572,6 +577,175 @@ class _SecretKeyDialogState extends State<_SecretKeyDialog> {
                 ? () => Navigator.pop(context, widget.controller.text.trim())
                 : null,
             child: const Text('Save'),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _StoredApiKeysSection extends ConsumerStatefulWidget {
+  final String uuid;
+
+  const _StoredApiKeysSection({required this.uuid});
+
+  @override
+  ConsumerState<_StoredApiKeysSection> createState() =>
+      _StoredApiKeysSectionState();
+}
+
+class _StoredApiKeysSectionState extends ConsumerState<_StoredApiKeysSection> {
+  List<String> _storedApiKeyUuids = [];
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadStoredApiKeys();
+  }
+
+  Future<void> _loadStoredApiKeys() async {
+    try {
+      final storage = ApiKeyStorage.instance;
+      await storage.init();
+      final uuids = await storage.getStoredApiKeyUuids();
+      if (mounted) {
+        setState(() {
+          _storedApiKeyUuids = uuids;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  Future<void> _deleteStoredKey(String apiKeyUuid) async {
+    try {
+      final storage = ApiKeyStorage.instance;
+      await storage.deleteApiKey(apiKeyUuid);
+      if (mounted) {
+        setState(() {
+          _storedApiKeyUuids.remove(apiKeyUuid);
+        });
+        showFToast(
+          context: context,
+          title: const Text('Stored API key deleted'),
+        );
+      }
+    } catch (e) {
+      showFToast(
+        context: context,
+        title: Text('Failed to delete: $e'),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_isLoading) {
+      return const Padding(
+        padding: EdgeInsets.all(16),
+        child: FCircularProgress(),
+      );
+    }
+
+    if (_storedApiKeyUuids.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      spacing: 12,
+      children: [
+        const SizedBox(height: 12),
+        Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: Colors.orange.withValues(alpha: 0.05),
+            border: Border.all(
+              color: Colors.orange.withValues(alpha: 0.3),
+              width: 1.5,
+            ),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            spacing: 8,
+            children: [
+              Row(
+                children: [
+                  Icon(
+                    FIcons.info,
+                    color: Colors.orange.shade700,
+                    size: 18,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Locally Stored API Keys',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: Colors.orange.shade700,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              Text(
+                'These API keys are stored locally on your device. They cannot be used in the dashboard anymore and should be deleted after you\'re done using them.',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.orange.shade600,
+                  height: 1.4,
+                ),
+              ),
+            ],
+          ),
+        ),
+        ..._storedApiKeyUuids.map(
+          (uuid) => Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              border: Border.all(color: Colors.grey.shade300),
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    spacing: 4,
+                    children: [
+                      Text(
+                        'Stored Key',
+                        style: const TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      SelectableText(
+                        uuid,
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontFamily: 'monospace',
+                          color: Colors.grey.shade600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                FButton.icon(
+                  onPress: () => _deleteStoredKey(uuid),
+                  style: FButtonStyle.ghost(),
+                  child: const Icon(FIcons.trash2),
+                ),
+              ],
+            ),
           ),
         ),
       ],
