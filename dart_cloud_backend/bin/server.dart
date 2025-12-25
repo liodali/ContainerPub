@@ -17,7 +17,6 @@ void main() async {
   // Initialize database
   await Database.initialize(Config.databaseUrl);
   print('Database initialized');
-  print('S3 Client Library Path: ${Config.s3ClientLibraryPath}');
   // Initialize S3
   S3Service.initializeS3(
     S3RequestConfiguration(
