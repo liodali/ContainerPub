@@ -29,8 +29,11 @@ dependencies:
   characters: ^1.4.1
   database: 
     path: packages/database
-  s3_client_dart:
-    path: ../tools/dart_packages/s3_client_dart
+  s3_native_http_client:
+    path: ../tools/dart_packages/s3_native_http_client
+  cli_util: ^0.4.2
+  #s3_client_dart:
+  #  path: ../tools/dart_packages/s3_client_dart
     # git:
     #   url: https://github.com/liodali/ContainerPub.git
     #   path: tools/dart_packages/s3_client_dart

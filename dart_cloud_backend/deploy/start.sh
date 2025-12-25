@@ -321,13 +321,13 @@ else
 fi
 
 
-if [ ! -f ../s3_client_dart.so ]; then
-    print_info "Downloading s3_client_dart library..."
-    if ! dart run ../bin/download_library.dart; then
-        print_error "Failed to download s3_client_dart library"
-        cleanup_on_failure
-    fi
-fi
+# if [ ! -f ../s3_client_dart.so ]; then
+#     print_info "Downloading s3_client_dart library..."
+#     if ! dart run ../bin/download_library.dart; then
+#         print_error "Failed to download s3_client_dart library"
+#         cleanup_on_failure
+#     fi
+# fi
 
 if [ "$SKIP_BUILD" = false ]; then
     # Start services

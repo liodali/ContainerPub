@@ -9,13 +9,11 @@ WORKDIR /app
 
 # Copy pubspec files
 COPY ./dart_cloud_backend/pubspec.* /app/dart_cloud_backend/
-COPY ./dart_cloud_backend/s3_client_dart.so /app/dart_cloud_backend
 
 COPY dart_cloud_backend /app/dart_cloud_backend
 
 # Copy source code
-COPY ./tools/dart_packages/s3_client_dart /app/tools/dart_packages/s3_client_dart
-RUN  rm -rf  /app/dart_cloud_backend/s3_client_dart.dylib
+COPY ./tools/dart_packages/s3_native_http_client /app/tools/dart_packages/s3_native_http_client
 
 WORKDIR /app/dart_cloud_backend
 # Get dependencies
@@ -25,7 +23,8 @@ RUN dart pub get
 RUN mkdir -p /app/functions
 
 # Compile to native executable for better performance
-RUN dart compile exe bin/server.dart --target-os=linux --target-arch=x64 -o bin/server 
+# --target-os=linux --target-arch=arm64 
+RUN dart compile exe bin/server.dart -o bin/server 
 #RUN dart compile exe bin/server.dart -o bin/server 
 
 # Runtime stage - use minimal image
@@ -56,7 +55,6 @@ WORKDIR /app
 COPY --from=build /runtime/ /
 COPY --from=build /app/dart_cloud_backend/bin/server /app/server
 COPY --from=build /app/dart_cloud_backend/.env /app/.env
-COPY --from=build /app/dart_cloud_backend/s3_client_dart.so /app/s3_client_dart.so
 COPY --from=build /app/functions /app/functions
 
 # Create functions directory
@@ -70,4 +68,4 @@ COPY --from=build /app/functions /app/functions
 #    CMD curl -f http://localhost:8080/api/health || exit 1
 
 # Run the server
-CMD ["./server", "--dart-define=S3_CLIENT_LIBRARY_PATH=/app/s3_client_dart.so"]
+CMD ["/app/server"]
