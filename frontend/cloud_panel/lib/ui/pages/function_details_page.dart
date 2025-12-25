@@ -1,3 +1,4 @@
+import 'package:auto_route/auto_route.dart';
 import 'package:cloud_panel/common/commons.dart';
 import 'package:cloud_panel/providers/function_details_provider.dart';
 import 'package:cloud_panel/ui/component/header_with_action.dart';
@@ -5,6 +6,7 @@ import 'package:cloud_panel/ui/widgets/overview_function_tab.dart';
 import 'package:cloud_panel/ui/widgets/deployments_tab.dart';
 import 'package:cloud_panel/ui/widgets/api_keys_tab.dart';
 import 'package:cloud_panel/ui/widgets/invoke_tab.dart';
+import 'package:cloud_panel/ui/widgets/settings_tab.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:forui/forui.dart';
@@ -26,11 +28,13 @@ class FunctionDetailsPage extends ConsumerStatefulWidget {
 
 class _FunctionDetailsPageState extends ConsumerState<FunctionDetailsPage>
     with SingleTickerProviderStateMixin {
+  late final FTabControl _tabControl;
   late final FTabController _tabController;
   @override
   void initState() {
     super.initState();
-    _tabController = FTabController(length: 4, vsync: this, initialIndex: 0);
+    _tabController = FTabController(length: 5, vsync: this, index: 0);
+    _tabControl = FTabControl.managed(controller: _tabController);
   }
 
   @override
@@ -39,9 +43,12 @@ class _FunctionDetailsPageState extends ConsumerState<FunctionDetailsPage>
 
     return FScaffold(
       header: HeaderWithAction(
-        prefix: FTappable(
-          onPress: () => Navigator.pop(context),
-          child: const Icon(Icons.arrow_back),
+        prefix: FButton.icon(
+          onPress: () {
+            context.router.popTop();
+          },
+          style: FButtonStyle.ghost(),
+          child: const Icon(FIcons.arrowLeft),
         ),
         titleWidget: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -81,6 +88,9 @@ class _FunctionDetailsPageState extends ConsumerState<FunctionDetailsPage>
                   break;
                 case 3:
                   break;
+                case 4:
+                  ref.invalidate(functionDetailsProvider(widget.uuid));
+                  break;
               }
             },
             child: const Icon(FIcons.refreshCcw),
@@ -91,7 +101,7 @@ class _FunctionDetailsPageState extends ConsumerState<FunctionDetailsPage>
         data: (func) => SizedBox(
           height: MediaQuery.sizeOf(context).height,
           child: FTabs(
-            controller: _tabController,
+            control: _tabControl,
             children: [
               FTabEntry(
                 label: Text(AppLocalizations.of(context)!.overview),
@@ -110,6 +120,10 @@ class _FunctionDetailsPageState extends ConsumerState<FunctionDetailsPage>
               FTabEntry(
                 label: Text(AppLocalizations.of(context)!.invoke),
                 child: InvokeTab(uuid: func.uuid),
+              ),
+              FTabEntry(
+                label: const Text('Settings'),
+                child: SettingsTab(func: func),
               ),
             ],
           ),

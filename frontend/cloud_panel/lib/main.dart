@@ -80,6 +80,7 @@ class _MyAppState extends ConsumerState<MyApp> {
     }
     return MaterialApp.router(
       title: 'Cloud Panel',
+      debugShowCheckedModeBanner: false,
       onGenerateTitle: (context) => AppLocalizations.of(context)!.appTitle,
       localizationsDelegates: const [
         AppLocalizations.delegate,

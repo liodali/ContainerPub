@@ -296,7 +296,7 @@ class _KeyNameDialogState extends State<_KeyNameDialog> {
                 ListenableBuilder(
                   listenable: widget.controller,
                   builder: (context, _) => FTextField(
-                    controller: widget.controller,
+                    control: .managed(controller: widget.controller),
                     hint: AppLocalizations.of(context)!.keyNameHint,
                     autofocus: true,
                   ),
@@ -427,7 +427,7 @@ class _PasswordDialogState extends State<_PasswordDialog> {
             ListenableBuilder(
               listenable: widget.passwordController,
               builder: (context, _) => FTextField(
-                controller: widget.passwordController,
+                control: .managed(controller: widget.passwordController),
                 hint: 'Password',
                 obscureText: !_showPassword,
                 autofocus: true,
@@ -443,7 +443,7 @@ class _PasswordDialogState extends State<_PasswordDialog> {
             ListenableBuilder(
               listenable: widget.confirmPasswordController,
               builder: (context, _) => FTextField(
-                controller: widget.confirmPasswordController,
+                control: .managed(controller: widget.confirmPasswordController),
                 hint: 'Confirm Password',
                 obscureText: !_showConfirmPassword,
                 suffixBuilder: (context, _, _) => FTappable(
@@ -550,7 +550,7 @@ class _SecretKeyDialogState extends State<_SecretKeyDialog> {
             ListenableBuilder(
               listenable: widget.controller,
               builder: (context, _) => FTextField(
-                controller: widget.controller,
+                control: .managed(controller: widget.controller),
                 hint: 'Paste secret key here',
                 obscureText: !_showSecret,
                 autofocus: true,

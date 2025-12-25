@@ -133,7 +133,7 @@ class _RollbackConfirmDialogState extends State<RollbackConfirmDialog> {
                   ListenableBuilder(
                     listenable: _funcUuidController,
                     builder: (context, _) => FTextField(
-                      controller: _funcUuidController,
+                      control: .managed(controller: _funcUuidController),
                       hint: 'Enter function UUID',
                     ),
                   ),
@@ -152,7 +152,7 @@ class _RollbackConfirmDialogState extends State<RollbackConfirmDialog> {
                   ListenableBuilder(
                     listenable: _depUuidController,
                     builder: (context, _) => FTextField(
-                      controller: _depUuidController,
+                      control: .managed(controller: _depUuidController),
                       hint: 'Enter deployment UUID',
                     ),
                   ),

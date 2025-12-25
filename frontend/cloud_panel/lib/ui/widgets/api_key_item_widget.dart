@@ -455,7 +455,7 @@ class _DeleteKeyDialogState extends State<_DeleteKeyDialog> {
             ListenableBuilder(
               listenable: widget.controller,
               builder: (context, _) => FTextField(
-                controller: widget.controller,
+                control: .managed(controller: widget.controller),
                 hint: AppLocalizations.of(context)!.enterKeyNameConfirm,
                 autofocus: true,
               ),
@@ -517,7 +517,7 @@ class _EnableKeyDialog extends StatelessWidget {
             ListenableBuilder(
               listenable: controller,
               builder: (context, _) => FTextField(
-                controller: controller,
+                control: .managed(controller: controller),
                 hint: keyName,
                 autofocus: true,
               ),

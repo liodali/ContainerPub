@@ -91,13 +91,13 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                         const SizedBox(height: 16),
                       ],
                       FTextField(
-                        controller: _emailController,
+                        control: .managed(controller: _emailController),
                         label: Text(AppLocalizations.of(context)!.email),
                         hint: AppLocalizations.of(context)!.enterEmail,
                       ),
                       const SizedBox(height: 16),
                       FTextField(
-                        controller: _passwordController,
+                        control: .managed(controller: _passwordController),
                         label: Text(AppLocalizations.of(context)!.password),
                         obscureText: true,
                         hint: AppLocalizations.of(context)!.enterPassword,

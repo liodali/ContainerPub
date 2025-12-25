@@ -139,19 +139,21 @@ class CreateFunctionCard extends ConsumerStatefulWidget {
 class _CreateFunctionCardState extends ConsumerState<CreateFunctionCard> {
   final _nameController = TextEditingController();
   bool _isLoading = false;
+  bool _skipSigning = false;
 
   Future<void> _create() async {
     if (_nameController.text.isEmpty) return;
     setState(() => _isLoading = true);
     try {
       final client = ref.read(apiClientProvider);
-      await client.createFunction(_nameController.text);
+      await client.createFunction(
+        _nameController.text,
+        skipSigning: _skipSigning,
+      );
       ref.invalidate(functionsProvider);
       if (mounted) Navigator.of(context).pop();
     } catch (e) {
       if (mounted) {
-        // Since we are in a dialog, snackbar might show behind or on parent scaffold.
-        // It should work.
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(
@@ -176,9 +178,15 @@ class _CreateFunctionCardState extends ConsumerState<CreateFunctionCard> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           FTextField(
-            controller: _nameController,
+            control: .managed(controller: _nameController),
             label: Text(AppLocalizations.of(context)!.functionName),
             hint: 'my-function',
+          ),
+          const SizedBox(height: 16),
+          FCheckbox(
+            label: const Text('Skip Signing'),
+            value: _skipSigning,
+            onChange: (value) => setState(() => _skipSigning = value),
           ),
           const SizedBox(height: 24),
           Row(

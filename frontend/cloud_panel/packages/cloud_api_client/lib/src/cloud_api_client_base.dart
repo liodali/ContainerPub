@@ -109,12 +109,14 @@ class CloudApiClient {
     return DailyStatsResponse.fromJson(data);
   }
 
-  Future<CloudFunction> createFunction(String name) async {
+  Future<CloudFunction> createFunction(String name,
+      {bool skipSigning = false}) async {
     final data = await _handleRequest(
       () => _dio.post(
         CommonsApis.apiCreateFunctionPath,
         data: {
           'name': name,
+          'skipSigning': skipSigning,
         },
       ),
     );
@@ -215,14 +217,17 @@ class CloudApiClient {
   }
 
   Future<dynamic> invokeFunction(String functionUuid,
-      {Map<String, dynamic>? body, String? secretKey}) async {
+      {Map<String, dynamic>? body,
+      String? secretKey,
+      String? apiKeyUuid}) async {
     final payload = body != null ? jsonEncode(body) : '{}';
 
     final options = Options(headers: {});
 
-    if (secretKey != null) {
+    if (secretKey != null && apiKeyUuid != null) {
       final headers = generateSignatureHeaders(secretKey, payload);
       options.headers!.addAll(headers);
+      options.headers!['X-Api-Key'] = apiKeyUuid;
     }
 
     final response = await _dio.post(

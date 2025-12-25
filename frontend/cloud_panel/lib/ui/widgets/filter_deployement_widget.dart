@@ -49,12 +49,14 @@ class FilterOtherDeployementWidget extends StatelessWidget {
         return SizedBox(
           width: 180,
           child: FSelect<String>(
-            initialValue: value,
-            onChange: (sortV) {
-              if (sortV != null) {
-                onSortByChange(sortV);
-              }
-            },
+            control: .managed(
+              initial: value,
+              onChange: (sortV) {
+                if (sortV != null) {
+                  onSortByChange(sortV);
+                }
+              },
+            ),
             builder: (context, style, state, child) => child,
             items: SortDeploy.values.fold(
               <String, String>{},

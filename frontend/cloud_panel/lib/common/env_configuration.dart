@@ -15,6 +15,6 @@ class EnvConfiguration {
   }
 
   static EnvConfiguration fromPlatformEnv() {
-    return EnvConfiguration(String.fromEnvironment('API_BASE_URL'));
+    return EnvConfiguration(const String.fromEnvironment('API_BASE_URL'));
   }
 }
