@@ -92,7 +92,7 @@ class _MyAppState extends ConsumerState<MyApp> {
       locale: locale,
       builder: (context, child) => FTheme(
         data: widget.theme,
-        child: child!,
+        child: FToaster(child: child!),
       ),
       routerConfig: _appRouter.config(),
     );
