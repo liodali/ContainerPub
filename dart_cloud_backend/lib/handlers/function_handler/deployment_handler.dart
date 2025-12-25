@@ -12,7 +12,6 @@ import 'package:shelf_multipart/shelf_multipart.dart';
 import 'package:path/path.dart' as path;
 import 'package:uuid/uuid.dart';
 import 'package:archive/archive_io.dart';
-import 'package:s3_client_dart/s3_client_dart.dart';
 import 'package:dart_cloud_backend/configuration/config.dart';
 import 'package:database/database.dart';
 import 'package:dart_cloud_backend/services/functions_services/function_main_injection.dart';
@@ -26,7 +25,6 @@ import 'package:yaml/yaml.dart';
 /// - Managing deployment history
 class DeploymentHandler {
   static const _uuid = Uuid();
-  static late S3Client _s3Client = S3Service.s3Client;
 
   /// Deploy a new function or update an existing one
   ///
@@ -412,6 +410,9 @@ class DeploymentHandler {
     final (archiveFile, path) = await dirFunction.createFunctionArchive(
       functionName,
     );
-    await _s3Client.upload(archiveFile.path, '$s3KeyPrefix/${functionName}.zip');
+    await S3Service.s3Client.upload(
+      '$s3KeyPrefix/${functionName}.zip',
+      archiveFile,
+    );
   }
 }

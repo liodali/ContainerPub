@@ -51,8 +51,8 @@ class FunctionRollback {
         'Downloading function from S3: $s3key',
       );
 
-      final downloadResult = await S3Service.s3Client.download(objectKey, zipPath);
-      if (downloadResult.isNotEmpty) {
+      final downloadResult = await S3Service.s3Client.downloadToFile(objectKey, zipPath);
+      if (!downloadResult) {
         await FunctionUtils.logDeploymentFunction(
           functionUUId,
           'error',

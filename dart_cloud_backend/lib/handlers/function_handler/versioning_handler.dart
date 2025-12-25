@@ -336,7 +336,7 @@ class VersioningHandler {
 
     // Image doesn't exist - need to rebuild from S3
     // First verify S3 archive exists
-    final s3Exists = await S3Service.s3Client.isKeyBucketExist(
+    final s3Exists = await S3Service.s3Client.exists(
       '$s3Key/${functionName}.zip',
     );
     if (!s3Exists) {

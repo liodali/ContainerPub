@@ -1,7 +1,9 @@
 import 'dart:io';
 import 'package:dart_cloud_backend/services/s3_service.dart' show S3Service;
 import 'package:dart_cloud_backend/services/token_service.dart';
-import 'package:s3_client_dart/s3_client_dart.dart' show S3Configuration;
+import 'package:s3_native_http_client/s3_native_http_client.dart'
+    show S3RequestConfiguration;
+// import 'package:s3_client_dart/s3_client_dart.dart' show S3Configuration;
 import 'package:shelf/shelf.dart';
 import 'package:shelf/shelf_io.dart' as shelf_io;
 import 'package:dart_cloud_backend/router.dart';
@@ -18,18 +20,14 @@ void main() async {
   print('S3 Client Library Path: ${Config.s3ClientLibraryPath}');
   // Initialize S3
   S3Service.initializeS3(
-    S3Configuration(
+    S3RequestConfiguration(
       endpoint: Config.s3Endpoint,
-      bucketName: Config.s3BucketName,
-      accessKeyId: Config.s3AccessKeyId,
-      secretAccessKey: Config.s3SecretAccessKey,
+      bucket: Config.s3BucketName,
+      accessKey: Config.s3AccessKeyId,
+      secretKey: Config.s3SecretAccessKey,
       sessionToken: Config.s3SessionToken ?? '',
       region: Config.s3Region,
-      accountId: Config.s3AccountId ?? '',
-    ),
-    (
-      libraryPath: Config.s3ClientLibraryPath, //'./s3_client_dart.so',
-      autoDownload: false,
+      // accountId: Config.s3AccountId ?? '',
     ),
   );
 
