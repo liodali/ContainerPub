@@ -4,6 +4,7 @@ class S3RequestConfiguration {
   final String endpoint; // e.g., 'https://<id>.r2.cloudflarestorage.com'
   final String region; // R2 uses 'auto', AWS uses 'us-east-1', etc.
   final String bucket;
+  final String? sessionToken;
 
   S3RequestConfiguration({
     required this.accessKey,
@@ -11,6 +12,7 @@ class S3RequestConfiguration {
     required this.endpoint,
     required this.region,
     required this.bucket,
+     this.sessionToken = '',
   });
   String get uri => '$endpoint/$bucket';
   @override
@@ -19,7 +21,8 @@ class S3RequestConfiguration {
       secretKey.hashCode ^
       endpoint.hashCode ^
       region.hashCode ^
-      bucket.hashCode;
+      bucket.hashCode ^
+      sessionToken.hashCode;
 
   @override
   bool operator ==(Object other) {
@@ -29,6 +32,7 @@ class S3RequestConfiguration {
         secretKey == other.secretKey &&
         endpoint == other.endpoint &&
         region == other.region &&
-        bucket == other.bucket;
+        bucket == other.bucket &&
+        sessionToken == other.sessionToken;
   }
 }
