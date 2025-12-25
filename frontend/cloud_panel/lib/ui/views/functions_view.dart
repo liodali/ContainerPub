@@ -21,15 +21,12 @@ class FunctionsView extends ConsumerStatefulWidget {
 
 class _FunctionsViewState extends ConsumerState<FunctionsView> {
   void _showCreateDialog(BuildContext context) {
-    showDialog(
+    showFDialog(
       context: context,
 
-      builder: (context) => Dialog(
-        backgroundColor: Colors.transparent,
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 400),
-          child: const CreateFunctionCard(),
-        ),
+      builder: (context, style, animation) => ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 400),
+        child: const CreateFunctionCard(),
       ),
     );
   }
@@ -171,41 +168,53 @@ class _CreateFunctionCardState extends ConsumerState<CreateFunctionCard> {
 
   @override
   Widget build(BuildContext context) {
-    return FCard(
+    return FDialog(
+      direction: Axis.horizontal,
+      style: (style) => style.copyWith(
+        insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 0),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.all(
+            Radius.circular(12),
+          ),
+          border: Border.all(
+            color: context.theme.colors.border,
+          ),
+        ),
+      ),
+      actions: [
+        FButton(
+          style: FButtonStyle.ghost(),
+          onPress: () => Navigator.of(context).pop(),
+          child: Text(AppLocalizations.of(context)!.cancel),
+        ),
+        FButton(
+          onPress: _isLoading ? null : _create,
+          child: _isLoading
+              ? Text(AppLocalizations.of(context)!.creating)
+              : Text(AppLocalizations.of(context)!.create),
+        ),
+      ],
       title: Text(AppLocalizations.of(context)!.createFunction),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          FTextField(
-            control: .managed(controller: _nameController),
-            label: Text(AppLocalizations.of(context)!.functionName),
-            hint: 'my-function',
-          ),
-          const SizedBox(height: 16),
-          FCheckbox(
-            label: const Text('Skip Signing'),
-            value: _skipSigning,
-            onChange: (value) => setState(() => _skipSigning = value),
-          ),
-          const SizedBox(height: 24),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.end,
-            children: [
-              FButton.raw(
-                onPress: () => Navigator.of(context).pop(),
-                child: Text(AppLocalizations.of(context)!.cancel),
-              ),
-              const SizedBox(width: 8),
-              FButton(
-                onPress: _isLoading ? null : _create,
-                child: _isLoading
-                    ? Text(AppLocalizations.of(context)!.creating)
-                    : Text(AppLocalizations.of(context)!.create),
-              ),
-            ],
-          ),
-        ],
+
+      body: Padding(
+        padding: const EdgeInsets.only(top: 12),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          spacing: 16,
+          children: [
+            FTextField(
+              control: .managed(controller: _nameController),
+              label: Text(AppLocalizations.of(context)!.functionName),
+              hint: 'my-function',
+            ),
+            FCheckbox(
+              label: const Text('Skip Signing'),
+              value: _skipSigning,
+              onChange: (value) => setState(() => _skipSigning = value),
+            ),
+          ],
+        ),
       ),
     );
   }
