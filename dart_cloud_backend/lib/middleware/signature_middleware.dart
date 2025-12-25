@@ -65,8 +65,8 @@ Middleware get signatureMiddleware {
       final timestampStr = request.headers['x-timestamp'];
 
       if (signature == null || timestampStr == null || apiKey == null) {
-        return Response.forbidden(
-          jsonEncode({
+        return Response.badRequest(
+          body: jsonEncode({
             'error': 'This function requires API key signature',
             'message': 'Include X-Signature and X-Timestamp headers',
           }),
@@ -81,8 +81,8 @@ Middleware get signatureMiddleware {
         },
       );
       if (apiKeyEntity != null && !apiKeyEntity.isValid) {
-        return Response.forbidden(
-          jsonEncode({
+        return Response.badRequest(
+          body: jsonEncode({
             'error':
                 'this function cannot be invoked! check your developer portal or contact support',
           }),
@@ -126,8 +126,8 @@ Middleware get signatureMiddleware {
       );
 
       if (!isValid) {
-        return Response.forbidden(
-          jsonEncode({
+        return Response.badRequest(
+          body: jsonEncode({
             'error': 'Invalid signature',
             'message': 'Signature verification failed. Check your API key and timestamp.',
           }),
