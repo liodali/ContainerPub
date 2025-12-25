@@ -8,6 +8,8 @@
 /// - Legacy QueryHelpers for backward compatibility
 library;
 
+import 'dart:io';
+
 import 'package:postgres/postgres.dart';
 
 // Legacy query helpers (for backward compatibility)
@@ -77,24 +79,28 @@ class Database {
 
       print('✓ Database connected');
 
-      // Create tables
-      await _createTables();
+      await _connection.run((session) async {
+        // Create tables
+        await _createTables(session);
+        return;
+      });
     } catch (e, trace) {
       print('⚠️  Database connection failed: $e');
       print('Trace: $trace');
       print('   Continuing without database (in-memory mode)');
+      exit(1);
       // In production, you might want to fail here
     }
   }
 
-  static Future<void> _createTables() async {
+  static Future<void> _createTables(Session connection) async {
     // Enable UUID extension
-    await _connection.execute('''
+    await connection.execute('''
       CREATE EXTENSION IF NOT EXISTS "uuid-ossp"
     ''');
 
     // Users table with serial ID (internal) and UUID (public)
-    await _connection.execute('''
+    await connection.execute('''
       CREATE TABLE IF NOT EXISTS users (
         id SERIAL PRIMARY KEY,
         uuid UUID UNIQUE NOT NULL DEFAULT uuid_generate_v4(),
@@ -106,12 +112,12 @@ class Database {
     ''');
 
     // Create index on UUID for fast lookups
-    await _connection.execute('''
+    await connection.execute('''
       CREATE INDEX IF NOT EXISTS idx_users_uuid ON users(uuid)
     ''');
 
     // Functions table with serial ID (internal) and UUID (public)
-    await _connection.execute('''
+    await connection.execute('''
       CREATE TABLE IF NOT EXISTS functions (
         id SERIAL PRIMARY KEY,
         uuid UUID UNIQUE NOT NULL DEFAULT uuid_generate_v4(),
@@ -128,17 +134,17 @@ class Database {
     ''');
 
     // Create index on UUID for fast lookups
-    await _connection.execute('''
+    await connection.execute('''
       CREATE INDEX IF NOT EXISTS idx_functions_uuid ON functions(uuid)
     ''');
 
     // Create index on user_id for fast user queries
-    await _connection.execute('''
+    await connection.execute('''
       CREATE INDEX IF NOT EXISTS idx_functions_user_id ON functions(user_id)
     ''');
 
     // Migration: Add active_deployment_id column if it doesn't exist
-    await _connection.execute('''
+    await connection.execute('''
       DO \$\$ 
       BEGIN
         IF NOT EXISTS (SELECT 1 FROM information_schema.columns 
@@ -149,12 +155,12 @@ class Database {
     ''');
 
     // Create index on active_deployment_id for fast lookups
-    await _connection.execute('''
+    await connection.execute('''
       CREATE INDEX IF NOT EXISTS idx_functions_active_deployment ON functions(active_deployment_id)
     ''');
 
     // Migration: Add skip_signing column if it doesn't exist
-    await _connection.execute('''
+    await connection.execute('''
       DO \$\$ 
       BEGIN
         IF NOT EXISTS (SELECT 1 FROM information_schema.columns 
@@ -165,7 +171,7 @@ class Database {
     ''');
 
     // Function deployments table for versioning and deployment history
-    await _connection.execute('''
+    await connection.execute('''
       CREATE TABLE IF NOT EXISTS function_deployments (
         id SERIAL PRIMARY KEY,
         uuid UUID UNIQUE NOT NULL DEFAULT uuid_generate_v4(),
@@ -182,35 +188,35 @@ class Database {
     ''');
 
     // Create indexes for function_deployments
-    await _connection.execute('''
+    await connection.execute('''
       CREATE INDEX IF NOT EXISTS idx_function_deployments_uuid ON function_deployments(uuid)
     ''');
 
-    await _connection.execute('''
+    await connection.execute('''
       CREATE INDEX IF NOT EXISTS idx_function_deployments_function_id ON function_deployments(function_id)
     ''');
 
-    await _connection.execute('''
+    await connection.execute('''
       CREATE INDEX IF NOT EXISTS idx_function_deployments_is_active ON function_deployments(function_id, is_active)
     ''');
 
-    await _connection.execute('''
+    await connection.execute('''
       CREATE INDEX IF NOT EXISTS idx_function_deployments_version ON function_deployments(function_id, version DESC)
     ''');
 
     // Alter function_logs table if it exists (for migration from old schema)
     try {
-      await _connection.execute('''
-        ALTER TABLE IF EXISTS function_logs
-        RENAME TO function_deploy_logs
+      await connection.execute('''
+        ALTER TABLE IF EXISTS function_logs RENAME TO function_deploy_logs
       ''');
-    } catch (e) {
+    } catch (e, trace) {
       // Table might not exist or already renamed, continue
+      print(trace);
     }
 
     // Alter message column to JSONB if table exists
     try {
-      await _connection.execute('''
+      await connection.execute('''
         ALTER TABLE IF EXISTS function_deploy_logs
         ALTER COLUMN message TYPE JSONB USING message::JSONB
       ''');
@@ -219,7 +225,7 @@ class Database {
     }
 
     // Function deploy logs table with serial ID (internal) and UUID (public)
-    await _connection.execute('''
+    await connection.execute('''
       CREATE TABLE IF NOT EXISTS function_deploy_logs (
         id SERIAL PRIMARY KEY,
         uuid UUID UNIQUE NOT NULL DEFAULT uuid_generate_v4(),
@@ -230,20 +236,34 @@ class Database {
       )
     ''');
 
+    await connection.execute('''
+        DO \$\$ 
+        BEGIN
+            IF EXISTS (
+                SELECT 1 
+                FROM information_schema.columns 
+                WHERE table_name='function_deploy_logs' 
+                AND column_name='function_id'
+            ) THEN
+                ALTER TABLE function_deploy_logs RENAME COLUMN function_id TO function_uuid;
+            END IF;
+        END \$\$ 
+    ''');
+
     // Create index on function_id for fast function deploy log queries
-    await _connection.execute('''
+    await connection.execute('''
       CREATE INDEX IF NOT EXISTS idx_function_deploy_logs_function_id ON function_deploy_logs(function_uuid)
     ''');
 
     // Create index on timestamp for time-based queries
-    await _connection.execute('''
+    await connection.execute('''
       CREATE INDEX IF NOT EXISTS idx_function_deploy_logs_timestamp ON function_deploy_logs(timestamp DESC)
     ''');
 
     // Function invocations table with serial ID (internal) and UUID (public)
     // Stores request metadata and execution logs
     // Body is NOT stored for security - only request info (headers, query, method, path)
-    await _connection.execute('''
+    await connection.execute('''
       CREATE TABLE IF NOT EXISTS function_invocations (
         id SERIAL PRIMARY KEY,
         uuid UUID UNIQUE NOT NULL DEFAULT uuid_generate_v4(),
@@ -260,23 +280,23 @@ class Database {
     ''');
 
     // Create index on function_id for fast function invocation queries
-    await _connection.execute('''
+    await connection.execute('''
       CREATE INDEX IF NOT EXISTS idx_function_invocations_function_id ON function_invocations(function_id)
     ''');
 
     // Create index on timestamp for time-based queries
-    await _connection.execute('''
+    await connection.execute('''
       CREATE INDEX IF NOT EXISTS idx_function_invocations_timestamp ON function_invocations(timestamp DESC)
     ''');
 
     // Migration: Add logs column to function_invocations if not exists
-    await _connection.execute('''
+    await connection.execute('''
       ALTER TABLE function_invocations 
       ADD COLUMN IF NOT EXISTS logs JSONB
     ''');
 
     // Migration: Add request info and result fields to function_invocations
-    await _connection.execute('''
+    await connection.execute('''
       ALTER TABLE function_invocations 
       ADD COLUMN IF NOT EXISTS request_info JSONB,
       ADD COLUMN IF NOT EXISTS result TEXT,
@@ -284,7 +304,7 @@ class Database {
     ''');
 
     // Create triggers for updated_at
-    await _connection.execute('''
+    await connection.execute('''
       CREATE OR REPLACE FUNCTION update_updated_at_column()
       RETURNS TRIGGER AS \$\$
       BEGIN
@@ -294,22 +314,22 @@ class Database {
       \$\$ language 'plpgsql'
     ''');
 
-    await _connection.execute('''
+    await connection.execute('''
       DROP TRIGGER IF EXISTS update_users_updated_at ON users
     ''');
 
-    await _connection.execute('''
+    await connection.execute('''
       CREATE TRIGGER update_users_updated_at
         BEFORE UPDATE ON users
         FOR EACH ROW
         EXECUTE FUNCTION update_updated_at_column()
     ''');
 
-    await _connection.execute('''
+    await connection.execute('''
       DROP TRIGGER IF EXISTS update_functions_updated_at ON functions
     ''');
 
-    await _connection.execute('''
+    await connection.execute('''
       CREATE TRIGGER update_functions_updated_at
         BEFORE UPDATE ON functions
         FOR EACH ROW
@@ -317,7 +337,7 @@ class Database {
     ''');
 
     // User information table
-    await _connection.execute('''
+    await connection.execute('''
       CREATE TABLE IF NOT EXISTS user_information (
         id SERIAL PRIMARY KEY,
         uuid UUID DEFAULT gen_random_uuid() UNIQUE NOT NULL,
@@ -337,16 +357,16 @@ class Database {
       )
     ''');
 
-    await _connection.execute('''
+    await connection.execute('''
       CREATE INDEX IF NOT EXISTS idx_user_information_user_id ON user_information(user_id)
     ''');
 
-    await _connection.execute('''
+    await connection.execute('''
       CREATE INDEX IF NOT EXISTS idx_user_information_role ON user_information(role)
     ''');
 
     // Organizations table - one organization can have multiple users
-    await _connection.execute('''
+    await connection.execute('''
       CREATE TABLE IF NOT EXISTS organizations (
         id SERIAL PRIMARY KEY,
         uuid UUID DEFAULT gen_random_uuid() UNIQUE NOT NULL,
@@ -357,16 +377,16 @@ class Database {
       )
     ''');
 
-    await _connection.execute('''
+    await connection.execute('''
       CREATE INDEX IF NOT EXISTS idx_organizations_owner_id ON organizations(owner_id)
     ''');
 
-    await _connection.execute('''
+    await connection.execute('''
       CREATE INDEX IF NOT EXISTS idx_organizations_name ON organizations(name)
     ''');
 
     // Organization members table - junction table for users belonging to organizations
-    await _connection.execute('''
+    await connection.execute('''
       CREATE TABLE IF NOT EXISTS organization_members (
         id SERIAL PRIMARY KEY,
         organization_id UUID NOT NULL REFERENCES organizations(uuid) ON DELETE CASCADE,
@@ -376,31 +396,31 @@ class Database {
       )
     ''');
 
-    await _connection.execute('''
+    await connection.execute('''
       CREATE INDEX IF NOT EXISTS idx_org_members_org_id ON organization_members(organization_id)
     ''');
 
-    await _connection.execute('''
+    await connection.execute('''
       CREATE INDEX IF NOT EXISTS idx_org_members_user_id ON organization_members(user_id)
     ''');
 
     // Triggers for new tables
-    await _connection.execute('''
+    await connection.execute('''
       DROP TRIGGER IF EXISTS update_user_information_updated_at ON user_information
     ''');
 
-    await _connection.execute('''
+    await connection.execute('''
       CREATE TRIGGER update_user_information_updated_at
         BEFORE UPDATE ON user_information
         FOR EACH ROW
         EXECUTE FUNCTION update_updated_at_column()
     ''');
 
-    await _connection.execute('''
+    await connection.execute('''
       DROP TRIGGER IF EXISTS update_organizations_updated_at ON organizations
     ''');
 
-    await _connection.execute('''
+    await connection.execute('''
       CREATE TRIGGER update_organizations_updated_at
         BEFORE UPDATE ON organizations
         FOR EACH ROW
@@ -408,7 +428,7 @@ class Database {
     ''');
 
     // Logs table
-    await _connection.execute('''
+    await connection.execute('''
       CREATE TABLE IF NOT EXISTS logs (
         id SERIAL PRIMARY KEY,
         uuid UUID UNIQUE NOT NULL DEFAULT uuid_generate_v4(),
@@ -420,35 +440,35 @@ class Database {
     ''');
 
     // Create indexes for logs table
-    await _connection.execute('''
+    await connection.execute('''
       CREATE INDEX IF NOT EXISTS idx_logs_uuid ON logs(uuid)
     ''');
 
-    await _connection.execute('''
+    await connection.execute('''
       CREATE INDEX IF NOT EXISTS idx_logs_action ON logs(action)
     ''');
 
-    await _connection.execute('''
+    await connection.execute('''
       CREATE INDEX IF NOT EXISTS idx_logs_level ON logs(level)
     ''');
 
-    await _connection.execute('''
+    await connection.execute('''
       CREATE INDEX IF NOT EXISTS idx_logs_created_at ON logs(created_at DESC)
     ''');
 
     // Alter logs table schema
-    await _connection.execute('''
+    await connection.execute('''
       ALTER TABLE logs
       ALTER COLUMN message TYPE JSONB USING message::JSONB
     ''');
 
-    await _connection.execute('''
+    await connection.execute('''
       ALTER TABLE logs
       ALTER COLUMN action TYPE TEXT
     ''');
 
     // API Keys table for function signing
-    await _connection.execute('''
+    await connection.execute('''
       CREATE TABLE IF NOT EXISTS api_keys (
         id SERIAL PRIMARY KEY,
         uuid UUID UNIQUE NOT NULL DEFAULT uuid_generate_v4(),
@@ -465,19 +485,19 @@ class Database {
     ''');
 
     // Create indexes for api_keys table
-    await _connection.execute('''
+    await connection.execute('''
       CREATE INDEX IF NOT EXISTS idx_api_keys_uuid ON api_keys(uuid)
     ''');
 
-    await _connection.execute('''
+    await connection.execute('''
       CREATE INDEX IF NOT EXISTS idx_api_keys_function_uuid ON api_keys(function_uuid)
     ''');
 
-    await _connection.execute('''
+    await connection.execute('''
       CREATE INDEX IF NOT EXISTS idx_api_keys_is_active ON api_keys(is_active)
     ''');
 
-    await _connection.execute('''
+    await connection.execute('''
       CREATE INDEX IF NOT EXISTS idx_api_keys_expires_at ON api_keys(expires_at)
     ''');
 
