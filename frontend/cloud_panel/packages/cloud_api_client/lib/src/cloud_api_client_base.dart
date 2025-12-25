@@ -204,12 +204,11 @@ class CloudApiClient {
 
   static Map<String, String> generateSignatureHeaders(
       String secretKey, String payload) {
-    final timestamp = (DateTime.now().millisecondsSinceEpoch / 1000).round();
+    final timestamp = (DateTime.now().millisecondsSinceEpoch ~/ 1000).round();
     final dataToSign = '$timestamp:$payload';
     final hmac = Hmac(sha256, utf8.encode(secretKey));
     final digest = hmac.convert(utf8.encode(dataToSign));
     final signature = base64Encode(digest.bytes);
-
     return {
       'X-Signature': signature,
       'X-Timestamp': timestamp.toString(),
@@ -232,7 +231,9 @@ class CloudApiClient {
 
     final response = await _dio.post(
       '/api/functions/$functionUuid/invoke',
-      data: body,
+      data: {
+        'body': body,
+      },
       options: options,
     );
     return response.data;
