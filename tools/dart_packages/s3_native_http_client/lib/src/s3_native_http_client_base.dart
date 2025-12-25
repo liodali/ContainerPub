@@ -7,9 +7,21 @@ import 'package:xml/xml.dart';
 
 class S3NativeHttpClient {
   final S3RequestConfiguration configuration;
-
-  S3NativeHttpClient({required this.configuration});
-
+  final AWSSigV4Signer _signer;
+  final AWSCredentialScope _scope;
+  S3NativeHttpClient({required this.configuration})
+    : _signer = AWSSigV4Signer(
+        credentialsProvider: AWSCredentialsProvider(
+          AWSCredentials(
+            configuration.accessKey,
+            configuration.secretKey,
+          ),
+        ),
+      ),
+      _scope = AWSCredentialScope(
+        region: configuration.region,
+        service: AWSService.s3,
+      );
   // 1. Check if Object Exists (HEAD Request)
   Future<bool> exists(String objectKey) async {
     final request = AWSHttpRequest(
@@ -65,7 +77,8 @@ class S3NativeHttpClient {
     }
     return null;
   }
-    // 3. Download Object (GET Request)
+
+  // 3. Download Object (GET Request)
   Future<bool> downloadToFile(String objectKey, String filePath) async {
     final request = AWSHttpRequest(
       method: AWSHttpMethod.get,
@@ -140,17 +153,6 @@ class S3NativeHttpClient {
 
   // Internal Helper: Signs the request using SigV4
   Future<AWSBaseHttpRequest> _sign(AWSHttpRequest request) async {
-    final signer = AWSSigV4Signer(
-      credentialsProvider: AWSCredentialsProvider(
-        AWSCredentials(configuration.accessKey, configuration.secretKey),
-      ),
-    );
-
-    final scope = AWSCredentialScope(
-      region: configuration.region,
-      service: AWSService.s3,
-    );
-
-    return await signer.sign(request, credentialScope: scope);
+    return _signer.sign(request, credentialScope: _scope);
   }
 }

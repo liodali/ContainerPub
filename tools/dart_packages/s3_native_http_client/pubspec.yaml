@@ -1,6 +1,6 @@
 name: s3_native_http_client
 description: S3 Native HTTP Client
-version: 0.1.0
+version: 0.2.0
 # repository: https://github.com/my_org/my_repo
 
 environment:
