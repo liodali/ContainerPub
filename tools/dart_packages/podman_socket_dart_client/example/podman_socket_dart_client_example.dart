@@ -2,22 +2,27 @@ import 'package:podman_socket_dart_client/podman_socket_dart_client.dart';
 
 /// Example usage
 void main() async {
+  final String sock = const String.fromEnvironment('PODMAN_SOCKET_PATH', defaultValue: '/run/podman/podman.sock');
   final client = PodmanClient(
-    socketPath:
-        '/var/folders/yz/57p58qc10vqdt6d3j66wkjp80000gn/T/podman/podman-machine-default-api.sock',
+    socketPath: sock,
   );
 
   try {
     // Pull an image
     print('Pulling alpine image...');
-    await client.pullImage('docker.io/library/alpine:latest');
+    final exist = await client.imagesOps.existImage('docker.io/library/alpine:latest');
+    if (!exist) {
+      await client.imagesOps.pullImage('docker.io/library/alpine:latest');
+    }else {
+      print('Image already exists');
+    }
     print('Image pulled successfully');
     // await Future.delayed(const Duration(seconds: 2));
 
     // Run a container
     print('Running container...');
-    final containerId = await client.runContainer(
-      ContainerSpec(
+    final containerId = await client.containerOps.runContainer(
+      CompatContainerConfig(
         image: 'alpine:latest',
         cmd: ['echo', 'Hello from Podman! time: ${DateTime.now()}'],
         name: 'my-test-container',
@@ -28,7 +33,7 @@ void main() async {
 
     // Delete the container
     print('Deleting container...');
-    await client.deleteContainer(containerId);
+    await client.containerOps.deleteContainer(containerId);
     print('Container deleted');
 
     // Delete the image
