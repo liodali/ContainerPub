@@ -79,7 +79,11 @@ class PodmanSocketClient {
     Object? body,
   ) {
     final buffer = StringBuffer();
-    buffer.writeln('$method /v4.0.0/libpod/$path HTTP/1.1');
+    // Support both compat (/v6.0.0/containers/...) and libpod (/v4.0.0/libpod/...) endpoints
+    // Compat endpoints: containers/, images/, networks/, volumes/, etc.
+    // Libpod endpoints: libpod/containers/, libpod/images/, etc.
+    final apiPath = '/v6.0.0/libpod/$path';
+    buffer.writeln('$method $apiPath HTTP/1.1');
     buffer.writeln('Host: localhost');
     buffer.writeln('User-Agent: podman-dart-client/1.0.0');
     buffer.writeln('Content-Type: application/json');
