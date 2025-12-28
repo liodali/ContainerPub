@@ -83,7 +83,8 @@ class PodmanCLI:
                      detach: bool = True, ports: Optional[Dict[str, int]] = None,
                      environment: Optional[Dict[str, str]] = None,
                      volumes: Optional[Dict[str, Dict[str, str]]] = None,
-                     command: Optional[List[str]] = None) -> None:
+                     command: Optional[List[str]] = None,
+                     auto_remove: bool = False) -> None:
         try:
             run_params = {
                 "image": image,
@@ -99,7 +100,8 @@ class PodmanCLI:
                 run_params["volumes"] = volumes
             if command:
                 run_params["command"] = command
-
+            if auto_remove:
+                run_params["auto_remove"] = auto_remove
             container = self.client.containers.run(**run_params)
             
             self._output_success({
@@ -194,8 +196,8 @@ def main():
         help="Container name"
     )
     run_parser.add_argument(
-        "--detach", "-d",
-        action="store_true",
+        "--detach","-d",
+        type=bool,
         default=True,
         help="Run container in background (default: true)"
     )
@@ -215,14 +217,20 @@ def main():
         help="Volume mapping (format: HOST:CONTAINER)"
     )
     run_parser.add_argument(
-        "command",
+        "--run-command","-c",
         nargs="*",
         help="Command to run in container"
+    )
+    run_parser.add_argument(
+        "--auto-remove","-r",
+        type=bool,
+        default=False,
+        help="Remove container after exit"
     )
 
     rm_parser = subparsers.add_parser("rm", help="Delete a container")
     rm_parser.add_argument(
-        "container_id",
+        "--container-id","--i",
         type=str,
         help="Container ID or name"
     )
@@ -240,7 +248,6 @@ def main():
     )
 
     args = parser.parse_args()
-
     if not args.command:
         parser.print_help()
         sys.exit(1)
@@ -288,15 +295,27 @@ def main():
             for vol in args.volume:
                 host, container = vol.split(":")
                 volumes[host] = {"bind": container, "mode": "rw"}
-        
+        detach = True
+        if args.detach == False or args.detach == "false":
+            detach = False
+        auto_remove = False
+        if args.auto_remove == True or args.auto_remove == "true":
+            auto_remove = True
+        run_command = None
+        if args.run_command:
+            if len(args.run_command) == 1:
+                run_command = ["/bin/sh", "-c", args.run_command[0]]
+            else:
+                run_command = args.run_command
         cli.run_container(
             image=args.image,
             name=args.name,
-            detach=args.detach,
+            detach=detach,
             ports=ports,
             environment=environment,
             volumes=volumes,
-            command=args.command if args.command else None
+            command=run_command,
+            auto_remove=auto_remove
         )
     
     elif args.command == "rm":
