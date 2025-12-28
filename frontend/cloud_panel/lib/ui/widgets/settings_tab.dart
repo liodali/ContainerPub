@@ -115,7 +115,9 @@ class SettingsTab extends ConsumerWidget {
                 Text(
                   'This setting is configured during function creation and cannot be modified.',
                   style: context.theme.typography.sm.copyWith(
-                    color: context.theme.colors.foreground.withOpacity(0.6),
+                    color: context.theme.colors.foreground.withValues(
+                      alpha: 0.6,
+                    ),
                   ),
                 ),
               ],
@@ -130,7 +132,9 @@ class SettingsTab extends ConsumerWidget {
                 Text(
                   'Use this URL to invoke your function:',
                   style: context.theme.typography.sm.copyWith(
-                    color: context.theme.colors.foreground.withOpacity(0.8),
+                    color: context.theme.colors.foreground.withValues(
+                      alpha: 0.8,
+                    ),
                   ),
                 ),
                 const SizedBox(height: 12),
@@ -197,7 +201,9 @@ class SettingsTab extends ConsumerWidget {
                 Text(
                   'Once you delete a function, there is no going back. Please be certain.',
                   style: context.theme.typography.sm.copyWith(
-                    color: context.theme.colors.foreground.withOpacity(0.8),
+                    color: context.theme.colors.foreground.withValues(
+                      alpha: 0.8,
+                    ),
                   ),
                 ),
                 const SizedBox(height: 16),

@@ -66,8 +66,9 @@ class ApiKeysTab extends ConsumerWidget {
                   itemCount: sortedKeys.length + 1,
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   separatorBuilder: (_, index) {
-                    if (index == sortedKeys.length)
+                    if (index == sortedKeys.length) {
                       return const SizedBox.shrink();
+                    }
                     return const SizedBox(height: 12);
                   },
                   itemBuilder: (context, index) {

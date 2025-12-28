@@ -145,7 +145,8 @@ class InitCommand extends BaseCommand {
           print('');
           print('  The function was already registered on the backend.');
           print(
-              '  Local config file has been created to link to the existing function.');
+            '  Local config file has been created to link to the existing function.',
+          );
         } else {
           print('✓ Function initialized successfully!');
           print('');

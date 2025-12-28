@@ -140,7 +140,7 @@ class DartClientBenchmark {
   Future<void> benchmarkFullWorkflow() async {
     print('\n${'=' * 60}');
     print('Benchmarking: Full Workflow (Check + Run + Delete)');
-    print('${'=' * 60}');
+    print('=' * 60);
 
     final times = <Duration>[];
 
@@ -235,7 +235,7 @@ class DartClientBenchmark {
   void printResults() {
     print('\n${'=' * 60}');
     print('BENCHMARK RESULTS - Dart Socket Client');
-    print('${'=' * 60}');
+    print('=' * 60);
 
     for (final result in results) {
       print('\n${result.operation.toUpperCase()}:');
@@ -266,7 +266,7 @@ class DartClientBenchmark {
     print('# Dart Socket Client Performance Benchmark');
     print('# Socket: $socketPath');
     print('# Iterations: $iterations');
-    print('${'#' * 60}');
+    print('#' * 60);
 
     // Verify socket exists
     if (!File(socketPath).existsSync()) {
