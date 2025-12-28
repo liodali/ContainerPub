@@ -180,71 +180,80 @@ void main(List<String> arguments) async {
       defaultsTo: '/run/podman/podman.sock',
       help: 'Path to Podman socket',
     )
-    ..addCommand('images')
-    ..addCommand('build')
-    ..addCommand('run')
-    ..addCommand('rm')
-    ..addCommand('ps');
-
-  // Configure images command
-  parser.commands['images']!.addFlag(
-    'all',
-    abbr: 'a',
-    defaultsTo: false,
-    help: 'Show all images (including intermediate)',
-  );
-
-  // Configure build command
-  parser.commands['build']!
-    ..addOption('tag', abbr: 't', help: 'Image tag (e.g., myapp:latest)')
-    ..addOption(
-      'file',
-      abbr: 'f',
-      defaultsTo: 'Dockerfile',
-      help: 'Dockerfile name',
+    ..addCommand(
+      'images',
+      ArgParser()..addFlag(
+        'all',
+        abbr: 'a',
+        defaultsTo: false,
+        help: 'Show all images (including intermediate)',
+      ),
     )
-    ..addMultiOption('build-arg', help: 'Build arguments (format: KEY=VALUE)');
-
-  // Configure run command
-  parser.commands['run']!
-    ..addOption('name', help: 'Container name')
-    ..addFlag(
-      'detach',
-      abbr: 'd',
-      defaultsTo: true,
-      help: 'Run container in background',
+    ..addCommand(
+      'build',
+      ArgParser()
+        ..addOption('tag', abbr: 't', help: 'Image tag (e.g., myapp:latest)')
+        ..addOption(
+          'file',
+          abbr: 'f',
+          defaultsTo: 'Dockerfile',
+          help: 'Dockerfile name',
+        )
+        ..addMultiOption(
+          'build-arg',
+          help: 'Build arguments (format: KEY=VALUE)',
+        ),
     )
-    ..addMultiOption(
-      'port',
-      abbr: 'p',
-      help: 'Port mapping (format: HOST:CONTAINER)',
+    ..addCommand(
+      'run',
+      ArgParser()
+        ..addOption('name', help: 'Container name')
+        ..addFlag(
+          'detach',
+          abbr: 'd',
+          defaultsTo: true,
+          help: 'Run container in background',
+        )
+        ..addMultiOption(
+          'port',
+          abbr: 'p',
+          help: 'Port mapping (format: HOST:CONTAINER)',
+        )
+        ..addMultiOption(
+          'env',
+          abbr: 'e',
+          help: 'Environment variables (format: KEY=VALUE)',
+        )
+        ..addMultiOption(
+          'volume',
+          abbr: 'v',
+          help: 'Volume mapping (format: HOST:CONTAINER)',
+        ),
     )
-    ..addMultiOption(
-      'env',
-      abbr: 'e',
-      help: 'Environment variables (format: KEY=VALUE)',
+    ..addCommand(
+      'rm',
+      ArgParser()
+        ..addOption(
+          'container-id',
+          abbr: 'i',
+          help: 'Container ID',
+        )
+        ..addFlag(
+          'force',
+          abbr: 'f',
+          defaultsTo: false,
+          help: 'Force delete (stop if running)',
+        ),
     )
-    ..addMultiOption(
-      'volume',
-      abbr: 'v',
-      help: 'Volume mapping (format: HOST:CONTAINER)',
+    ..addCommand(
+      'ps',
+      ArgParser()..addFlag(
+        'all',
+        abbr: 'a',
+        defaultsTo: false,
+        help: 'Show all containers (including stopped)',
+      ),
     );
-
-  // Configure rm command
-  parser.commands['rm']!.addFlag(
-    'force',
-    abbr: 'f',
-    defaultsTo: false,
-    help: 'Force delete (stop if running)',
-  );
-
-  // Configure ps command
-  parser.commands['ps']!.addFlag(
-    'all',
-    abbr: 'a',
-    defaultsTo: false,
-    help: 'Show all containers (including stopped)',
-  );
 
   try {
     final results = parser.parse(arguments);
@@ -296,7 +305,8 @@ void main(List<String> arguments) async {
         }
 
         final ports = <String, int>{};
-        for (final port in results.command!['port'] as List<String>) {
+        final portList = results.command!['port'] as List<String>? ?? [];
+        for (final port in portList) {
           final parts = port.split(':');
           if (parts.length == 2) {
             ports[parts[1]] = int.parse(parts[0]);
@@ -304,7 +314,8 @@ void main(List<String> arguments) async {
         }
 
         final env = <String, String>{};
-        for (final envVar in results.command!['env'] as List<String>) {
+        final envList = results.command!['env'] as List<String>? ?? [];
+        for (final envVar in envList) {
           final parts = envVar.split('=');
           if (parts.length == 2) {
             env[parts[0]] = parts[1];
@@ -312,7 +323,8 @@ void main(List<String> arguments) async {
         }
 
         final volumes = <String, Map<String, String>>{};
-        for (final vol in results.command!['volume'] as List<String>) {
+        final volumeList = results.command!['volume'] as List<String>? ?? [];
+        for (final vol in volumeList) {
           final parts = vol.split(':');
           if (parts.length == 2) {
             volumes[parts[0]] = {'bind': parts[1], 'mode': 'rw'};
@@ -334,14 +346,16 @@ void main(List<String> arguments) async {
         break;
 
       case 'rm':
-        if (results.command!.rest.isEmpty) {
+        print(results.command!.arguments);
+        if (!results.command!.arguments.contains('--container-id') &&
+            results.command?.option('container-id') == null) {
           printError('Container ID or name required');
           exit(1);
         }
 
         await deleteContainer(
           client,
-          containerId: results.command!.rest.first,
+          containerId: results.command!.option('container-id')!,
           force: results.command!['force'] as bool,
         );
         break;
