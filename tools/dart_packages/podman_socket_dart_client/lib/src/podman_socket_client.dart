@@ -59,8 +59,7 @@ class PodmanSocketClient {
 
       socket.close();
 
-      final responseString = utf8.decode(responseBytes);
-      final response = _parseHttpResponse(responseString);
+      final response = _parseHttpResponseBytes(responseBytes);
 
       return PodmanResponse(
         statusCode: response.statusCode,
@@ -107,34 +106,122 @@ class PodmanSocketClient {
   }
 
   ({int statusCode, Map<String, String> headers, String body})
-  _parseHttpResponse(String response) {
-    final lines = response.split('\r\n');
-
-    // Parse status line
-    final statusLine = lines[0];
-    final statusCode = int.parse(statusLine.split(' ')[1]);
-
-    // Parse headers
-    final headers = <String, String>{};
-    int bodyStartIndex = 1;
-
-    for (int i = 1; i < lines.length; i++) {
-      if (lines[i].isEmpty) {
-        bodyStartIndex = i + 1;
+  _parseHttpResponseBytes(List<int> responseBytes) {
+    // Find the end of headers (\r\n\r\n)
+    int headerEnd = -1;
+    for (int i = 0; i < responseBytes.length - 3; i++) {
+      if (responseBytes[i] == 13 &&
+          responseBytes[i + 1] == 10 &&
+          responseBytes[i + 2] == 13 &&
+          responseBytes[i + 3] == 10) {
+        headerEnd = i;
         break;
       }
+    }
 
-      final colonIndex = lines[i].indexOf(':');
+    if (headerEnd == -1) {
+      throw Exception('Invalid HTTP response: no header end found');
+    }
+
+    // Parse headers
+    final headerBytes = responseBytes.sublist(0, headerEnd);
+    final headerString = utf8.decode(headerBytes);
+    final headerLines = headerString.split('\r\n');
+
+    // Parse status line
+    final statusLine = headerLines[0];
+    final statusCode = int.parse(statusLine.split(' ')[1]);
+
+    // Parse header fields
+    final headers = <String, String>{};
+    for (int i = 1; i < headerLines.length; i++) {
+      final colonIndex = headerLines[i].indexOf(':');
       if (colonIndex > 0) {
-        final key = lines[i].substring(0, colonIndex).trim().toLowerCase();
-        final value = lines[i].substring(colonIndex + 1).trim();
+        final key = headerLines[i]
+            .substring(0, colonIndex)
+            .trim()
+            .toLowerCase();
+        final value = headerLines[i].substring(colonIndex + 1).trim();
         headers[key] = value;
       }
     }
 
-    // Parse body
-    final body = lines.skip(bodyStartIndex).join('\r\n');
+    // Extract body bytes (after \r\n\r\n)
+    final bodyBytes = responseBytes.sublist(headerEnd + 4);
+
+    // Handle chunked transfer encoding
+    String body;
+    if (headers['transfer-encoding']?.toLowerCase() == 'chunked') {
+      final decodedBytes = _decodeChunkedBodyBytes(bodyBytes);
+      body = utf8.decode(decodedBytes);
+    } else {
+      body = utf8.decode(bodyBytes);
+    }
 
     return (statusCode: statusCode, headers: headers, body: body);
+  }
+
+  List<int> _decodeChunkedBodyBytes(List<int> chunkedBytes) {
+    final result = <int>[];
+    int position = 0;
+
+    while (position < chunkedBytes.length) {
+      // Find the end of the chunk size line (\r\n)
+      int chunkSizeEnd = -1;
+      for (int i = position; i < chunkedBytes.length - 1; i++) {
+        if (chunkedBytes[i] == 13 && chunkedBytes[i + 1] == 10) {
+          chunkSizeEnd = i;
+          break;
+        }
+      }
+
+      if (chunkSizeEnd == -1) break;
+
+      // Extract chunk size line
+      final chunkSizeBytes = chunkedBytes.sublist(position, chunkSizeEnd);
+      final chunkSizeLine = utf8.decode(chunkSizeBytes).trim();
+
+      // Skip empty lines
+      if (chunkSizeLine.isEmpty) {
+        position = chunkSizeEnd + 2;
+        continue;
+      }
+
+      // Parse chunk size (hex)
+      int chunkSize;
+      try {
+        chunkSize = int.parse(chunkSizeLine, radix: 16);
+      } catch (e) {
+        // If we can't parse as hex, skip this line
+        position = chunkSizeEnd + 2;
+        continue;
+      }
+
+      // If chunk size is 0, we've reached the end
+      if (chunkSize == 0) {
+        break;
+      }
+
+      // Move position to start of chunk data (after \r\n)
+      position = chunkSizeEnd + 2;
+
+      // Extract chunk data bytes
+      if (position + chunkSize <= chunkedBytes.length) {
+        result.addAll(chunkedBytes.sublist(position, position + chunkSize));
+        position += chunkSize;
+
+        // Skip trailing \r\n after chunk data
+        if (position + 1 < chunkedBytes.length &&
+            chunkedBytes[position] == 13 &&
+            chunkedBytes[position + 1] == 10) {
+          position += 2;
+        }
+      } else {
+        // Not enough data, break
+        break;
+      }
+    }
+
+    return result;
   }
 }
