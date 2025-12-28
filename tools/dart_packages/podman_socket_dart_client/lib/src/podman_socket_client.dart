@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:podman_socket_dart_client/podman_socket_dart_client.dart';
 
@@ -42,20 +43,37 @@ class PodmanSocketClient {
   }) async {
     try {
       // Connect to Unix socket
-      final socket = await Socket.connect(
+      final socket = await RawSocket.connect(
         InternetAddress(socketPath, type: InternetAddressType.unix),
         0,
       );
 
       // Send request
       final requestString = _buildHttpRequest(method, path, headers, body);
-      socket.add(utf8.encode(requestString));
+      socket.write(utf8.encode(requestString));
 
-      // Read response
+      final BytesBuilder receiptBuffer = BytesBuilder();
       final responseBytes = <int>[];
-      await for (final chunk in socket) {
-        responseBytes.addAll(chunk);
-      }
+      // 3. Listen for data events
+      await socket
+          .listen(
+            (RawSocketEvent event) {
+              if (event == RawSocketEvent.read) {
+                // Read available data into our buffer
+                final Uint8List? data = socket.read();
+                if (data != null) {
+                  receiptBuffer.add(data);
+                }
+              } else if (event == RawSocketEvent.closed ||
+                  event == RawSocketEvent.readClosed) {
+                responseBytes.addAll(receiptBuffer.takeBytes());
+                socket.close();
+              }
+            },
+            onError: (e) => print("Error: $e"),
+            onDone: () => print("Stream Done"),
+          )
+          .asFuture();
 
       socket.close();
 
@@ -66,7 +84,9 @@ class PodmanSocketClient {
         body: response.body,
         headers: response.headers,
       );
-    } catch (e) {
+    } catch (e, trace) {
+      print(e);
+      print(trace);
       throw Exception('Failed to connect to Podman socket: $e');
     }
   }
