@@ -232,6 +232,145 @@ Available conditions for `waitContainer()`:
 ✅ **Well Documented** - Complete docs and examples
 ✅ **Compat + Libpod** - Support for both API types
 
+
+# Podman Dart CLI
+
+Command-line interface for managing Podman containers and images using direct Unix socket communication.
+
+## Installation
+
+```bash
+# Install dependencies
+dart pub get
+
+# Run directly
+dart run bin/podman_dart_cli.dart --help
+
+# Or compile to native executable
+dart compile exe bin/podman_dart_cli.dart -o podman_dart_cli
+./podman_dart_cli --help
+```
+
+## Usage
+
+```bash
+dart run bin/podman_dart_cli.dart [--socket PATH] <command> [options]
+```
+
+### Global Options
+
+- `--socket PATH` - Path to Podman socket (default: `/run/podman/podman.sock`)
+
+### Commands
+
+#### List Images
+
+```bash
+# List images
+dart run bin/podman_dart_cli.dart images
+
+# List all images (including intermediate)
+dart run bin/podman_dart_cli.dart images --all
+```
+
+#### List Containers
+
+```bash
+# List running containers
+dart run bin/podman_dart_cli.dart ps
+
+# List all containers (including stopped)
+dart run bin/podman_dart_cli.dart ps --all
+```
+
+#### Run Container
+
+```bash
+# Basic run
+dart run bin/podman_dart_cli.dart run alpine:latest
+
+# With name
+dart run bin/podman_dart_cli.dart run alpine:latest --name my-container
+
+# With port mapping
+dart run bin/podman_dart_cli.dart run nginx:latest -p 8080:80
+
+# With environment variables
+dart run bin/podman_dart_cli.dart run alpine:latest -e KEY=value -e FOO=bar
+
+# With volumes
+dart run bin/podman_dart_cli.dart run alpine:latest -v /host/path:/container/path
+
+# With command
+dart run bin/podman_dart_cli.dart run alpine:latest echo "Hello World"
+```
+
+#### Delete Container
+
+```bash
+# Delete container
+dart run bin/podman_dart_cli.dart rm container_id
+
+# Force delete (stop if running)
+dart run bin/podman_dart_cli.dart rm container_id --force
+```
+
+## JSON Output
+
+All commands return JSON output in the following format:
+
+**Success:**
+
+```json
+{
+  "success": true,
+  "data": { ... }
+}
+```
+
+**Error:**
+
+```json
+{
+  "success": false,
+  "error": "Error message"
+}
+```
+
+## Examples
+
+### List all images
+
+```bash
+dart run bin/podman_dart_cli.dart --socket /run/podman/podman.sock images
+```
+
+### Run nginx with port mapping
+
+```bash
+dart run bin/podman_dart_cli.dart run nginx:latest --name web -p 8080:80
+```
+
+### Delete container forcefully
+
+```bash
+dart run bin/podman_dart_cli.dart rm my-container --force
+```
+
+## Comparison with Python CLI
+
+Both CLIs provide the same functionality:
+
+- Same command structure
+- Same JSON output format
+- Same socket parameter support
+
+The Dart CLI uses direct Unix socket communication, while the Python CLI uses the Podman Python library.
+
+See `../../BENCHMARK_README.md` for performance comparison.
+
+
+
 ## Next Steps
 
 For production use, consider:
