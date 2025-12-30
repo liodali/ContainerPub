@@ -1,46 +1,61 @@
 # Multi-stage build for Dart Cloud Backend
-FROM dart:3.9.2 AS build
+FROM dart:latest AS build
+
+# Add this label
+LABEL stage=builder-intermediate 
 
 # Set working directory
 WORKDIR /app
 
 # Copy pubspec files
-COPY ../dart_cloud_backend/pubspec.* ./
+COPY ./dart_cloud_backend/pubspec.* /app/dart_cloud_backend/
 
+COPY dart_cloud_backend /app/dart_cloud_backend
+
+# Copy source code
+COPY ./tools/dart_packages/s3_native_http_client /app/tools/dart_packages/s3_native_http_client
+
+WORKDIR /app/dart_cloud_backend
 # Get dependencies
 RUN dart pub get
 
-# Copy source code
-COPY ../dart_cloud_backend/ ./
+# Create functions directory
+RUN mkdir -p /app/functions
 
 # Compile to native executable for better performance
-RUN dart compile exe bin/server.dart -o bin/server
+# --target-os=linux --target-arch=arm64 
+RUN dart compile exe bin/server.dart -o bin/server 
+#RUN dart compile exe bin/server.dart -o bin/server 
 
 # Runtime stage - use minimal image
-FROM debian:bookworm-slim
+#FROM scratch
 
-# Install runtime dependencies
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends \
-    ca-certificates \
-    curl \
-    && rm -rf /var/lib/apt/lists/*
+#FROM alpine
+FROM python:3.13.11-alpine
+#FROM debian:bookworm-slim
+
+
+
+ARG PORT
 
 # Create app directory
 WORKDIR /app
 
 # Copy compiled binary from build stage
-COPY --from=build /app/bin/server /app/server
+COPY --from=build /runtime/ /
+COPY --from=build /app/dart_cloud_backend/bin/server /app/server
+COPY --from=build /app/dart_cloud_backend/.env /app/.env
+COPY --from=build /app/functions /app/functions
 
 # Create functions directory
-RUN mkdir -p /app/functions
+#RUN mkdir -p /app/functions
 
 # Expose port
-EXPOSE 8080
+#EXPOSE PORT
 
 # Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:8080/api/health || exit 1
+#HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+#    CMD curl -f http://localhost:8080/api/health || exit 1
 
 # Run the server
 CMD ["/app/server"]
