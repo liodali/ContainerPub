@@ -1,4 +1,11 @@
 import 'dart:io';
+import 'package:dart_cloud_backend/services/docker/docker_service.dart'
+    show DockerService;
+import 'package:dart_cloud_backend/services/docker/dockerfile_generator.dart';
+import 'package:dart_cloud_backend/services/docker/file_system.dart';
+import 'package:dart_cloud_backend/services/docker/podman_py_runtime.dart';
+import 'package:dart_cloud_backend/services/docker/podman_runtime.dart'
+    show PodmanRuntime;
 import 'package:dotenv/dotenv.dart';
 
 class Config {
@@ -135,6 +142,18 @@ class Config {
     if (!await dir.exists()) {
       await dir.create(recursive: true);
     }
+
+    final podmanSocket = env['PODMAN_SOCKET'];
+    final pyPodmanCliPath = env['PYTHON_PODMAN_CLI'];
+    final usePODCLI = const bool.fromEnvironment('USE_PODMAN_CLI', defaultValue: true);
+
+    DockerService.init(
+      runtime: podmanSocket == null && usePODCLI
+          ? PodmanRuntime()
+          : PodmanPyRuntime(socketPath: podmanSocket, pythonClientPath: pyPodmanCliPath),
+      fileSystem: const RealFileSystem(),
+      dockerfileGenerator: const DockerfileGenerator(),
+    );
   }
 
   static void loadFake() {
