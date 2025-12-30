@@ -57,14 +57,32 @@ class DockerService {
   final RequestFileManager _requestFileManager;
 
   /// Default singleton instance for static method access
-  static final DockerService _instance = DockerService._internal();
+  static DockerService? _instance;
+  static DockerService get instance {
+    if (_instance == null) {
+      throw StateError('DockerService not initialized');
+    }
+    return _instance!;
+  }
+
+  static void init({
+    ContainerRuntime? runtime,
+    FileSystem? fileSystem,
+    DockerfileGenerator? dockerfileGenerator,
+  }) {
+    _instance ??= DockerService(
+      runtime: runtime,
+      fileSystem: fileSystem,
+      dockerfileGenerator: dockerfileGenerator,
+    );
+  }
 
   /// Private constructor for singleton
-  DockerService._internal()
-    : _runtime = PodmanRuntime(),
-      _fileSystem = const RealFileSystem(),
-      _dockerfileGenerator = const DockerfileGenerator(),
-      _requestFileManager = const RequestFileManager(RealFileSystem());
+  // DockerService._internal()
+  //   : _runtime = PodmanRuntime(),
+  //     _fileSystem = const RealFileSystem(),
+  //     _dockerfileGenerator = const DockerfileGenerator(),
+  //     _requestFileManager = const RequestFileManager(RealFileSystem());
 
   /// Create a DockerService instance
   ///
@@ -77,14 +95,12 @@ class DockerService {
     FileSystem? fileSystem,
     DockerfileGenerator? dockerfileGenerator,
   }) {
-    if (runtime == null && fileSystem == null && dockerfileGenerator == null) {
-      return _instance;
-    }
-    return DockerService._custom(
+    _instance ??= DockerService._custom(
       runtime: runtime ?? PodmanRuntime(),
       fileSystem: fileSystem ?? const RealFileSystem(),
       dockerfileGenerator: dockerfileGenerator ?? const DockerfileGenerator(),
     );
+    return _instance!;
   }
 
   /// Custom constructor for dependency injection
@@ -409,7 +425,7 @@ class DockerService {
     String functionId,
     String functionName,
     String functionDir,
-  ) => _instance.buildImage(
+  ) => _instance!.buildImage(
     functionId,
     functionName,
     functionDir,
@@ -427,7 +443,7 @@ class DockerService {
     String functionName,
     String functionDir,
     String entrypoint,
-  ) => _instance.buildImage(
+  ) => instance.buildImage(
     functionId,
     functionName,
     functionDir,
@@ -446,12 +462,12 @@ class DockerService {
     required int version,
   }) async {
     // Check if image exists before running
-    final imageExists = await _instance.isImageExist(imageTag);
+    final imageExists = await instance.isImageExist(imageTag);
     if (!imageExists) {
       throw Exception('Container image does not exist: $imageTag');
     }
 
-    final result = await _instance.runContainer(
+    final result = await instance.runContainer(
       imageTag: imageTag,
       input: input,
       timeoutMs: timeoutMs,
@@ -462,23 +478,23 @@ class DockerService {
   }
 
   static Future<bool> isContainerImageExist(String imageTag) =>
-      _instance.isImageExist(imageTag);
+      instance.isImageExist(imageTag);
 
   Future<bool> isImageExist(String imageTag) => _runtime.imageExists(imageTag);
 
-  static Future<void> pruneIntermediateImages() => _instance.prune();
+  static Future<void> pruneIntermediateImages() => instance.prune();
   Future<void> prune() => _runtime.prune();
 
   /// Static method to remove image (delegates to singleton)
   ///
   /// @deprecated Use instance method instead: `DockerService().removeImage(...)`
   static Future<void> removeImageStatic(String imageTag) =>
-      _instance.removeImage(imageTag);
+      instance.removeImage(imageTag);
 
   /// Static method to check runtime availability (delegates to singleton)
   ///
   /// @deprecated Use instance method instead: `DockerService().isRuntimeAvailable()`
-  static Future<bool> isPodmanAvailable() => _instance.isRuntimeAvailable();
+  static Future<bool> isPodmanAvailable() => instance.isRuntimeAvailable();
 
   /// @deprecated Use isPodmanAvailable instead
   @Deprecated('Use isPodmanAvailable instead')
