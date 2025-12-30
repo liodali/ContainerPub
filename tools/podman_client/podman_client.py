@@ -2,6 +2,7 @@
 import argparse
 import json
 import sys
+import re
 from pathlib import Path
 from podman import PodmanClient
 from typing import Optional, Dict, Any, List
@@ -23,11 +24,25 @@ class PodmanCLI:
             return False
 
     def _output_success(self, data: Any):
-        print(json.dumps({"success": True, "data": data}, indent=2))
+        print(json.dumps({"success": True, "data": data}))
 
     def _output_error(self, message: str):
         print(json.dumps({"success": False, "error": message}, indent=2), file=sys.stderr)
+    def version(self):
+        try:
+            versionInfo = self.client.version()
+            self._output_success(versionInfo.get('Version'))
+        except Exception as e:
+            self._output_error(f"Failed to get version: {str(e)}")
+    
+    def infoPodman(self,format:str|None) -> None:
 
+        info = self.client.info()
+        if format:
+            # Use our dynamic formatter
+            self._output_success(self.format_inspect(info, format))
+        else:
+            self._output_success(info)
     def image_exists(self, image_tag: str) -> bool:
         """Check if an image exists locally."""
         try:
@@ -35,7 +50,16 @@ class PodmanCLI:
             return True
         except Exception:
             return False
-
+    def inspect_image(self,image_tag:str,format:str|None):
+        try:
+            imageInspect = self.client.images.get(image_tag)
+            if format:
+                # Use our dynamic formatter
+                self._output_success(self.format_inspect(imageInspect.attrs, format))
+            else:
+                self._output_success(json.dumps(imageInspect.attrs, indent=4))
+        except Exception as e:
+            self._output_error(f"Failed to inspect image: {str(e)}")
     def container_exists(self, container_name: str) -> bool:
         """Check if a container exists (running or stopped)."""
         try:
@@ -288,6 +312,42 @@ class PodmanCLI:
             })
         except Exception as e:
             self._output_error(f"Failed to prune images: {str(e)}")
+    def get_nested_value(self,data, path):
+        """Recursively finds values like 'Config.Cmd' in image attributes."""
+        keys = path.strip('.').split('.')
+        current = data
+        for key in keys:
+            if not isinstance(current, dict):
+                return None
+            
+            # 1. Direct Match (Case-Sensitive)
+            if key in current:
+                current = current[key]
+            else:
+                # 2. Case-Insensitive Fallback (Crucial for Host vs host)
+                mapping = {k.lower(): k for k in current.keys()}
+                target_key = mapping.get(key.lower())
+                
+                if target_key:
+                    current = current[target_key]
+                else:
+                    return None
+                    
+        return current
+
+    def format_inspect(self,attrs, format_str):
+        """Replaces {{.Path}} with values from the attributes dictionary."""
+        # Find all Go-style placeholders {{.Something}}
+        patterns = re.findall(r'\{\{\s*\.(.*?)\s*\}\}', format_str)
+        
+        output = format_str
+        for p in patterns:
+            value = self.get_nested_value(attrs, p)
+            # Convert list/dict values to string for display (like CLI does)
+            val_str = json.dumps(value) if isinstance(value, (list, dict)) else str(value)
+            output = output.replace(f"{{{{.{p}}}}}", val_str)
+        
+        return output
 
 
 def main():
@@ -303,11 +363,31 @@ def main():
 
     subparsers = parser.add_subparsers(dest="command", help="Available commands")
 
+    subparsers.add_parser("version", help="Get Podman version")
+    info_parser = subparsers.add_parser("info", help="Get Podman info")
+    info_parser.add_argument(
+        "--format","-f",
+        type=str,
+        required=False,
+        help="Format the output",
+    )
     images_parser = subparsers.add_parser("images", help="List images")
     images_parser.add_argument(
         "--all", "-a",
         action="store_true",
         help="Show all images (including intermediate)"
+    )
+    inspect_image_parser = subparsers.add_parser("inspect", help="inspect an image")
+    inspect_image_parser.add_argument(
+        "tag",
+        type=str,
+        help="Image tag (e.g., myapp:latest)"
+    )
+    inspect_image_parser.add_argument(
+        "--format",
+        type=str,
+        required=False,
+        help="Format the output",
     )
 
     build_parser = subparsers.add_parser("build", help="Build an image")
@@ -453,7 +533,7 @@ def main():
         help="Force delete (default: true)"
     )
 
-    prune_parser = subparsers.add_parser("prune", help="Remove unused images")
+    subparsers.add_parser("prune", help="Remove unused images")
 
     ps_parser = subparsers.add_parser("ps", help="List containers")
     ps_parser.add_argument(
@@ -470,11 +550,16 @@ def main():
     cli = PodmanCLI(args.socket)
     if not cli.connect():
         sys.exit(1)
-
-    if args.command == "images":
+    if args.command == "version":
+        cli.version()
+    elif args.command == "info":
+        cli.infoPodman(format=args.format)
+    elif args.command == "images":
         cli.list_images(all_images=args.all)
-    elif args.command == "pull" : 
-        cli.list_images
+    elif args.command == "inspect":
+        cli.inspect_image(image_tag=args.tag,format=args.format)
+    # elif args.command == "pull" : 
+    #     cli.pull(args.image)
     elif args.command == "build":
         buildargs = None
         if args.build_arg:
