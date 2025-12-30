@@ -30,7 +30,9 @@ RUN dart compile exe bin/server.dart -o bin/server
 # Runtime stage - use minimal image
 #FROM scratch
 
-FROM alpine
+
+#FROM alpine
+FROM python:3.13.11-alpine
 
 #FROM debian:bookworm-slim
 
@@ -55,7 +57,11 @@ WORKDIR /app
 COPY --from=build /runtime/ /
 COPY --from=build /app/dart_cloud_backend/bin/server /app/server
 COPY --from=build /app/dart_cloud_backend/.env /app/.env
+
 COPY --from=build /app/functions /app/functions
+
+COPY  ../tools/podman_client/podman_client.py /app/podman_client.py
+RUN pip3 install --no-cache-dir --break-system-packages -r ../tools/podman_client/requirements.txt
 
 # Create functions directory
 #RUN mkdir -p /app/functions
