@@ -30,7 +30,7 @@ class PodmanPyRuntime implements ContainerRuntime {
 
   /// Get default Python client path relative to project root
   static String _getDefaultPythonClientPath() {
-    return 'tools/podman_client/podman_client.py';
+    return 'podman_client.py';
   }
 
   /// Get socket path from dart-define
@@ -118,15 +118,14 @@ class PodmanPyRuntime implements ContainerRuntime {
   }
 
   @override
-  Future<Architecture> getArch() async {
-    final result = await _executePythonCommand(['images', '--all']);
+  Future<Architecture> getArch({String format = '{{.Host.Arch}}'}) async {
+    final result = await _executePythonCommand(['info', '--format', format]);
 
     if (result['success'] == true) {
       // Use platform detection from info
-      final platform = _socketPath.contains('arm64')
-          ? Architecture.arm64
-          : Architecture.x64;
-      return platform;
+      final platform = result['data'] as String?;
+      if (platform == 'arm64') return Architecture.arm64;
+      return Architecture.x64;
     }
 
     // Fallback: detect from system
@@ -139,27 +138,32 @@ class PodmanPyRuntime implements ContainerRuntime {
 
   @override
   Future<ArchitecturePlatform> getArchPlatform() async {
-    final arch = await getArch();
-    return arch == Architecture.arm64
-        ? ArchitecturePlatform.linuxArm64
-        : ArchitecturePlatform.linuxX64;
+    final result = await _executePythonCommand([
+      'info',
+      '--format',
+      '{{.Version.OsArch}}',
+    ]);
+
+    if (result['success'] == true) {
+      final arch = result['data'] as String?;
+      return ArchitecturePlatform.values.firstWhere(
+        (element) => element.buildPlatform == arch,
+      );
+    }
+    throw Exception('Unsupported architecture: ${result['error']}');
   }
 
   @override
   Future<String?> getImagePlatform(String imageTag) async {
-    final result = await _executePythonCommand(['images', '--all']);
+    final result = await _executePythonCommand([
+      'inspect',
+      imageTag,
+      '--format',
+      '{{.Os}}/{{.Architecture}}',
+    ]);
 
     if (result['success'] == true) {
-      final images = result['data'] as List<dynamic>?;
-      if (images != null) {
-        for (final img in images) {
-          final tags = img['tags'] as List<dynamic>?;
-          if (tags != null && tags.contains(imageTag)) {
-            // Return platform info if available
-            return 'linux/amd64'; // Default, could be enhanced
-          }
-        }
-      }
+      return result['data'] as String?;
     }
     return null;
   }
@@ -348,17 +352,15 @@ class PodmanPyRuntime implements ContainerRuntime {
   @override
   Future<bool> isAvailable() async {
     try {
-      final result = await Process.run(_pythonExecutable, ['--version']);
-      if (result.exitCode != 0) return false;
-
-      // Check if Python client file exists
-      final clientFile = File(_pythonClientPath);
-      if (!await clientFile.exists()) return false;
-
-      // Try to connect to Podman
-      final testResult = await _executePythonCommand(['images']);
-      return testResult['success'] == true;
-    } catch (e) {
+      final result = await _executePythonCommand(['ping']);
+      if (result['success'] != true) {
+        print(result['error']);
+        return false;
+      }
+      return true;
+    } catch (e, trace) {
+      print(e);
+      print(trace);
       return false;
     }
   }
@@ -366,9 +368,9 @@ class PodmanPyRuntime implements ContainerRuntime {
   @override
   Future<String?> getVersion() async {
     try {
-      final result = await _executePythonCommand(['images']);
+      final result = await _executePythonCommand(['version']);
       if (result['success'] == true) {
-        return 'podman-py-client-1.0.0';
+        return result['data'] as String?;
       }
       return null;
     } catch (e) {
