@@ -34,6 +34,12 @@ class PodmanCLI:
             self._output_success(versionInfo.get('Version'))
         except Exception as e:
             self._output_error(f"Failed to get version: {str(e)}")
+    def ping(self):
+        try:
+            self.client.ping()
+            self._output_success("Pong")
+        except Exception as e:
+            self._output_error(f"Failed to ping: {str(e)}")
     
     def infoPodman(self,format:str|None) -> None:
 
@@ -364,6 +370,7 @@ def main():
     subparsers = parser.add_subparsers(dest="command", help="Available commands")
 
     subparsers.add_parser("version", help="Get Podman version")
+    subparsers.add_parser("ping", help="Ping Podman")
     info_parser = subparsers.add_parser("info", help="Get Podman info")
     info_parser.add_argument(
         "--format","-f",
@@ -552,6 +559,8 @@ def main():
         sys.exit(1)
     if args.command == "version":
         cli.version()
+    elif args.command == "ping":
+        cli.ping()
     elif args.command == "info":
         cli.infoPodman(format=args.format)
     elif args.command == "images":
