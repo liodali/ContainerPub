@@ -51,8 +51,8 @@ services:
 
   backend:
     build:
-      context: ../..
-      dockerfile: infrastructure/Dockerfile.backend
+      context: ../../..
+      dockerfile: deployment/infrastructure/Dockerfile.backend
       platform: linux/amd64
     platform: linux/amd64
     container_name: dart_cloud_backend_prod
