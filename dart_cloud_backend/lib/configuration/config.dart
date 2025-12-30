@@ -12,6 +12,7 @@ class Config {
   static late int port;
   static late String functionsDir;
   static late String databaseUrl;
+  static late bool databaseSSL;
   static late String jwtSecret;
 
   // Function execution limits
@@ -59,12 +60,21 @@ class Config {
     databaseUrl =
         env['DATABASE_URL'] ??
         Platform.environment['DATABASE_URL'] ??
-        'postgres://dart_cloud:dart_cloud@postgres:5432/dart_cloud';
+        dbURLGenerator(
+          env,
+        ); //'postgres://dart_cloud:dart_cloud@postgres:5432/dart_cloud';
+    databaseSSL =
+        bool.tryParse(
+          env['DATABASE_SSL'] ?? Platform.environment['DATABASE_SSL'] ?? 'false',
+        ) ??
+        false;
     jwtSecret =
         env['JWT_SECRET'] ??
         Platform.environment['JWT_SECRET'] ??
-        'your-secret-key-change-in-production';
-
+       '';
+    if (jwtSecret.isEmpty) {
+      throw Exception('JWT_SECRET is not set');
+    }
     // Function execution limits
     functionTimeoutSeconds = int.parse(
       env['FUNCTION_TIMEOUT_SECONDS'] ??
@@ -143,17 +153,38 @@ class Config {
       await dir.create(recursive: true);
     }
 
-    final podmanSocket = env['PODMAN_SOCKET'];
-    final pyPodmanCliPath = env['PYTHON_PODMAN_CLI'];
-    final usePODCLI = const bool.fromEnvironment('USE_PODMAN_CLI', defaultValue: true);
+    final podmanSocket =
+        env['PODMAN_SOCKET'] ??
+        const String.fromEnvironment(
+          'PODMAN_SOCKET',
+        );
+    final pyPodmanCliPath =
+        env['PYTHON_PODMAN_CLI'] ??
+        const String.fromEnvironment(
+          'PYTHON_PODMAN_CLI',
+        );
+    final usePODCLI =
+        bool.tryParse(env['USE_PODMAN_CLI'] ?? '') ??
+        const bool.fromEnvironment(
+          'USE_PODMAN_CLI',
+          defaultValue: false,
+        );
 
     DockerService.init(
-      runtime: podmanSocket == null && usePODCLI
+      runtime: usePODCLI
           ? PodmanRuntime()
-          : PodmanPyRuntime(socketPath: podmanSocket, pythonClientPath: pyPodmanCliPath),
+          : PodmanPyRuntime(
+              socketPath: podmanSocket,
+              pythonClientPath: '${Directory.current.path}/$pyPodmanCliPath',
+            ),
       fileSystem: const RealFileSystem(),
       dockerfileGenerator: const DockerfileGenerator(),
     );
+    final isAvailable = await DockerService.instance.isRuntimeAvailable();
+    if (!isAvailable) {
+      print('Podman runtime is not available');
+      exit(1);
+    }
   }
 
   static void loadFake() {
@@ -163,4 +194,8 @@ class Config {
     functionDatabaseMaxConnections = 5;
     functionDatabaseConnectionTimeoutMs = 5000;
   }
+}
+
+String dbURLGenerator(DotEnv env) {
+  return 'postgres://${env['POSTGRES_USER']}:${env['POSTGRES_PASSWORD']}@${env['POSTGRES_HOST']}:${env['POSTGRES_PORT']}/${env['POSTGRES_DB']}';
 }
