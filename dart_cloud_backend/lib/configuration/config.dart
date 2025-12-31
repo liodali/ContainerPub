@@ -6,6 +6,7 @@ import 'package:dart_cloud_backend/services/docker/file_system.dart';
 import 'package:dart_cloud_backend/services/docker/podman_py_runtime.dart';
 import 'package:dart_cloud_backend/services/docker/podman_runtime.dart'
     show PodmanRuntime;
+import 'package:dart_cloud_backend/utils/commons.dart';
 import 'package:dotenv/dotenv.dart';
 
 class Config {
@@ -63,15 +64,13 @@ class Config {
         dbURLGenerator(
           env,
         ); //'postgres://dart_cloud:dart_cloud@postgres:5432/dart_cloud';
+    print(databaseUrl);
     databaseSSL =
         bool.tryParse(
           env['DATABASE_SSL'] ?? Platform.environment['DATABASE_SSL'] ?? 'false',
         ) ??
         false;
-    jwtSecret =
-        env['JWT_SECRET'] ??
-        Platform.environment['JWT_SECRET'] ??
-       '';
+    jwtSecret = env['JWT_SECRET'] ?? Platform.environment['JWT_SECRET'] ?? '';
     if (jwtSecret.isEmpty) {
       throw Exception('JWT_SECRET is not set');
     }
@@ -152,23 +151,13 @@ class Config {
     if (!await dir.exists()) {
       await dir.create(recursive: true);
     }
-
-    final podmanSocket =
-        env['PODMAN_SOCKET'] ??
-        const String.fromEnvironment(
-          'PODMAN_SOCKET',
-        );
+    final podmanSocket = getValueFromEnv('PODMAN_SOCKET') ?? env['PODMAN_SOCKET'];
     final pyPodmanCliPath =
-        env['PYTHON_PODMAN_CLI'] ??
-        const String.fromEnvironment(
-          'PYTHON_PODMAN_CLI',
-        );
+        getValueFromEnv('PYTHON_PODMAN_CLI') ?? env['PYTHON_PODMAN_CLI'];
     final usePODCLI =
+        getBoolValueFromEnv('USE_PODMAN_CLI', false) ??
         bool.tryParse(env['USE_PODMAN_CLI'] ?? '') ??
-        const bool.fromEnvironment(
-          'USE_PODMAN_CLI',
-          defaultValue: false,
-        );
+        false;
 
     DockerService.init(
       runtime: usePODCLI
@@ -182,6 +171,9 @@ class Config {
     );
     final isAvailable = await DockerService.instance.isRuntimeAvailable();
     if (!isAvailable) {
+      print(podmanSocket);
+      print(pyPodmanCliPath);
+      print(usePODCLI);
       print('Podman runtime is not available');
       exit(1);
     }
