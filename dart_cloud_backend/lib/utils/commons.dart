@@ -43,3 +43,24 @@ extension StringExtension on String {
     return parts.firstWhereOrNull((part) => part.startsWith('filename=')) != null;
   }
 }
+
+const String _notSet = 'DART_DEFINE_NOT_SET';
+String? getValueFromEnv(String key) {
+  String value = String.fromEnvironment(key, defaultValue: _notSet);
+  return value == _notSet ? null : value;
+}
+
+bool? getBoolValueFromEnv(String key, bool defaultValue) =>
+    bool.fromEnvironment(key, defaultValue: defaultValue);
+
+T? getGenericValueFromEnv<T extends Comparable>(String key, Comparable defaultValue) {
+  // T value = T.fromEnvironment(key, defaultValue: _notSet);
+  // return value == _notSet ? null : value;
+  return switch (T.runtimeType) {
+        String => String.fromEnvironment(key, defaultValue: _notSet),
+        int => int.fromEnvironment(key, defaultValue: defaultValue as int),
+        double => double.tryParse(String.fromEnvironment(key, defaultValue: _notSet)),
+        _ => throw Exception('Unsupported type'),
+      }
+      as T?;
+}
