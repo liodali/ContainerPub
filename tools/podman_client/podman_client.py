@@ -11,16 +11,16 @@ from typing import Optional, Dict, Any, List
 class PodmanCLI:
     def __init__(self, socket_path: str):
         self.socket_path = socket_path
-        self.client = PodmanClient(base_url=f"unix://{self.socket_path}")
+        self.client = PodmanClient(base_url=f"http+unix://{self.socket_path}",version="6.0.0")
 
     def connect(self) -> bool:
         try:
             if(self.client.ping() != False) :
-                self.client = PodmanClient(base_url=f"unix://{self.socket_path}")
+                self.client = PodmanClient(base_url=f"http+unix://{self.socket_path}",version="6.0.0")
                 return True
             return False
         except Exception as e:
-            self._output_error(f"Failed to connect to Podman socket: {str(e)}")
+            self._output_error(f"Failed to connect to Podman socket: {e}")
             return False
 
     def _output_success(self, data: Any):
