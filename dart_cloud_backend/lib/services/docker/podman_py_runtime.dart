@@ -2,7 +2,9 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:dart_cloud_backend/handlers/logs_utils/log_utils.dart';
 import 'package:dart_cloud_backend/services/docker/container_data.dart';
+import 'package:sentry/sentry.dart';
 
 import 'container_runtime.dart';
 
@@ -95,7 +97,15 @@ class PodmanPyRuntime implements ContainerRuntime {
           'error': errorJson['error'] ?? 'Unknown error',
           'exit_code': exitCode,
         };
-      } catch (_) {
+      } catch (exception, trace) {
+        LogsUtils.log('runContainer', 'error', {
+          'error': 'Command failed with exit code $exitCode',
+          'trace': trace.toString(),
+          'exception': exception.toString(),
+          'stderr': stderr,
+          'stdout': stdout,
+        });
+        await Sentry.captureException(exception, stackTrace: trace);
         return {
           'success': false,
           'error': stderr.isNotEmpty ? stderr : 'Command failed with exit code $exitCode',
@@ -255,7 +265,7 @@ class PodmanPyRuntime implements ContainerRuntime {
       '--memory',
       '$memoryMb$memoryUnit',
       '--memory-swap',
-      '$memoryMb$memoryUnit',
+      '50m',
       '--cpus',
       cpus.toString(),
     ];
@@ -267,11 +277,11 @@ class PodmanPyRuntime implements ContainerRuntime {
 
     // Add environment variables
     for (final entry in environment.entries) {
-      args.addAll(['--env', '${entry.key}=${entry.value}']);
+      args.addAll(['-e', '${entry.key}=${entry.value}']);
     }
-
+    print('run container args: ${args}');
     final result = await _executePythonCommand(args, timeout: timeout);
-
+    print('run container result: ${result}');
     if (result['success'] == true) {
       final data = result['data'] as Map<String, dynamic>;
 
@@ -380,18 +390,10 @@ class PodmanPyRuntime implements ContainerRuntime {
 
   @override
   Future<bool> imageExists(String imageTag) async {
-    final result = await _executePythonCommand(['images', '--all']);
-
-    if (result['success'] == true) {
-      final images = result['data'] as List<dynamic>?;
-      if (images != null) {
-        for (final img in images) {
-          final tags = img['tags'] as List<dynamic>?;
-          if (tags != null && tags.contains(imageTag)) {
-            return true;
-          }
-        }
-      }
+    final result = await _executePythonCommand(['exists', imageTag]);
+    print('check $imageTag image exists: ${result['data']}');
+    if (result['success'] == true && result['data'] == true) {
+      return true;
     }
     return false;
   }
@@ -403,24 +405,20 @@ class PodmanPyRuntime implements ContainerRuntime {
 
   @override
   Future<ImageSizeData> getImageSize(String imageTag) async {
-    final result = await _executePythonCommand(['images', '--all']);
+    final result = await _executePythonCommand([
+      'inspect',
+      imageTag,
+      '--format',
+      '{{.Size}}',
+    ]);
 
     if (result['success'] == true) {
-      final images = result['data'] as List<dynamic>?;
-      if (images != null) {
-        for (final img in images) {
-          final tags = img['tags'] as List<dynamic>?;
-          if (tags != null && tags.contains(imageTag)) {
-            final size = img['size'] as int? ?? 0;
-            // Convert bytes to MB
-            final sizeMb = size / (1024 * 1024);
-            return (
-              size: sizeMb,
-              unit: UniteSize.MB,
-            );
-          }
-        }
-      }
+      final size = int.parse(result['data'] as String);
+      final sizeMb = size / (1024 * 1024);
+      return (
+        size: sizeMb,
+        unit: UniteSize.MB,
+      );
     }
 
     return (
