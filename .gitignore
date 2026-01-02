@@ -40,3 +40,6 @@ dart_cloud_backend/devtools_options.yaml
 dart_cloud_cli/devtools_options.yaml
 frontend/cloud_panel/devtools_options.yaml
 .deploy
+tools/benchmark
+requirements.txt
+.env*
