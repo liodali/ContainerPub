@@ -45,11 +45,12 @@ class TokenService {
   TokenService._internal();
 
   /// Initialize Hive and open boxes
-  Future<void> initialize() async {
+  Future<void> initialize({String? directoryApp}) async {
+    final filePath = '${directoryApp ?? directory}/tokens';
     Hive.init(
-      '$directory/tokens',
+      filePath,
     );
-    final cipher = _generateCipher();
+    final cipher = _generateCipher(directoryApp: directoryApp);
     _authTokenBox = await Hive.openLazyBox<List<dynamic>>(
       _authTokenBoxName,
       encryptionCipher: cipher,
@@ -237,11 +238,11 @@ class TokenService {
 }
 
 extension on TokenService {
-  HiveAesCipher _generateCipher() {
+  HiveAesCipher _generateCipher({String? directoryApp}) {
     var context = path.Context(style: path.Style.platform);
     final file = File(
       context.join(
-        directory,
+        directoryApp ?? directory,
         _keyPath,
       ),
     );
