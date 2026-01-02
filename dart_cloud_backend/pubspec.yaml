@@ -32,6 +32,7 @@ dependencies:
   s3_native_http_client:
     path: ../tools/dart_packages/s3_native_http_client
   cli_util: ^0.4.2
+  sentry: ^9.9.1
   #s3_client_dart:
   #  path: ../tools/dart_packages/s3_client_dart
     # git:
