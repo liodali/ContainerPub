@@ -5,6 +5,7 @@ import sys
 import re
 from pathlib import Path
 from podman import PodmanClient
+from podman.errors import ImageNotFound
 from typing import Optional, Dict, Any, List
 
 
@@ -53,9 +54,9 @@ class PodmanCLI:
         """Check if an image exists locally."""
         try:
             self.client.images.get(image_tag)
-            return True
+            self._output_success(True)
         except Exception:
-            return False
+            self._output_error("Image does not exist")
     def inspect_image(self,image_tag:str,format:str|None):
         try:
             imageInspect = self.client.images.get(image_tag)
@@ -126,9 +127,7 @@ class PodmanCLI:
         """
         try:
             # Check if image already exists
-            if tag and self.image_exists(tag):
-                self._output_error(f"Image '{tag}' already exists. Use --force to rebuild or choose a different tag.")
-                return
+            self.client.images.get(tag)
 
             # Auto-detect platform if not provided
             if not platform:
@@ -162,6 +161,8 @@ class PodmanCLI:
                 "platform": platform,
                 "logs": logs
             })
+        except ImageNotFound:
+            self._output_error(f"Image '{tag}' not found. Please build the image first.")
         except Exception as e:
             self._output_error(f"Failed to build image: {str(e)}")
 
@@ -172,7 +173,7 @@ class PodmanCLI:
                      command: Optional[List[str]] = None,
                      auto_remove: bool = True, network: str = "none",
                      mem_limit: str = "20m", mem_swap_limit: str = "20m",
-                     cpu_quota: Optional[int] = None, cpus: float = 0.5,
+                     cpus: float = 0.5,
                      storage_opt: Optional[Dict[str, str]] = None) -> None:
         """Run a container from an image.
         
@@ -194,15 +195,14 @@ class PodmanCLI:
         """
         try:
             # Check if image exists
-            if not self.image_exists(image):
-                self._output_error(f"Image '{image}' does not exist. Pull or build it first.")
-                return
-
-            # Check if container name already exists
-            if name and self.container_exists(name):
-                self._output_error(f"Container '{name}' already exists. Remove it first or use a different name.")
-                return
-
+            # Check if image already exists
+            # self.client.images.get(image)
+            
+            # # Check if container name already exists
+            # if name and self.container_exists(name):
+            #     self._output_error(f"Container '{name}' already exists. Remove it first or use a different name.")
+            #     return
+            print(f"run container from image {image} with name {name}")
             run_params = {
                 "image": image,
                 "detach": detach,
@@ -240,6 +240,8 @@ class PodmanCLI:
                 "image": container.image.tags if container.image else image,
                 "auto_remove": auto_remove,
             })
+        except ImageNotFound:
+            self._output_error(f"Image '{image}' does not exist. Pull or build it first.")
         except Exception as e:
             self._output_error(f"Failed to run container: {str(e)}")
 
@@ -371,6 +373,12 @@ def main():
 
     subparsers.add_parser("version", help="Get Podman version")
     subparsers.add_parser("ping", help="Ping Podman")
+    existParser = subparsers.add_parser("exists", help="Check if an image exists")
+    existParser.add_argument(
+        "tag",
+        type=str,
+        help="Image tag (e.g., myapp:latest)"
+    )
     info_parser = subparsers.add_parser("info", help="Get Podman info")
     info_parser.add_argument(
         "--format","-f",
@@ -467,11 +475,11 @@ def main():
         action="append",
         help="Volume mapping (format: HOST:CONTAINER)"
     )
-    run_parser.add_argument(
-        "--run-command","-c",
-        nargs="*",
-        help="Command to run in container"
-    )
+    # run_parser.add_argument(
+    #     "--run-command","-c",
+    #     nargs="*",
+    #     help="Command to run in container"
+    # )
     run_parser.add_argument(
         "--no-auto-remove",
         action="store_true",
@@ -565,6 +573,8 @@ def main():
         cli.infoPodman(format=args.format)
     elif args.command == "images":
         cli.list_images(all_images=args.all)
+    elif args.command == "exists":
+        cli.image_exists(args.tag)
     elif args.command == "inspect":
         cli.inspect_image(image_tag=args.tag,format=args.format)
     # elif args.command == "pull" : 
@@ -609,8 +619,15 @@ def main():
         if args.volume:
             volumes = {}
             for vol in args.volume:
-                host, container = vol.split(":")
-                volumes[host] = {"bind": container, "mode": "rw"}
+                parts = vol.split(":")
+                if len(parts) == 2:
+                    host, container = parts
+                    mode = "rw"
+                elif len(parts) == 3:
+                    host, container, mode = parts
+                else:
+                    raise ValueError(f"Invalid volume format: {vol}. Expected host:container or host:container:mode")
+                volumes[host] = {"bind": container, "mode": mode}
         detach = True
         if args.detach == False or args.detach == "false":
             detach = False
@@ -618,13 +635,13 @@ def main():
         # auto_remove is True by default, unless --no-auto-remove is set
         auto_remove = not args.no_auto_remove
         
-        run_command = None
-        if args.run_command:
-            if len(args.run_command) == 1:
-                run_command = ["/bin/sh", "-c", args.run_command[0]]
-            else:
-                run_command = args.run_command
-        
+        # run_command = None
+        # if args.run_command:
+        #     if len(args.run_command) == 1:
+        #         run_command = ["/bin/sh", "-c", args.run_command[0]]
+        #     else:
+        #         run_command = args.run_command
+
         cli.run_container(
             image=args.image,
             name=args.name,
@@ -632,7 +649,7 @@ def main():
             ports=ports,
             environment=environment,
             volumes=volumes,
-            command=run_command,
+            command=None,
             auto_remove=auto_remove,
             network=args.network,
             mem_limit=args.memory,
