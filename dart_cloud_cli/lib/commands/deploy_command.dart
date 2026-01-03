@@ -211,8 +211,9 @@ class DeployCommand extends BaseCommand {
       archiveFile.deleteSync();
       archiveFile = null;
       exit(0);
-    } catch (e) {
+    } catch (e,trace) {
       print('✗ Deployment failed: $e');
+      print(trace);
       archiveFile?.deleteSync();
       archiveFile = null;
       exit(1);
