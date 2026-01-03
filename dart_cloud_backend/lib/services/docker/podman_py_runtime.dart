@@ -268,6 +268,8 @@ class PodmanPyRuntime implements ContainerRuntime {
       '50m',
       '--cpus',
       cpus.toString(),
+      '--timeout',
+      timeout.inSeconds.toString(),
     ];
 
     // Add volume mounts
