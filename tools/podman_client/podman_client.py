@@ -169,7 +169,9 @@ class PodmanCLI:
         """
         try:
             # Check if image already exists
-            self.client.images.get(tag)
+            if self.client.images.exists(tag):
+                self._output_success({"image": tag, "message": "Image already exists"})
+                return
 
             # Auto-detect platform if not provided
             if not platform:
@@ -216,7 +218,9 @@ class PodmanCLI:
                      auto_remove: bool = True, network: str = "none",
                      mem_limit: str = "20m", mem_swap_limit: str = "20m",
                      cpus: float = 0.5,
-                     storage_opt: Optional[Dict[str, str]] = None,timeout: Optional[int] = 5) -> None:
+                     storage_opt: Optional[Dict[str, str]] = None,
+                     timeout: Optional[int] = 5,
+                     working_dir: Optional[str] = None) -> None:
         """Run a container from an image.
         
         Args:
@@ -235,6 +239,7 @@ class PodmanCLI:
             cpus: Number of CPUs (default: 0.5)
             storage_opt: Storage driver options
             timeout: Timeout in seconds (default: None)
+            working_dir: Working directory inside the container
         """
         try:
             # Check if image exists
@@ -276,6 +281,8 @@ class PodmanCLI:
                 run_params["volumes"] = volumes
             if command:
                 run_params["command"] = command
+            if working_dir:
+                run_params["working_dir"] = working_dir
             
             containerImage = self.client.containers.run(image=imageContainer, **run_params)
             
@@ -578,6 +585,11 @@ def main():
         default=5,
         help="Timeout in seconds to wait for container to exit (default: 5)"
     )
+    run_parser.add_argument(
+        "--workdir", "-w",
+        type=str,
+        help="Working directory inside the container"
+    )
 
     kill_parser = subparsers.add_parser("kill", help="Kill a running container")
     kill_parser.add_argument(
@@ -724,7 +736,8 @@ def main():
             mem_limit=args.memory,
             mem_swap_limit=args.memory_swap,
             cpus=args.cpus,
-            timeout=args.timeout
+            timeout=args.timeout,
+            working_dir=args.workdir
         )
     
     elif args.command == "kill":
