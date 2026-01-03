@@ -213,7 +213,7 @@ class PodmanPyRuntime implements ContainerRuntime {
       '--file',
       dockerfilePath,
     ];
-
+    
     final result = await _executePythonCommand(args, timeout: timeout);
 
     if (result['success'] == true) {
@@ -254,6 +254,7 @@ class PodmanPyRuntime implements ContainerRuntime {
     double cpus = 0.5,
     String network = 'none',
     Duration timeout = const Duration(seconds: 10),
+    String? workingDir,
   }) async {
     final args = [
       'run',
@@ -281,7 +282,13 @@ class PodmanPyRuntime implements ContainerRuntime {
     for (final entry in environment.entries) {
       args.addAll(['-e', '${entry.key}=${entry.value}']);
     }
-    print('run container args: ${args}');
+
+    // Add working directory if specified
+    if (workingDir != null) {
+      args.addAll(['--workdir', workingDir]);
+    }
+
+    print('run container args: $args');
     final result = await _executePythonCommand(args, timeout: timeout);
     print('run container result: ${result}');
     if (result['success'] == true) {
