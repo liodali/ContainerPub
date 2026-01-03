@@ -104,6 +104,7 @@ abstract class ContainerRuntime {
   /// - [cpus]: CPU limit
   /// - [network]: Network mode
   /// - [timeout]: Execution timeout
+  /// - [workingDir]: Working directory inside the container
   Future<ProcessResult> runContainer({
     required String imageTag,
     required String containerName,
@@ -115,6 +116,7 @@ abstract class ContainerRuntime {
     double cpus = 0.5,
     String network = 'none',
     Duration timeout = const Duration(seconds: 30),
+    String? workingDir,
   });
 
   /// Remove a container image

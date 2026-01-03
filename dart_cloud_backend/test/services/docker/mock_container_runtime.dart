@@ -132,6 +132,7 @@ class MockContainerRuntime extends ContainerRuntime {
     double cpus = 0.5,
     String network = 'none',
     Duration timeout = const Duration(seconds: 30),
+    String? workingDir,
   }) async {
     methodCalls.add(
       MethodCall(
@@ -147,6 +148,7 @@ class MockContainerRuntime extends ContainerRuntime {
           'cpus': cpus,
           'network': network,
           'timeout': timeout,
+          'workingDir': workingDir,
         },
       ),
     );

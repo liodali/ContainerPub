@@ -140,6 +140,7 @@ class PodmanRuntime implements ContainerRuntime {
     double cpus = 0.5,
     String network = 'none',
     Duration timeout = const Duration(seconds: 10),
+    String? workingDir,
   }) async {
     final args = [
       'run',
@@ -174,6 +175,11 @@ class PodmanRuntime implements ContainerRuntime {
     environment.forEach((key, value) {
       args.addAll(['-e', '$key=$value']);
     });
+
+    // Add working directory if specified
+    if (workingDir != null) {
+      args.addAll(['-w', workingDir]);
+    }
 
     // Add image tag
     args.add(imageTag);
