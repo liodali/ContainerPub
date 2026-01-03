@@ -63,14 +63,15 @@ print_header "Dart Cloud Backend - Quick Start"
 cleanup_on_failure() {
     print_error "Deployment failed. Cleaning up..."
     
-    print_info "Stopping containers..."
-    $CONTAINER_COMPOSE_RUNTIME stop 2>/dev/null || true
+    print_info "Stopping and removing containers..."
+    $CONTAINER_COMPOSE_RUNTIME down  2>/dev/null || true #--remove-orphans
     
-    print_info "Removing containers..."
-    $CONTAINER_COMPOSE_RUNTIME rm -f backend-cloud postgres 2>/dev/null || true
+    # Force remove any remaining containers
+    $CONTAINER_RUNTIME rm -f dart_cloud_backend dart_cloud_postgres 2>/dev/null || true
     
+    # Force remove network if it still exists
     print_info "Removing network..."
-    $CONTAINER_COMPOSE_RUNTIME down 2>/dev/null || true
+    $CONTAINER_RUNTIME network rm dart_cloud_dart_cloud_network -f 2>/dev/null || true
     
     # Clean up temporary .env files
     # rm -rf .env 2>/dev/null || true
@@ -142,11 +143,11 @@ if $CONTAINER_RUNTIME ps | grep -q "dart_cloud_backend.*Up"; then
 fi
 
 # Check if services exist but are stopped
-if $CONTAINER_RUNTIME ps -a | grep -q "dart_cloud_postgres"; then
+if $CONTAINER_RUNTIME ps -a | grep -q "^dart_cloud_postgres$"; then
     POSTGRES_EXISTS=true
 fi
 
-if $CONTAINER_RUNTIME ps -a | grep -q "dart_cloud_backend"; then
+if $CONTAINER_RUNTIME ps -a | grep -q "^dart_cloud_backend$"; then
     BACKEND_EXISTS=true
 fi
 
@@ -257,8 +258,12 @@ elif [ "$POSTGRES_RUNNING" = true ] || [ "$BACKEND_RUNNING" = true ]; then
             echo ""
             if [[ $REPLY =~ ^[Yy]$ ]]; then
                 print_info "Removing everything..."
-                $CONTAINER_COMPOSE_RUNTIME down -v
-                $CONTAINER_RUNTIME rmi $($CONTAINER_RUNTIME images -f "label=stage=builder-intermediate" -q)
+                $CONTAINER_COMPOSE_RUNTIME down -v # --remove-orphans
+                # Force remove network if it still exists
+                # $CONTAINER_RUNTIME network rm dart_cloud_dart_cloud_network -f 2>/dev/null || true
+                # Remove intermediate images
+                # $CONTAINER_RUNTIME rmi $($CONTAINER_RUNTIME images -f "label=stage=builder-intermediate" -q) 2>/dev/null || true
+                $CONTAINER_RUNTIME images prune
                 print_success "All services and volumes removed"
             else
                 print_info "Cancelled"
