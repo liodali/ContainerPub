@@ -42,6 +42,9 @@ class Config {
   // Docker Configuration
   static late String dockerBaseImage;
   static late String dockerRegistry;
+  static late String sharedVolumeName;
+
+  static late String sentryDsn;
 
   static String get fileEnv {
     return String.fromEnvironment('FILE_ENV', defaultValue: '.env');
@@ -57,14 +60,13 @@ class Config {
 
     port = int.parse(env['PORT'] ?? Platform.environment['PORT'] ?? '8080');
     functionsDir =
-        env['FUNCTIONS_DIR'] ?? Platform.environment['FUNCTIONS_DIR'] ?? './functions';
-    databaseUrl =
+        getValueFromEnv('FUNCTIONS_DIR') ?? env['FUNCTIONS_DIR'] ?? './functions';
+    databaseUrl = //
+        getValueFromEnv('DATABASE_URL') ??
         env['DATABASE_URL'] ??
-        Platform.environment['DATABASE_URL'] ??
         dbURLGenerator(
           env,
         ); //'postgres://dart_cloud:dart_cloud@postgres:5432/dart_cloud';
-    print(databaseUrl);
     databaseSSL =
         bool.tryParse(
           env['DATABASE_SSL'] ?? Platform.environment['DATABASE_SSL'] ?? 'false',
@@ -115,6 +117,8 @@ class Config {
           '5000',
     );
 
+    sentryDsn = env['SENTRY_DSN'] ?? getValueFromEnv('SENTRY_DSN') ?? '';
+
     // S3 Client Configuration
     s3ClientLibraryPath = env['S3_CLIENT_LIBRARY_PATH'] ?? './s3_client_dart.dylib';
 
@@ -145,6 +149,10 @@ class Config {
         env['DOCKER_REGISTRY'] ??
         Platform.environment['DOCKER_REGISTRY'] ??
         'localhost:5000';
+    sharedVolumeName =
+        getValueFromEnv('SHARED_VOLUME_NAME') ??
+        env['SHARED_VOLUME_NAME'] ??
+        'functions_data';
 
     // Ensure functions directory exists
     final dir = Directory(functionsDir);
