@@ -86,6 +86,48 @@ class PodmanCLI:
             self._output_error(f"Failed to get architecture platform: {str(e)}")
             return "linux/amd64"
 
+    def _wait_for_container_exit(self, container, timeout: Optional[int], auto_remove: bool) -> bool:
+        """Wait for container to exit with optional timeout.
+        
+        Args:
+            container: Container object to wait for
+            timeout: Timeout in seconds (None or 0 for no timeout)
+            auto_remove: Whether to remove container on timeout
+            
+        Returns:
+            True if container exited normally, False if timeout occurred
+        """
+        import time
+        
+        start_time = time.time()
+        
+        while True:
+            container.reload()
+            status = container.status
+            
+            # Container has exited (could be 'exited', 'stopped', or 'dead')
+            if status in ['exited', 'stopped', 'dead']:
+                return True
+            
+            # Check if timeout exceeded
+            if timeout and (time.time() - start_time) >= timeout:
+                # Timeout exceeded - kill the container
+                try:
+                    container.kill()
+                except Exception as kill_error:
+                    print(f"Warning: Failed to kill container: {kill_error}")
+                
+                self._output_error(f"Container '{container.name}' exceeded timeout of {timeout}s and was killed")
+                if auto_remove:
+                    try:
+                        container.remove()
+                    except Exception:
+                        pass
+                return False
+            
+            # Sleep briefly before checking again
+            time.sleep(0.5)
+
     def pull(self, imageName: str) -> None:
         """Pull an image from a registry."""
         try:
@@ -174,7 +216,7 @@ class PodmanCLI:
                      auto_remove: bool = True, network: str = "none",
                      mem_limit: str = "20m", mem_swap_limit: str = "20m",
                      cpus: float = 0.5,
-                     storage_opt: Optional[Dict[str, str]] = None) -> None:
+                     storage_opt: Optional[Dict[str, str]] = None,timeout: Optional[int] = 5) -> None:
         """Run a container from an image.
         
         Args:
@@ -192,25 +234,29 @@ class PodmanCLI:
             cpu_quota: CPU quota in microseconds
             cpus: Number of CPUs (default: 0.5)
             storage_opt: Storage driver options
+            timeout: Timeout in seconds (default: None)
         """
         try:
             # Check if image exists
             # Check if image already exists
-            # self.client.images.get(image)
+            imageContainer = self.client.images.get(image)
             
             # # Check if container name already exists
             # if name and self.container_exists(name):
             #     self._output_error(f"Container '{name}' already exists. Remove it first or use a different name.")
             #     return
-            print(f"run container from image {image} with name {name}")
+            # print(f"run container from image {image} with name {name}")
             run_params = {
-                "image": image,
+                # "image": image,
                 "detach": detach,
-                "auto_remove": auto_remove,
+                "auto_remove": False, #auto_remove,
                 "mem_limit": mem_limit,
-                "mem_swappiness": 0,
-                "network_mode": network,
+                # "mem_swappiness": 0,
+                #"network_mode": network,
             }
+
+            if network != None:
+                run_params["network_mode"] = network
 
             # Add resource limits
             if mem_swap_limit:
@@ -230,16 +276,33 @@ class PodmanCLI:
                 run_params["volumes"] = volumes
             if command:
                 run_params["command"] = command
-
-            container = self.client.containers.run(**run_params)
             
-            self._output_success({
-                "container_id": container.id,
-                "name": container.name,
-                "status": container.status,
-                "image": container.image.tags if container.image else image,
-                "auto_remove": auto_remove,
-            })
+            containerImage = self.client.containers.run(image=imageContainer, **run_params)
+            
+            # Wait for container to exit with timeout
+            if not self._wait_for_container_exit(containerImage, timeout, auto_remove):
+                return
+            
+            # Refresh container status after wait
+            containerImage.reload()
+             
+            # Check exit code for success/failure
+            exit_code = containerImage.attrs.get('State', {}).get('ExitCode', -1)
+            
+            if containerImage.status == "exited" and exit_code == 0:
+                self._output_success({
+                    "container_id": containerImage.id,
+                    "name": containerImage.name,
+                    "status": containerImage.status,
+                    "exit_code": exit_code,
+                    "image": containerImage.image.tags if containerImage.image else image,
+                    "auto_remove": auto_remove,
+                })
+            else:
+                self._output_error(f"Container '{containerImage.name}' failed with exit code {exit_code}")
+            
+            if auto_remove:
+                containerImage.remove()
         except ImageNotFound:
             self._output_error(f"Image '{image}' does not exist. Pull or build it first.")
         except Exception as e:
@@ -509,6 +572,12 @@ def main():
         default=0.5,
         help="Number of CPUs (default: 0.5)"
     )
+    run_parser.add_argument(
+        "--timeout",
+        type=int,
+        default=5,
+        help="Timeout in seconds to wait for container to exit (default: 5)"
+    )
 
     kill_parser = subparsers.add_parser("kill", help="Kill a running container")
     kill_parser.add_argument(
@@ -654,7 +723,8 @@ def main():
             network=args.network,
             mem_limit=args.memory,
             mem_swap_limit=args.memory_swap,
-            cpus=args.cpus
+            cpus=args.cpus,
+            timeout=args.timeout
         )
     
     elif args.command == "kill":
