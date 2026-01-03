@@ -225,7 +225,6 @@ class ApiKeyService {
       payload: payload,
       timestamp: timestamp,
     );
-
     return _secureCompare(signature, expectedSignature);
   }
 

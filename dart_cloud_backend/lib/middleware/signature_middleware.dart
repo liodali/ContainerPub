@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:dart_cloud_backend/handlers/logs_utils/log_utils.dart';
 import 'package:shelf/shelf.dart';
 import 'package:database/database.dart';
 import 'package:dart_cloud_backend/services/api_key_service.dart';
@@ -116,7 +117,6 @@ Middleware get signatureMiddleware {
 
       // Get the payload for verification (body content)
       final payload = body['body'] != null ? jsonEncode(body['body']) : '';
-
       final isValid = await ApiKeyService.instance.verifySignature(
         functionUuid: functionUuid,
         keyUUID: apiKey,
@@ -126,6 +126,14 @@ Middleware get signatureMiddleware {
       );
 
       if (!isValid) {
+        LogsUtils.logError(
+          'Invalid signature',
+          {
+            'error': 'Invalid signature mismatch',
+            'signature_middleware.dart': 'verifySignature',
+          }.toString(),
+          'no trace'
+        );
         return Response.badRequest(
           body: jsonEncode({
             'error': 'Invalid signature',
