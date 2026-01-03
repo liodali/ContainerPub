@@ -1,4 +1,4 @@
-version: '3.8'
+version: "3.8"
 
 services:
   postgres:
@@ -32,14 +32,18 @@ services:
         PORT: ${PORT:-8080}
       ssh:
         - default
-      platform: linux/amd64
-    platform: linux/amd64
+      # platform: linux/amd64
+    # platform: linux/amd64
     container_name: dart_cloud_backend
     restart: unless-stopped
     command: ["sh", "-c", "sleep 5 && /app/server"]
+    user: "root:root"
+    security_opt:
+      - label=disable
     depends_on:
       postgres:
         condition: service_healthy
+    privileged: true
     environment:
       PORT: ${PORT:-8080}
       DATABASE_URL: postgres://${POSTGRES_USER:-dart_cloud}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}@$POSTGRES_HOST:5432/${POSTGRES_DB:-dart_cloud}
@@ -51,10 +55,12 @@ services:
       FUNCTION_MAX_CONCURRENT: ${FUNCTION_MAX_CONCURRENT:-10}
       FUNCTION_DB_MAX_CONNECTIONS: ${FUNCTION_DB_MAX_CONNECTIONS:-5}
       FUNCTION_DB_TIMEOUT_MS: ${FUNCTION_DB_TIMEOUT_MS:-5000}
+      PODMAN_SOCKET_PATH: /run/podman/podman.sock
     ports:
       - "${PORT:-8080}:${PORT:-8080}"
     volumes:
       - functions_data:/app/functions
+      - /run/podman/podman.sock:/run/podman/podman.sock
     networks:
       - dart_cloud_network
     healthcheck:

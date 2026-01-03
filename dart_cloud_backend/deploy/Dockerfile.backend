@@ -10,7 +10,11 @@ WORKDIR /app
 # Copy pubspec files
 COPY ./dart_cloud_backend/pubspec.* /app/dart_cloud_backend/
 
-COPY dart_cloud_backend /app/dart_cloud_backend
+COPY dart_cloud_backend/lib /app/dart_cloud_backend/lib
+COPY dart_cloud_backend/bin /app/dart_cloud_backend/bin
+COPY dart_cloud_backend/packages /app/dart_cloud_backend/packages
+COPY dart_cloud_backend/.env.dev /app/dart_cloud_backend/.env
+
 
 # Copy source code
 COPY ./tools/dart_packages/s3_native_http_client /app/tools/dart_packages/s3_native_http_client
@@ -29,7 +33,6 @@ RUN dart compile exe bin/server.dart -o bin/server
 
 # Runtime stage - use minimal image
 #FROM scratch
-
 
 #FROM alpine
 FROM python:3.13.11-alpine
@@ -60,18 +63,9 @@ COPY --from=build /app/dart_cloud_backend/.env /app/.env
 
 COPY --from=build /app/functions /app/functions
 
-COPY  ../tools/podman_client/podman_client.py /app/podman_client.py
-RUN pip3 install --no-cache-dir --break-system-packages -r ../tools/podman_client/requirements.txt
+COPY  ./tools/podman_client/podman_client.py /app/podman_client.py
+RUN pip3 install --no-cache-dir --break-system-packages --root-user-action=ignore   podman
 
-# Create functions directory
-#RUN mkdir -p /app/functions
-
-# Expose port
-#EXPOSE PORT
-
-# Health check
-#HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-#    CMD curl -f http://localhost:8080/api/health || exit 1
 
 # Run the server
 CMD ["/app/server"]

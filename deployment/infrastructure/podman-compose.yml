@@ -1,4 +1,4 @@
-version: '3.8'
+version: "3.8"
 
 services:
   postgres:
@@ -43,10 +43,12 @@ services:
       FUNCTION_MAX_CONCURRENT: 10
       FUNCTION_DB_MAX_CONNECTIONS: 5
       FUNCTION_DB_TIMEOUT_MS: 5000
+      PODMAN_SOCKET_PATH: /run/podman/podman.sock
     ports:
       - "8080:8080"
     volumes:
       - functions-data:/app/functions
+      - /run/podman/podman.sock:/run/podman/podman.sock
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/api/health"]
       interval: 30s

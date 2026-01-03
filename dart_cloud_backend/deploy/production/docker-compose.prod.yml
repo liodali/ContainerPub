@@ -1,4 +1,4 @@
-version: '3.8'
+version: "3.8"
 
 services:
   postgres:
@@ -72,6 +72,7 @@ services:
       FUNCTION_MAX_CONCURRENT: ${FUNCTION_MAX_CONCURRENT:-10}
       FUNCTION_DB_MAX_CONNECTIONS: ${FUNCTION_DB_MAX_CONNECTIONS:-5}
       FUNCTION_DB_TIMEOUT_MS: ${FUNCTION_DB_TIMEOUT_MS:-5000}
+      PODMAN_SOCKET_PATH: /run/podman/podman.sock
       # Production settings
       NODE_ENV: production
       LOG_LEVEL: ${LOG_LEVEL:-info}
@@ -80,6 +81,10 @@ services:
     volumes:
       # Functions storage
       - functions_data:/app/functions
+      # Functions storage - bind mount for nested container access
+      # - ./functions:/app/functions
+      # Podman socket for container management
+      - /run/podman/podman.sock:/run/podman/podman.sock
       # SSL Certificates for client
       - ./ssl/client-cert.pem:/app/ssl/client.crt:ro
       - ./ssl/client-key.pem:/app/ssl/client.key:ro
@@ -100,16 +105,14 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '2'
+          cpus: "2"
           memory: 2G
         reservations:
-          cpus: '0.5'
+          cpus: "0.5"
           memory: 512M
 
 volumes:
   postgres_data:
-    driver: local
-  functions_data:
     driver: local
 
 networks:
