@@ -17,17 +17,16 @@ dependencies:
   bcrypt: ^1.1.3
   dart_jsonwebtoken: ^3.3.1
   dotenv: ^4.2.0
-  analyzer: ^9.0.0
   hive_ce: ^2.15.1
   crypto: ^3.0.6
   collection: ^1.19.1
   yaml: ^3.1.3
   json2yaml: ^3.0.1
   zard: ^0.0.25
-  name_generator: 
+  name_generator:
     path: packages/name_generator
   characters: ^1.4.1
-  database: 
+  database:
     path: packages/database
   s3_native_http_client:
     path: ../tools/dart_packages/s3_native_http_client
@@ -35,10 +34,10 @@ dependencies:
   sentry: ^9.9.1
   #s3_client_dart:
   #  path: ../tools/dart_packages/s3_client_dart
-    # git:
-    #   url: https://github.com/liodali/ContainerPub.git
-    #   path: tools/dart_packages/s3_client_dart
-    #   ref: 1f39b55a582cd97a6890e53e8fe70738efd11876
+  # git:
+  #   url: https://github.com/liodali/ContainerPub.git
+  #   path: tools/dart_packages/s3_client_dart
+  #   ref: 1f39b55a582cd97a6890e53e8fe70738efd11876
 
 dev_dependencies:
   lints: ^6.0.0
