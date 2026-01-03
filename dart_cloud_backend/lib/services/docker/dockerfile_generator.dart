@@ -17,7 +17,7 @@ class DockerfileGenerator {
   /// [buildImage] defaults to 'dart:stable' for compilation
   /// [runtimeImage] defaults to 'alpine' for minimal runtime
   const DockerfileGenerator({
-    this.buildImage = 'dart:stable',
+    this.buildImage = 'dart:stable-sdk',
     this.runtimeImage = 'alpine',
   });
 
@@ -61,10 +61,11 @@ FROM $buildImage AS $buildStageTag
 WORKDIR /app
 
 # Copy pubspec files first for better layer caching
-COPY pubspec.* ./
+#COPY pubspec.* ./
+COPY pubspec.yaml pubspec.lock ./
 
 # Install dependencies (if pubspec.yaml exists)
-RUN if [ -f pubspec.yaml ]; then dart pub get; fi
+RUN dart pub get
 
 # Copy all function source files
 COPY . .
@@ -89,7 +90,7 @@ COPY --from=$buildStageTag /app/$outputBinary /$outputBinary
 
 # Set the entrypoint to the compiled function
 # Request data will be mounted at /request.json at runtime
-CMD ["./$outputBinary"]
+CMD ["/$outputBinary"]
 ''';
   }
 
