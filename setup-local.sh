@@ -26,23 +26,18 @@ if ! command -v dart &> /dev/null; then
 fi
 echo -e "${GREEN}✓ Dart SDK found: $(dart --version 2>&1 | head -n1)${NC}"
 
-# Check Docker
-if ! command -v docker &> /dev/null; then
-    echo -e "${YELLOW}⚠️  Docker not found (optional, but recommended for PostgreSQL)${NC}"
-    DOCKER_AVAILABLE=false
-else
-    echo -e "${GREEN}✓ Docker found${NC}"
-    DOCKER_AVAILABLE=true
+# Check Podman
+if ! command -v podman &> /dev/null; then
+    echo -e "${RED}❌ Podman not found${NC}"
+    echo "Please install Podman: https://podman.io/getting-started/installation"
+    exit 1
 fi
+echo -e "${GREEN}✓ Podman found${NC}"
+PODMAN_AVAILABLE=true
 
-# Check PostgreSQL
+# Check PostgreSQL client
 if ! command -v psql &> /dev/null; then
-    if [ "$DOCKER_AVAILABLE" = false ]; then
-        echo -e "${RED}❌ PostgreSQL not found and Docker not available${NC}"
-        echo "Please install PostgreSQL or Docker"
-        exit 1
-    fi
-    echo -e "${YELLOW}⚠️  PostgreSQL client not found (will use Docker)${NC}"
+    echo -e "${YELLOW}⚠️  PostgreSQL client not found (will use Podman container)${NC}"
     PSQL_AVAILABLE=false
 else
     echo -e "${GREEN}✓ PostgreSQL client found${NC}"
@@ -54,30 +49,37 @@ echo ""
 # Setup PostgreSQL
 echo "🐘 Setting up PostgreSQL..."
 
-if [ "$DOCKER_AVAILABLE" = true ]; then
+if [ "$PODMAN_AVAILABLE" = true ]; then
+    # Check if volume exists, create if not
+    if ! podman volume ls | grep -q dart_cloud_postgres_data; then
+        echo "Creating volume dart_cloud_postgres_data..."
+        podman volume create dart_cloud_postgres_data
+    fi
+    
     # Check if container already exists
-    if docker ps -a | grep -q containerpub-postgres; then
-        echo -e "${YELLOW}⚠️  Container 'containerpub-postgres' already exists${NC}"
+    if podman ps -a | grep -q dart_cloud_postgres; then
+        echo -e "${YELLOW}⚠️  Container 'dart_cloud_postgres' already exists${NC}"
         read -p "Remove and recreate? (y/n) " -n 1 -r
         echo
         if [[ $REPLY =~ ^[Yy]$ ]]; then
-            docker stop containerpub-postgres 2>/dev/null || true
-            docker rm containerpub-postgres 2>/dev/null || true
+            podman stop dart_cloud_postgres 2>/dev/null || true
+            podman rm dart_cloud_postgres 2>/dev/null || true
         else
             echo "Using existing container"
         fi
     fi
     
     # Start PostgreSQL container if not running
-    if ! docker ps | grep -q containerpub-postgres; then
+    if ! podman ps | grep -q dart_cloud_postgres; then
         echo "Starting PostgreSQL container..."
-        docker run -d \
-            --name containerpub-postgres \
-            -e POSTGRES_USER=dart_cloud \
-            -e POSTGRES_PASSWORD=dev_password \
+        podman run -d \
+            --name dart_cloud_postgres \
+            -e POSTGRES_USER=postgres \
+            -e POSTGRES_PASSWORD=postgres \
             -e POSTGRES_DB=dart_cloud \
             -p 5432:5432 \
-            postgres:15
+            -v dart_cloud_postgres_data:/var/lib/postgresql/data \
+            postgres:17-alpine
         
         echo "Waiting for PostgreSQL to start..."
         sleep 5
@@ -85,11 +87,11 @@ if [ "$DOCKER_AVAILABLE" = true ]; then
     
     # Create functions database
     echo "Creating functions_db..."
-    docker exec containerpub-postgres psql -U dart_cloud -d postgres -c "CREATE DATABASE functions_db;" 2>/dev/null || echo "Database functions_db already exists"
+    podman exec dart_cloud_postgres psql -U postgres -d postgres -c "CREATE DATABASE functions_db;" 2>/dev/null || echo "Database functions_db already exists"
     
     # Create test table
     echo "Creating test table in functions_db..."
-    docker exec containerpub-postgres psql -U dart_cloud -d functions_db << 'EOF'
+    podman exec dart_cloud_postgres psql -U postgres -d functions_db << 'EOF'
 CREATE TABLE IF NOT EXISTS items (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name VARCHAR(255) NOT NULL,
@@ -102,13 +104,11 @@ ON CONFLICT DO NOTHING;
 EOF
     
     echo -e "${GREEN}✓ PostgreSQL setup complete${NC}"
-    DB_URL="postgres://dart_cloud:dev_password@localhost:5432/dart_cloud"
-    FUNC_DB_URL="postgres://dart_cloud:dev_password@localhost:5432/functions_db"
+    DB_URL="postgres://postgres:postgres@localhost:5432/dart_cloud"
+    FUNC_DB_URL="postgres://postgres:postgres@localhost:5432/functions_db"
 else
-    echo -e "${YELLOW}Please ensure PostgreSQL is running locally${NC}"
-    echo "Default connection: postgres://dart_cloud:dev_password@localhost:5432/dart_cloud"
-    DB_URL="postgres://dart_cloud:dev_password@localhost:5432/dart_cloud"
-    FUNC_DB_URL="postgres://dart_cloud:dev_password@localhost:5432/functions_db"
+    echo -e "${RED}❌ Podman is required for PostgreSQL setup${NC}"
+    exit 1
 fi
 
 echo ""
