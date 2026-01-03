@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:dart_cloud_backend/configuration/config.dart';
 import 'package:dart_cloud_backend/handlers/logs_utils/log_utils.dart';
 import 'package:dart_cloud_backend/utils/commons.dart';
+import 'package:sentry/sentry.dart';
 
 import 'container_runtime.dart';
 import 'dockerfile_generator.dart';
@@ -256,7 +257,7 @@ class DockerService {
         network: 'none',
         timeout: Duration(milliseconds: timeoutMs),
       );
-
+      
       // Capture container logs (stdout and stderr) - these are now pure logs
       final containerLogs = <String, dynamic>{
         'stderr': result.stderr,
@@ -287,12 +288,19 @@ class DockerService {
 
       // Handle timeout
       if (result.exitCode == -1) {
+        LogsUtils.logError(
+          'runContainer',
+          'Function Error',
+          containerLogs.toString(),
+        );
         return ExecutionResult(
           success: false,
           error: 'Function execution timed out (${timeoutMs}ms)',
           logs: containerLogs,
         );
       }
+      print('Container result: ${result.stdout}');
+      print('Container error: ${result.stderr}');
       // Read result from result.json (written by function)
       Map<String, dynamic> parsedResult = Map.from(
         jsonDecode(result.stdout['stdout']),
@@ -309,6 +317,7 @@ class DockerService {
           e.toString(),
           stackTrace.toString(),
         );
+        Sentry.captureException(e, stackTrace: stackTrace);
         // If result.json is empty or invalid, check if function failed
         if (!result.isSuccess) {
           return ExecutionResult(
