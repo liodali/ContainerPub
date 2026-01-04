@@ -151,7 +151,7 @@ class ExecutionHandler {
       var invocationLogs = InvocationLogs.fromContainerLogs(
         executionResult['logs'] as Map<String, dynamic>?,
       );
-      final memUsage = executionResult.containsKey('logs')
+      final memUsage =  executionResult.containsKey('logs') && executionResult['logs'] != null
           ? executionResult['logs']['memory_usage'] ?? Config.functionMaxMemoryMb
           : Config.functionMaxMemoryMb;
       // Add execution metadata
