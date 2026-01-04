@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:dart_cloud_backend/utils/commons.dart';
 import 'package:database/database.dart';
+import 'package:sentry/sentry.dart';
 import 'package:uuid/v4.dart';
 
 /// Utility functions shared across function handlers
@@ -51,6 +52,10 @@ class LogsUtils {
     String trace,
   ) async {
     try {
+      await Sentry.captureException(
+        Exception(error),
+        stackTrace: StackTrace.fromString(trace),
+      );
       return log(
         LogLevels.error.name,
         action,
@@ -61,6 +66,10 @@ class LogsUtils {
       // This ensures we don't lose critical logs
       print('Failed to error log: $e');
       print('Failed to trace log: $trace');
+      Sentry.captureException(
+        Exception(e),
+        stackTrace: trace,
+      );
     }
   }
 }
