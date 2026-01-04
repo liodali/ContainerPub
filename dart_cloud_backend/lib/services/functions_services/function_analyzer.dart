@@ -1,9 +1,5 @@
 import 'dart:io';
 import 'package:path/path.dart' as path;
-import 'package:analyzer/dart/analysis/analysis_context_collection.dart';
-import 'package:analyzer/dart/analysis/results.dart';
-import 'package:analyzer/dart/ast/ast.dart';
-import 'package:analyzer/dart/ast/visitor.dart';
 
 /// Result of function analysis
 class AnalysisResult {
@@ -37,6 +33,7 @@ class FunctionAnalyzer {
   FunctionAnalyzer(this.functionDir);
 
   /// Analyze the function for security and compliance
+  /// Uses regex-based parsing to avoid dependency on Dart SDK internal files
   Future<AnalysisResult> analyze() async {
     final errors = <String>[];
     final warnings = <String>[];
@@ -67,35 +64,25 @@ class FunctionAnalyzer {
       // Read the file content
       final content = await File(mainFile).readAsString();
 
-      // Perform static analysis
-      final collection = AnalysisContextCollection(
-        includedPaths: [functionDir],
-      );
+      // Perform regex-based security analysis
+      final securityResult = _RegexSecurityAnalyzer.analyze(content);
 
-      final context = collection.contextFor(mainFile);
-      final result = await context.currentSession.getResolvedUnit(mainFile);
+      hasFunctionAnnotation = securityResult.hasFunctionAnnotation;
+      risks.addAll(securityResult.risks);
+      warnings.addAll(securityResult.warnings);
 
-      if (result is ResolvedUnitResult) {
-        final visitor = SecurityVisitor();
-        result.unit.visitChildren(visitor);
-
-        hasFunctionAnnotation = visitor.hasFunctionAnnotation;
-        risks.addAll(visitor.risks);
-        warnings.addAll(visitor.warnings);
-
-        // Check for @function annotation
-        if (!hasFunctionAnnotation) {
-          errors.add(
-            'Missing @function annotation. Functions must be annotated with @function',
-          );
-        }
-
-        // Check for risky patterns in code
-        _checkRiskyPatterns(content, risks, warnings);
-
-        // Validate function signature
-        _validateFunctionSignature(result.unit, errors, warnings);
+      // Check for @function annotation
+      if (!hasFunctionAnnotation) {
+        errors.add(
+          'Missing @function annotation. Functions must be annotated with @function',
+        );
       }
+
+      // Check for risky patterns in code
+      _checkRiskyPatterns(content, risks, warnings);
+
+      // Validate function signature using regex
+      _validateFunctionSignatureRegex(content, errors, warnings);
 
       final isValid = errors.isEmpty && hasFunctionAnnotation;
 
@@ -169,29 +156,20 @@ class FunctionAnalyzer {
     }
   }
 
-  /// Validate function signature requirements
-  void _validateFunctionSignature(
-    CompilationUnit unit,
+  /// Validate function signature requirements using regex
+  void _validateFunctionSignatureRegex(
+    String content,
     List<String> errors,
     List<String> warnings,
   ) {
-    bool hasValidHandler = false;
+    // Pattern to match handler or main function with parameters
+    // Matches: void handler(...), Future<void> handler(...), handler(...), main(...), etc.
+    final handlerPattern = RegExp(
+      r'(?:void|Future<void>|FutureOr<void>|\w+)?\s*(?:handler|main)\s*\([^)]+\)',
+      multiLine: true,
+    );
 
-    for (final declaration in unit.declarations) {
-      if (declaration is FunctionDeclaration) {
-        final name = declaration.name.lexeme;
-
-        // Look for handler function
-        if (name == 'handler' || name == 'main') {
-          final params = declaration.functionExpression.parameters?.parameters;
-
-          if (params != null && params.isNotEmpty) {
-            // Check if it accepts request-like parameters
-            hasValidHandler = true;
-          }
-        }
-      }
-    }
+    final hasValidHandler = handlerPattern.hasMatch(content);
 
     if (!hasValidHandler) {
       warnings.add(
@@ -201,59 +179,100 @@ class FunctionAnalyzer {
   }
 }
 
-/// AST visitor to detect security issues
-class SecurityVisitor extends RecursiveAstVisitor<void> {
-  bool hasFunctionAnnotation = false;
-  final List<String> risks = [];
-  final List<String> warnings = [];
+/// Result of regex-based security analysis
+class _SecurityAnalysisResult {
+  final bool hasFunctionAnnotation;
+  final List<String> risks;
+  final List<String> warnings;
 
-  @override
-  void visitAnnotation(Annotation node) {
-    final name = node.name.toString();
-    if (name == 'function' || name == 'Function') {
-      hasFunctionAnnotation = true;
-    }
-    super.visitAnnotation(node);
-  }
+  _SecurityAnalysisResult({
+    required this.hasFunctionAnnotation,
+    required this.risks,
+    required this.warnings,
+  });
+}
 
-  @override
-  void visitMethodInvocation(MethodInvocation node) {
-    final methodName = node.methodName.name;
+/// Regex-based security analyzer
+/// Replaces AST-based SecurityVisitor to avoid dependency on Dart SDK internal files
+class _RegexSecurityAnalyzer {
+  /// Analyze source code for security issues using regex
+  static _SecurityAnalysisResult analyze(String content) {
+    final risks = <String>[];
+    final warnings = <String>[];
+
+    // Check for @function or @Function annotation
+    final functionAnnotationPattern = RegExp(
+      r'@(?:function|Function)(?:\([^)]*\))?',
+      multiLine: true,
+    );
+    final hasFunctionAnnotation = functionAnnotationPattern.hasMatch(content);
+
+    // Check for dangerous imports
+    _checkDangerousImports(content, risks, warnings);
 
     // Check for dangerous method calls
-    if (methodName == 'run' || methodName == 'start') {
-      final target = node.target?.toString() ?? '';
-      if (target.contains('Process')) {
-        risks.add('Process execution detected: ${node.toString()}');
+    _checkDangerousMethodCalls(content, risks, warnings);
+
+    return _SecurityAnalysisResult(
+      hasFunctionAnnotation: hasFunctionAnnotation,
+      risks: risks,
+      warnings: warnings,
+    );
+  }
+
+  /// Check for dangerous imports using regex
+  static void _checkDangerousImports(
+    String content,
+    List<String> risks,
+    List<String> warnings,
+  ) {
+    // Pattern to match import statements
+    final importPattern = RegExp(
+      r'''import\s+['"]([^'"]+)['"]''',
+      multiLine: true,
+    );
+
+    for (final match in importPattern.allMatches(content)) {
+      final uri = match.group(1) ?? '';
+
+      // Check for dangerous imports
+      if (uri == 'dart:mirrors') {
+        risks.add('dart:mirrors import is not allowed');
       }
+
+      if (uri == 'dart:ffi') {
+        risks.add('dart:ffi import is not allowed');
+      }
+
+      if (uri.contains('dart:io') && !uri.contains('dart:io/http')) {
+        // Allow dart:io but warn about usage
+        warnings.add('dart:io import detected - ensure only HTTP operations are used');
+      }
+    }
+  }
+
+  /// Check for dangerous method calls using regex
+  static void _checkDangerousMethodCalls(
+    String content,
+    List<String> risks,
+    List<String> warnings,
+  ) {
+    // Check for Process.run, Process.start patterns
+    final processRunPattern = RegExp(
+      r'Process\s*\.\s*(run|start|runSync)\s*\(',
+      multiLine: true,
+    );
+    for (final match in processRunPattern.allMatches(content)) {
+      risks.add('Process execution detected: Process.${match.group(1)}');
     }
 
     // Check for eval-like patterns
-    if (methodName == 'eval' || methodName == 'execute') {
-      warnings.add('Dynamic code execution detected: ${node.toString()}');
+    final evalPattern = RegExp(
+      r'\.(eval|execute)\s*\(',
+      multiLine: true,
+    );
+    for (final match in evalPattern.allMatches(content)) {
+      warnings.add('Dynamic code execution detected: ${match.group(1)}()');
     }
-
-    super.visitMethodInvocation(node);
-  }
-
-  @override
-  void visitImportDirective(ImportDirective node) {
-    final uri = node.uri.stringValue ?? '';
-
-    // Check for dangerous imports
-    if (uri == 'dart:mirrors') {
-      risks.add('dart:mirrors import is not allowed');
-    }
-
-    if (uri == 'dart:ffi') {
-      risks.add('dart:ffi import is not allowed');
-    }
-
-    if (uri.contains('dart:io') && !uri.contains('dart:io/http')) {
-      // Allow dart:io but warn about usage
-      warnings.add('dart:io import detected - ensure only HTTP operations are used');
-    }
-
-    super.visitImportDirective(node);
   }
 }
