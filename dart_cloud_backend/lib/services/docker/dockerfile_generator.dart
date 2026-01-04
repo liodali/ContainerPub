@@ -17,7 +17,7 @@ class DockerfileGenerator {
   /// [buildImage] defaults to 'dart:stable' for compilation
   /// [runtimeImage] defaults to 'alpine' for minimal runtime
   const DockerfileGenerator({
-    this.buildImage = 'dart:stable-sdk',
+    this.buildImage = 'dart:stable',
     this.runtimeImage = 'alpine',
   });
 
@@ -49,7 +49,7 @@ class DockerfileGenerator {
   }) {
     final archCMD = targetPlatform == ArchitecturePlatform.linuxX64
         ? '--target-os=linux --target-arch=x64 '
-        : '';
+        : '--target-os=linux --target-arch=arm64';
 
     return '''
 # ============================================
@@ -82,15 +82,18 @@ RUN dart compile exe $entrypoint $archCMD -o /app/$outputBinary
 # ============================================
 FROM $runtimeImage
 
+WORKDIR /runner
 # Copy runtime dependencies (required for Dart AOT on alpine)
 COPY --from=$buildStageTag /runtime/ /
 
 # Copy the compiled executable from build stage
-COPY --from=$buildStageTag /app/$outputBinary /$outputBinary
+COPY --from=$buildStageTag /app/$outputBinary /runner/$outputBinary
+
+RUN chmod +x /runner/$outputBinary
 
 # Set the entrypoint to the compiled function
 # Request data will be mounted at /request.json at runtime
-CMD ["/$outputBinary"]
+CMD ["/runner/$outputBinary"]
 ''';
   }
 
@@ -107,7 +110,8 @@ FROM $buildImage
 WORKDIR /app
 
 COPY pubspec.* ./
-RUN if [ -f pubspec.yaml ]; then dart pub get; fi
+
+RUN dart pub get
 
 COPY . .
 
