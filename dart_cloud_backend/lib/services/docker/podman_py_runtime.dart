@@ -4,8 +4,6 @@ import 'dart:io';
 
 import 'package:dart_cloud_backend/handlers/logs_utils/log_utils.dart';
 import 'package:dart_cloud_backend/services/docker/container_data.dart';
-import 'package:sentry/sentry.dart';
-
 import 'container_runtime.dart';
 
 /// Podman implementation using Python client
@@ -98,14 +96,13 @@ class PodmanPyRuntime implements ContainerRuntime {
           'exit_code': exitCode,
         };
       } catch (exception, trace) {
-        LogsUtils.log('runContainer', 'error', {
+        LogsUtils.log('containerRuntime', 'error', {
           'error': 'Command failed with exit code $exitCode',
           'trace': trace.toString(),
           'exception': exception.toString(),
           'stderr': stderr,
           'stdout': stdout,
         });
-        await Sentry.captureException(exception, stackTrace: trace);
         return {
           'success': false,
           'error': stderr.isNotEmpty ? stderr : 'Command failed with exit code $exitCode',
@@ -116,9 +113,18 @@ class PodmanPyRuntime implements ContainerRuntime {
 
     // Parse success JSON
     try {
-      final result = jsonDecode(stdout);
-      return result as Map<String, dynamic>;
-    } catch (e) {
+      if (stdout.isNotEmpty) {
+        final result = jsonDecode(stdout);
+        return result as Map<String, dynamic>;
+      }
+      print(stdout);
+      return {
+        'success': true,
+        'data': stdout,
+        'exit_code': exitCode,
+      };
+    } catch (e, trace) {
+      LogsUtils.logError('containerRuntime', e.toString(), trace.toString());
       return {
         'success': false,
         'error': 'Failed to parse JSON response: $e',
@@ -213,7 +219,7 @@ class PodmanPyRuntime implements ContainerRuntime {
       '--file',
       dockerfilePath,
     ];
-    
+
     final result = await _executePythonCommand(args, timeout: timeout);
 
     if (result['success'] == true) {
@@ -261,6 +267,8 @@ class PodmanPyRuntime implements ContainerRuntime {
       imageTag,
       '--name',
       containerName,
+      '--entrypoint',
+      '/runner/function',
       '--network',
       network,
       '--memory',
@@ -291,8 +299,8 @@ class PodmanPyRuntime implements ContainerRuntime {
     print('run container args: $args');
     final result = await _executePythonCommand(args, timeout: timeout);
     print('run container result: ${result}');
-    if (result['success'] == true) {
-      final data = result['data'] as Map<String, dynamic>;
+    if (result['success'] == true &&  result['data'] is String ) {
+      final data = json.decode(result['data']) as Map<String, dynamic>;
 
       return ContainerProcessResult(
         exitCode: 0,
