@@ -104,7 +104,7 @@ class PodmanCLI:
         while True:
             container.reload()
             status = container.status
-            
+            print(f"Container '{container.name}' status: {status}")
             # Container has exited (could be 'exited', 'stopped', or 'dead')
             if status in ['exited', 'stopped', 'dead']:
                 return True
@@ -112,17 +112,18 @@ class PodmanCLI:
             # Check if timeout exceeded
             if timeout and (time.time() - start_time) >= timeout:
                 # Timeout exceeded - kill the container
-                try:
-                    container.kill()
-                except Exception as kill_error:
-                    print(f"Warning: Failed to kill container: {kill_error}")
+                # container.stop()
+                # try:
+                #     container.kill()
+                # except Exception as kill_error:
+                #     print(f"Warning: Failed to kill container: {kill_error}")
                 
                 self._output_error(f"Container '{container.name}' exceeded timeout of {timeout}s and was killed")
-                if auto_remove:
-                    try:
-                        container.remove()
-                    except Exception:
-                        pass
+                # if auto_remove:
+                #     try:
+                #         container.remove()
+                #     except Exception:
+                #         pass
                 return False
             
             # Sleep briefly before checking again
@@ -173,9 +174,7 @@ class PodmanCLI:
                 self._output_success({"image": tag, "message": "Image already exists"})
                 return
 
-            # Auto-detect platform if not provided
-            if not platform:
-                platform = self.get_arch_platform()
+
 
             build_params = {
                 "path": context_path,
@@ -183,8 +182,13 @@ class PodmanCLI:
                 "tag": tag,
                 "rm": rm,
                 "nocache": nocache,
-                "platform": platform,
+                
             }
+            # Auto-detect platform if not provided
+            if not platform:
+                platform = self.get_arch_platform()
+                build_params["platform"] = platform
+
             if buildargs:
                 build_params["buildargs"] = buildargs
 
@@ -211,16 +215,16 @@ class PodmanCLI:
             self._output_error(f"Failed to build image: {str(e)}")
 
     def run_container(self, image: str, name: Optional[str] = None, 
-                     detach: bool = True, ports: Optional[Dict[str, int]] = None,
+                     detach: bool = False, ports: Optional[Dict[str, int]] = None,
                      environment: Optional[Dict[str, str]] = None,
                      volumes: Optional[Dict[str, Dict[str, str]]] = None,
                      command: Optional[List[str]] = None,
-                     auto_remove: bool = True, network: str = "none",
+                     auto_remove: bool = True, network_mode: str = "none",
                      mem_limit: str = "20m", mem_swap_limit: str = "20m",
                      cpus: float = 0.5,
                      storage_opt: Optional[Dict[str, str]] = None,
                      timeout: Optional[int] = 5,
-                     working_dir: Optional[str] = None) -> None:
+                     working_dir: Optional[str] = None,entrypoint: Optional[str] = None) -> None:
         """Run a container from an image.
         
         Args:
@@ -240,6 +244,7 @@ class PodmanCLI:
             storage_opt: Storage driver options
             timeout: Timeout in seconds (default: None)
             working_dir: Working directory inside the container
+            entrypoint: Entrypoint to run in container
         """
         try:
             # Check if image exists
@@ -254,14 +259,19 @@ class PodmanCLI:
             run_params = {
                 # "image": image,
                 "detach": detach,
+                "user": "root:root",
                 "auto_remove": False, #auto_remove,
                 "mem_limit": mem_limit,
+                "stderr": True,
+                "stdout": True,
+                "privileged": True,
                 # "mem_swappiness": 0,
-                #"network_mode": network,
+                "network_mode": network_mode,
             }
 
-            if network != None:
-                run_params["network_mode"] = network
+            if entrypoint:
+                run_params["entrypoint"] = entrypoint
+
 
             # Add resource limits
             if mem_swap_limit:
@@ -285,17 +295,18 @@ class PodmanCLI:
                 run_params["working_dir"] = working_dir
             
             containerImage = self.client.containers.run(image=imageContainer, **run_params)
-            
+            containerImage.wait()
             # Wait for container to exit with timeout
-            if not self._wait_for_container_exit(containerImage, timeout, auto_remove):
-                return
+            # self._wait_for_container_exit(containerImage, timeout, auto_remove)
             
             # Refresh container status after wait
             containerImage.reload()
-             
+            logs = []
+            for log in containerImage.logs():
+                logs.append(log.decode('utf-8'))
+            containerImage.reload()
             # Check exit code for success/failure
             exit_code = containerImage.attrs.get('State', {}).get('ExitCode', -1)
-            
             if containerImage.status == "exited" and exit_code == 0:
                 self._output_success({
                     "container_id": containerImage.id,
@@ -304,16 +315,23 @@ class PodmanCLI:
                     "exit_code": exit_code,
                     "image": containerImage.image.tags if containerImage.image else image,
                     "auto_remove": auto_remove,
+                    "logs": logs,
                 })
+                if auto_remove:
+                    containerImage.remove()
+                sys.exit(0)
             else:
-                self._output_error(f"Container '{containerImage.name}' failed with exit code {exit_code}")
-            
-            if auto_remove:
-                containerImage.remove()
+                self._output_error(f"Container '{containerImage.name}' failed with exit code {exit_code},logs:{logs},error: {containerImage.attrs.get('State', {}).get('Error', '')}")
+                if auto_remove:
+                    containerImage.remove()
+                sys.exit(1)
+         
         except ImageNotFound:
             self._output_error(f"Image '{image}' does not exist. Pull or build it first.")
+            sys.exit(1)
         except Exception as e:
             self._output_error(f"Failed to run container: {str(e)}")
+            sys.exit(1)
 
     def kill_container(self, container_id: str, signal: str = "SIGKILL") -> None:
         """Kill a running container."""
@@ -525,6 +543,11 @@ def main():
         help="Container name"
     )
     run_parser.add_argument(
+        "--entrypoint",
+        type=str,
+        help="Entrypoint to run in container"
+    )
+    run_parser.add_argument(
         "--detach","-d",
         type=bool,
         default=True,
@@ -556,7 +579,7 @@ def main():
         help="Do not automatically remove container after exit (default: auto-remove enabled)"
     )
     run_parser.add_argument(
-        "--network",
+        "--network-mode",
         type=str,
         default="none",
         help="Network mode (default: none)"
@@ -709,9 +732,9 @@ def main():
                 else:
                     raise ValueError(f"Invalid volume format: {vol}. Expected host:container or host:container:mode")
                 volumes[host] = {"bind": container, "mode": mode}
-        detach = True
-        if args.detach == False or args.detach == "false":
-            detach = False
+        detach = False
+        if args.detach == True or args.detach == "true":
+            detach = True
         
         # auto_remove is True by default, unless --no-auto-remove is set
         auto_remove = not args.no_auto_remove
@@ -732,7 +755,7 @@ def main():
             volumes=volumes,
             command=None,
             auto_remove=auto_remove,
-            network=args.network,
+            network_mode=args.network_mode,
             mem_limit=args.memory,
             mem_swap_limit=args.memory_swap,
             cpus=args.cpus,
