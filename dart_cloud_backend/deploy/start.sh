@@ -238,6 +238,7 @@ elif [ "$POSTGRES_RUNNING" = true ] || [ "$BACKEND_RUNNING" = true ]; then
         2)
             print_info "Rebuilding backend only..."
             $CONTAINER_COMPOSE_RUNTIME -p dart_cloud up  -d --force-recreate --build backend-cloud
+            $CONTAINER_RUNTIME images prune
             SKIP_BUILD=true
             ;;
         3)
@@ -441,3 +442,4 @@ fi
 # print_success "Temporary .env files cleaned up"
 
 print_done
+date
