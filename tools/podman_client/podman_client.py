@@ -296,7 +296,6 @@ class PodmanCLI:
                 run_params["command"] = command
             if working_dir:
                 run_params["working_dir"] = working_dir
-            self.client.containers.create(image=imageContainer, **run_params)
             containerImage = self.client.containers.run(image=imageContainer, **run_params)
             containerImage.wait()
             # Wait for container to exit with timeout
@@ -574,7 +573,7 @@ def main():
     run_parser.add_argument(
         "--mount", "-m",
         action="append",
-        help="Mount mapping (format: HOST:CONTAINER)"
+        help="Mount mapping (format: source:target:relabel,propagation,size - size is optional)"
     )
     run_parser.add_argument(
         "--run-command","-c",
@@ -783,17 +782,38 @@ def main():
 def build_mounts(mountsStr:str | None) -> Dict[str, Dict[str, str]] | None:
     mounts = None
     if mountsStr:
-        mounts = {}
+        mounts = []
         for mount in mountsStr:
+            # Parse the main mount format: source:target:options
             parts = mount.split(":")
-            if len(parts) == 2:
-                host, container = parts
-                mode = "rw"
-            elif len(parts) == 3:
-                host, container, mode = parts
-            else:
-                raise ValueError(f"Invalid mount format: {mount}. Expected host:container or host:container:mode")
-            mounts[host] = {"type":"bind","source":host,"target":container, "mode": mode,"propagation":"rshared"}
+            if len(parts) < 2:
+                raise ValueError(f"Invalid mount format: {mount}. Expected source:target or source:target:options")
+            
+            source = parts[0]
+            target = parts[1]
+            
+            # Default mount configuration
+            mountStr = {"type":"bind","source":source,"target":target,"propagation":"rshared"}
+            
+            # Parse options if provided
+            if len(parts) >= 3:
+                options = parts[2]
+                # Parse comma-separated options: relabel,propagation,size
+                option_parts = options.split(",")
+                
+                for i, option in enumerate(option_parts):
+                    if i == 0:  # relabel option
+                        if option:
+                            mountStr["relabel"] = option
+                    elif i == 1:  # propagation option
+                        if option:
+                            mountStr["propagation"] = option
+                    elif i == 2:  # size option
+                        if option and option.lower() != "none":
+                            mountStr["size"] = option
+            
+            mounts.append(mountStr)
+
     return mounts
 
 def build_volumes(volumesStr:str | None) -> Dict[str, Dict[str, str]] | None:
