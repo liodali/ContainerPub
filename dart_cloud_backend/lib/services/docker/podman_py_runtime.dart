@@ -267,8 +267,10 @@ class PodmanPyRuntime implements ContainerRuntime {
       imageTag,
       '--name',
       containerName,
-      '--entrypoint',
-      '/runner/function',
+      // '--entrypoint',
+      // '/runner/function',
+      '--run-command',
+      'cd $workingDir && /runner/function',
       '--network',
       network,
       '--memory',
@@ -283,7 +285,7 @@ class PodmanPyRuntime implements ContainerRuntime {
 
     // Add volume mounts
     for (final mount in volumeMounts) {
-      args.addAll(['--volume', mount]);
+      args.addAll(['--mount', mount]);
     }
 
     // Add environment variables
@@ -292,9 +294,9 @@ class PodmanPyRuntime implements ContainerRuntime {
     }
 
     // Add working directory if specified
-    if (workingDir != null) {
-      args.addAll(['--workdir', workingDir]);
-    }
+    // if (workingDir != null) {
+    //   args.addAll(['--workdir', workingDir]);
+    // }
 
     print('run container args: $args');
     final result = await _executePythonCommand(args, timeout: timeout);
