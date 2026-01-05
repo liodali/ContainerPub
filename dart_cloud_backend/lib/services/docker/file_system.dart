@@ -39,42 +39,33 @@ class RealFileSystem implements FileSystem {
   const RealFileSystem();
 
   @override
-  Future<void> writeFile(String filePath, String content) async {
-    await File(filePath).writeAsString(content);
-  }
+  Future<void> writeFile(String filePath, String content) => File(filePath).writeAsString(
+    content,
+    flush: true,
+  );
 
   @override
-  Future<String> readFile(String filePath) async {
-    return File(filePath).readAsString();
-  }
+  Future<String> readFile(String filePath) => File(filePath).readAsString();
 
   @override
-  Future<bool> fileExists(String filePath) async {
-    return File(filePath).exists();
-  }
+  Future<bool> fileExists(String filePath) => File(filePath).exists();
 
   @override
-  Directory createTempDirectory(String prefix) {
-    return Directory.systemTemp.createTempSync(prefix);
-  }
+  Directory createTempDirectory(String prefix) =>
+      Directory.systemTemp.createTempSync(prefix);
 
   @override
-  Future<void> deleteDirectory(String dirPath) async {
-    await Directory(dirPath).delete(recursive: true);
-  }
+  Future<void> deleteDirectory(String dirPath) =>
+      Directory(dirPath).delete(recursive: true);
 
   @override
-  String joinPath(String part1, String part2) {
-    return path.join(part1, part2);
-  }
+  String joinPath(String part1, String part2) => path.join(part1, part2);
 
   @override
   Future<void> deleteFile(String filePath) => File(filePath).delete();
 
   @override
-  String joinPaths(String part1, List<String> part2) {
-    return path.joinAll([part1, ...part2]);
-  }
+  String joinPaths(String part1, List<String> part2) => path.joinAll([part1, ...part2]);
 }
 
 /// Helper class for managing request files
@@ -90,6 +81,7 @@ class RequestFileManager {
     String tempDir,
     Map<String, dynamic> input,
   ) async {
+    print('Creating request file at $tempDir , with content $input');
     final filePath = _fileSystem.joinPath(tempDir, 'request.json');
     await _fileSystem.writeFile(filePath, jsonEncode(input));
     return (filePath: filePath, tempDirPath: tempDir);
