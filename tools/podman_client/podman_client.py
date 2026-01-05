@@ -8,7 +8,6 @@ from podman import PodmanClient
 from podman.errors import ImageNotFound
 from typing import Optional, Dict, Any, List
 
-
 class PodmanCLI:
     def __init__(self, socket_path: str):
         self.socket_path = socket_path
@@ -218,6 +217,7 @@ class PodmanCLI:
                      detach: bool = False, ports: Optional[Dict[str, int]] = None,
                      environment: Optional[Dict[str, str]] = None,
                      volumes: Optional[Dict[str, Dict[str, str]]] = None,
+                     mounts: Optional[Dict[str, Dict[str, str]]] = None,
                      command: Optional[List[str]] = None,
                      auto_remove: bool = True, network_mode: str = "none",
                      mem_limit: str = "20m", mem_swap_limit: str = "20m",
@@ -234,6 +234,7 @@ class PodmanCLI:
             ports: Port mappings {container_port: host_port}
             environment: Environment variables {key: value}
             volumes: Volume mounts {host_path: {"bind": container_path, "mode": "rw"}}
+            mounts: Mount mounts {host_path: {"type":"bind","source":host_path,"target":container_path, "mode": mode,"propagation":"rshared"}}
             command: Command to run in container
             auto_remove: Automatically remove container when it exits (default: True)
             network: Network mode (default: "none")
@@ -259,7 +260,6 @@ class PodmanCLI:
             run_params = {
                 # "image": image,
                 "detach": detach,
-                "user": "root:root",
                 "auto_remove": False, #auto_remove,
                 "mem_limit": mem_limit,
                 "stderr": True,
@@ -267,6 +267,7 @@ class PodmanCLI:
                 "privileged": True,
                 # "mem_swappiness": 0,
                 "network_mode": network_mode,
+                "tty": True,
             }
 
             if entrypoint:
@@ -287,13 +288,15 @@ class PodmanCLI:
                 run_params["ports"] = ports
             if environment:
                 run_params["environment"] = environment
-            if volumes:
+            if volumes and not mounts:
                 run_params["volumes"] = volumes
+            elif mounts and not volumes:
+                run_params["mounts"] = mounts
             if command:
                 run_params["command"] = command
             if working_dir:
                 run_params["working_dir"] = working_dir
-            
+            self.client.containers.create(image=imageContainer, **run_params)
             containerImage = self.client.containers.run(image=imageContainer, **run_params)
             containerImage.wait()
             # Wait for container to exit with timeout
@@ -315,7 +318,7 @@ class PodmanCLI:
                     "exit_code": exit_code,
                     "image": containerImage.image.tags if containerImage.image else image,
                     "auto_remove": auto_remove,
-                    "logs": logs,
+                    "logs": json.loads(logs[0]),
                 })
                 if auto_remove:
                     containerImage.remove()
@@ -568,11 +571,16 @@ def main():
         action="append",
         help="Volume mapping (format: HOST:CONTAINER)"
     )
-    # run_parser.add_argument(
-    #     "--run-command","-c",
-    #     nargs="*",
-    #     help="Command to run in container"
-    # )
+    run_parser.add_argument(
+        "--mount", "-m",
+        action="append",
+        help="Mount mapping (format: HOST:CONTAINER)"
+    )
+    run_parser.add_argument(
+        "--run-command","-c",
+        nargs="*",
+        help="Command to run in container"
+    )
     run_parser.add_argument(
         "--no-auto-remove",
         action="store_true",
@@ -719,19 +727,13 @@ def main():
                 key, value = env.split("=", 1)
                 environment[key] = value
         
-        volumes = None
-        if args.volume:
-            volumes = {}
-            for vol in args.volume:
-                parts = vol.split(":")
-                if len(parts) == 2:
-                    host, container = parts
-                    mode = "rw"
-                elif len(parts) == 3:
-                    host, container, mode = parts
-                else:
-                    raise ValueError(f"Invalid volume format: {vol}. Expected host:container or host:container:mode")
-                volumes[host] = {"bind": container, "mode": mode}
+        mounts = build_mounts(args.mount)
+        volumes = build_volumes(args.volume)
+        
+        # Ensure either volumes or mounts exist
+        if not mounts and not volumes:
+            raise ValueError("Either --volume or --mount must be specified")
+        
         detach = False
         if args.detach == True or args.detach == "true":
             detach = True
@@ -739,21 +741,21 @@ def main():
         # auto_remove is True by default, unless --no-auto-remove is set
         auto_remove = not args.no_auto_remove
         
-        # run_command = None
-        # if args.run_command:
-        #     if len(args.run_command) == 1:
-        #         run_command = ["/bin/sh", "-c", args.run_command[0]]
-        #     else:
-        #         run_command = args.run_command
-
+        run_command = None
+        if args.run_command:
+            if len(args.run_command) == 1:
+                run_command = ["sh", "-c", args.run_command[0]]
+            else:
+                run_command = args.run_command
         cli.run_container(
             image=args.image,
             name=args.name,
             detach=detach,
             ports=ports,
+            command=run_command,
             environment=environment,
             volumes=volumes,
-            command=None,
+            mounts=mounts,
             auto_remove=auto_remove,
             network_mode=args.network_mode,
             mem_limit=args.memory,
@@ -777,6 +779,40 @@ def main():
     
     elif args.command == "ps":
         cli.list_containers(all_containers=args.all)
+
+def build_mounts(mountsStr:str | None) -> Dict[str, Dict[str, str]] | None:
+    mounts = None
+    if mountsStr:
+        mounts = {}
+        for mount in mountsStr:
+            parts = mount.split(":")
+            if len(parts) == 2:
+                host, container = parts
+                mode = "rw"
+            elif len(parts) == 3:
+                host, container, mode = parts
+            else:
+                raise ValueError(f"Invalid mount format: {mount}. Expected host:container or host:container:mode")
+            mounts[host] = {"type":"bind","source":host,"target":container, "mode": mode,"propagation":"rshared"}
+    return mounts
+
+def build_volumes(volumesStr:str | None) -> Dict[str, Dict[str, str]] | None:
+    volumes = None
+    if volumesStr:
+        volumes = {}
+        for vol in volumesStr:
+            parts = vol.split(":")
+            if len(parts) == 2:
+                host, container = parts
+                mode = "rw"
+            elif len(parts) == 3:
+                host, container, mode = parts
+            else:
+                raise ValueError(f"Invalid volume format: {vol}. Expected host:container or host:container:mode")
+            volumes[host] = {"bind": container, "mode": mode}
+    return volumes
+    
+    
 
 
 if __name__ == "__main__":
