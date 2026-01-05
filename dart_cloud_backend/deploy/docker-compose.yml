@@ -37,13 +37,14 @@ services:
     container_name: dart_cloud_backend
     restart: unless-stopped
     command: ["sh", "-c", "sleep 5 && /app/server"]
-    user: "root:root"
     security_opt:
       - label=disable
     depends_on:
       postgres:
         condition: service_healthy
     privileged: true
+    mem_limit: 2g
+    cpus: "3"
     environment:
       PORT: ${PORT:-8080}
       DATABASE_URL: postgres://${POSTGRES_USER:-dart_cloud}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}@$POSTGRES_HOST:5432/${POSTGRES_DB:-dart_cloud}
@@ -60,6 +61,11 @@ services:
       - "${PORT:-8080}:${PORT:-8080}"
     volumes:
       - functions_data:/app/functions
+      - type: bind
+        source: /Users/dalihamza/Desktop/DevOps/ContainerPub/.dev
+        target: /workers/functions/data
+        read_only: false
+        propagation: rshared
       - /run/podman/podman.sock:/run/podman/podman.sock
     networks:
       - dart_cloud_network
@@ -75,6 +81,7 @@ volumes:
     driver: local
   functions_data:
     driver: local
+    external: true
 
 networks:
   dart_cloud_network:
