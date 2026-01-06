@@ -210,54 +210,56 @@ class DockerService {
       // // Create logs temporary file for container
       // final logsInfo = await _requestFileManager.createLogsFile(tempDirPath, input);
 
-      // Create result directory at deployment location: functionsDir/functionUUID/version/
-      final resultDir = _fileSystem.joinPaths(Config.functionsDir, [
+      // Create shared directory at deployment location: functionsDir/functionUUID/version/containerName
+      // This path is inside the backend container, mapped to the external volume (functions_data)
+      final sharedDir = _fileSystem.joinPaths(Config.functionsDataDir, [
         functionUUID,
         'v$version',
         containerName,
       ]);
-      tempDirPath = resultDir;
-      // Ensure result directory exists
-      await Directory(resultDir).create(recursive: true);
-      // Create request.json file (empty, will be written by function)
-      final reqFilePath = await _requestFileManager.createRequestFile(resultDir, input);
-      // Create result.json file (empty, will be written by function)
-      final resultFilePath = _fileSystem.joinPath(resultDir, 'result.json');
-      await _fileSystem.writeFile(resultFilePath, '');
+      tempDirPath = sharedDir;
+      // Ensure shared directory exists
+      await Directory(sharedDir).create(recursive: true);
 
-      // Create logs.json file (empty, will be written by function logger)
-      final logsFilePath = _fileSystem.joinPath(resultDir, 'logs.json');
-      await _fileSystem.writeFile(logsFilePath, '');
-      // // Create env.json file (empty, will be written by function logger)
-      // final envFilePath = _fileSystem.joinPath(resultDir, 'env.json');
-      // await _fileSystem.writeFile(envFilePath, '');
+      // Container path for the shared volume (same structure inside function container)
+      final containerPath =
+          sharedDir; //'${Config.functionsDataDir}/$functionUUID/v$version/$containerName';
+
+      // Create request.json file (read by function)
+      await _requestFileManager.createRequestFile(sharedDir, input);
+      await _requestFileManager.createLogsFile(sharedDir, {});
+
       // Prepare environment variables and create .env.config file
-      final envConfigPath = await _createEnvConfigFile(
-        resultDir,
-        _buildEnvironment(timeoutMs),
+      // This must exist before container starts
+      await _createEnvConfigFile(
+        sharedDir,
+        _buildEnvironment(timeoutMs, containerPath),
       );
+      // Note: logs.json and result.json are created by the function inside the container
+      // They will be written to the shared volume at /app/functions/{uuid}/v{version}/{containerName}/
 
-      // Prepare volume mounts (request.json, .env.config, result.json, and logs.json)
+      // Use external named volume shared between backend and function containers
+      // Mount the specific shared directory to the container path
+      // Volume name is configurable via SHARED_VOLUME_NAME environment variable
       final volumeMounts = [
-        '${reqFilePath.filePath}:/request.json:ro',
-        '$envConfigPath:/.env.config:ro',
-        '$resultFilePath:/result.json:rw', // Writable for function to write result
-        '$logsFilePath:/logs.json:rw', // Writable for function to write logs
+        '${Config.sharedVolumeName}:${Config.functionsDataDir}:Z,rshared',
       ];
 
       final imageSize = await _runtime.getImageSize(imageTag);
-      // Run the container with env file mounted as volume
+      // Run the container with working directory set to the shared path
+      // This allows the function to use relative paths like ./logs.json, ./result.json
       final result = await _runtime.runContainer(
         imageTag: imageTag,
         containerName: containerName,
         volumeMounts: volumeMounts,
-        memoryMb: (imageSize.size / 2).toInt(),
+        memoryMb: (imageSize.size / 1.5).round(),
         memoryUnit: imageSize.unit.memoryUnit,
         cpus: 0.5,
         network: 'none',
         timeout: Duration(milliseconds: timeoutMs),
+        workingDir: containerPath,
       );
-      
+
       // Capture container logs (stdout and stderr) - these are now pure logs
       final containerLogs = <String, dynamic>{
         'stderr': result.stderr,
@@ -268,10 +270,12 @@ class DockerService {
       };
       containerLogs.addAll(result.stdout);
 
-      // Read function logs from logs.json (written by CloudLogger)
+      // Read function logs from logs.json (written by CloudLogger in container)
+      final logsFilePath = _fileSystem.joinPath(sharedDir, 'logs.json');
       Map<String, dynamic>? functionLogs;
       try {
         final logsContent = await _fileSystem.readFile(logsFilePath);
+        print(logsContent);
         if (logsContent.isNotEmpty) {
           functionLogs = jsonDecode(logsContent);
         }
@@ -285,7 +289,6 @@ class DockerService {
       if (functionLogs != null) {
         containerLogs['function_logs'] = functionLogs;
       }
-
       // Handle timeout
       if (result.exitCode == -1) {
         LogsUtils.logError(
@@ -295,15 +298,15 @@ class DockerService {
         );
         return ExecutionResult(
           success: false,
-          error: 'Function execution timed out (${timeoutMs}ms)',
+          error:
+              'Function execution Failed', //'Function execution timed out (${timeoutMs}ms)',
           logs: containerLogs,
         );
       }
-      print('Container result: ${result.stdout}');
-      print('Container error: ${result.stderr}');
-      // Read result from result.json (written by function)
+      // Read result from result.json (written by function in container)
+      final resultFilePath = _fileSystem.joinPath(sharedDir, 'result.json');
       Map<String, dynamic> parsedResult = Map.from(
-        jsonDecode(result.stdout['stdout']),
+        result.stdout['stdout'],
       );
       try {
         final resultContent = await _fileSystem.readFile(resultFilePath);
@@ -317,9 +320,13 @@ class DockerService {
           e.toString(),
           stackTrace.toString(),
         );
-        Sentry.captureException(e, stackTrace: stackTrace);
         // If result.json is empty or invalid, check if function failed
         if (!result.isSuccess) {
+          LogsUtils.logError(
+            'runContainer',
+            'Function Error',
+            containerLogs.toString(),
+          );
           return ExecutionResult(
             success: false,
             error: 'Function exited with code ${result.exitCode}: ${result.stderr}',
@@ -360,7 +367,7 @@ class DockerService {
       );
       return ExecutionResult(
         success: false,
-        error: 'Container execution error: $e',
+        error: 'Container execution error',
       );
     } finally {
       // Clean up temp directory
@@ -391,11 +398,12 @@ class DockerService {
 
   /// Build environment variables for container execution
   /// Returns a map of environment variables to be written to .env.config
-  Map<String, String> _buildEnvironment(int timeoutMs) {
+  Map<String, String> _buildEnvironment(int timeoutMs, String sharedPath) {
     final environment = {
       'DART_CLOUD_RESTRICTED': 'true',
       'FUNCTION_TIMEOUT_MS': timeoutMs.toString(),
       'FUNCTION_MAX_MEMORY_MB': Config.functionMaxMemoryMb.toString(),
+      'SHARED_PATH': sharedPath, // Path to shared volume for logs, result, request files
     };
 
     return environment;
