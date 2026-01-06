@@ -118,8 +118,8 @@ print_done(){
 
 }
 
-# Set trap for cleanup on error
-trap cleanup_on_failure ERR
+# Set trap for cleanup on error (disabled to prevent restart loops on health check failures)
+# trap cleanup_on_failure ERR
 
 # Check if services are already running
 POSTGRES_RUNNING=false
@@ -130,24 +130,24 @@ SKIP_BUILD=false
 
 print_info "Checking if services are already running..."
 
-if $CONTAINER_RUNTIME ps | grep -q "dart_cloud_postgres.*Up"; then
+if $CONTAINER_RUNTIME ps | grep -E "dart_cloud_postgres.*Up" > /dev/null 2>&1; then
     POSTGRES_RUNNING=true
     POSTGRES_EXISTS=true
     print_info "PostgreSQL is already running"
 fi
 
-if $CONTAINER_RUNTIME ps | grep -q "dart_cloud_backend.*Up"; then
+if $CONTAINER_RUNTIME ps | grep -E "dart_cloud_backend.*Up" > /dev/null 2>&1; then
     BACKEND_RUNNING=true
     BACKEND_EXISTS=true
     print_info "Backend is already running"
 fi
 
 # Check if services exist but are stopped
-if $CONTAINER_RUNTIME ps -a | grep -q "^dart_cloud_postgres$"; then
+if $CONTAINER_RUNTIME ps -a | grep -q "dart_cloud_postgres"; then
     POSTGRES_EXISTS=true
 fi
 
-if $CONTAINER_RUNTIME ps -a | grep -q "^dart_cloud_backend$"; then
+if $CONTAINER_RUNTIME ps -a | grep -q "dart_cloud_backend"; then
     BACKEND_EXISTS=true
 fi
 
@@ -206,8 +206,8 @@ elif [ "$POSTGRES_RUNNING" = true ] || [ "$BACKEND_RUNNING" = true ]; then
     print_header "Services Already Running"
     
     echo -e "${BLUE}Current status:${NC}"
-    echo -e "  PostgreSQL: $([ "$POSTGRES_RUNNING" = true ] && echo "${GREEN}Running${NC}" || echo "${YELLOW}Stopped${NC}")"
-    echo -e "  Backend:    $([ "$BACKEND_RUNNING" = true ] && echo "${GREEN}Running${NC}" || echo "${YELLOW}Stopped${NC}")"
+    echo -e "  PostgreSQL: $([ "$POSTGRES_RUNNING" = true ] && echo "${GREEN}Running${NC}" || echo "${RED}Stopped${NC}")"
+    echo -e "  Backend:    $([ "$BACKEND_RUNNING" = true ] && echo "${GREEN}Running${NC}" || echo "${RED}Stopped${NC}")"
     echo ""
     
     echo -e "${BLUE}What would you like to do?${NC}"
@@ -237,8 +237,14 @@ elif [ "$POSTGRES_RUNNING" = true ] || [ "$BACKEND_RUNNING" = true ]; then
             ;;
         2)
             print_info "Rebuilding backend only..."
-            $CONTAINER_COMPOSE_RUNTIME -p dart_cloud up  -d --force-recreate --build backend-cloud
-            $CONTAINER_RUNTIME images prune
+            print_info "Stopping backend container..."
+            $CONTAINER_RUNTIME stop dart_cloud_backend 2>/dev/null || true
+            $CONTAINER_RUNTIME rm -f dart_cloud_backend 2>/dev/null || true
+            print_info "Removing backend image..."
+            $CONTAINER_RUNTIME rmi dart_cloud_backend 2>/dev/null || true
+            print_info "Rebuilding and starting backend..."
+            $CONTAINER_COMPOSE_RUNTIME -p dart_cloud up -d --force-recreate --build backend-cloud
+            $CONTAINER_RUNTIME image prune -f 2>/dev/null || true
             SKIP_BUILD=true
             ;;
         3)
