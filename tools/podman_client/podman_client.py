@@ -317,7 +317,7 @@ class PodmanCLI:
                     "exit_code": exit_code,
                     "image": containerImage.image.tags if containerImage.image else image,
                     "auto_remove": auto_remove,
-                    "logs": json.loads(logs[0]),
+                    "stdout": json.loads(logs[0]),
                 })
                 if auto_remove:
                     containerImage.remove()
