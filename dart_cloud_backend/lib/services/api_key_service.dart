@@ -17,6 +17,7 @@ class ApiKeyService {
   Future<ApiKeyResult> generateApiKey({
     required String functionUuid,
     required ApiKeyValidity validity,
+    bool deactivateExistingKeysFlag = false,
     String? name,
   }) async {
     // Generate cryptographically secure secret key
@@ -27,9 +28,10 @@ class ApiKeyService {
     final now = DateTime.now();
     final expiresAt = validity.getExpirationDate(now);
 
-    // // Deactivate any existing active keys for this function
-    /// TODO: Deactivate any existing active keys for this function(we should return to this)
-    // await _deactivateExistingKeys(functionUuid);
+    //Deactivate any existing active keys for this function
+    if (deactivateExistingKeysFlag) {
+      await deactivateExistingKeys(functionUuid);
+    }
 
     // Store the API key in database (we store the secret key for verification)
     final apiKeyEntity = await DatabaseManagers.apiKeys.insert(
@@ -198,19 +200,19 @@ class ApiKeyService {
   /// Returns true if signature is valid
   Future<bool> verifySignature({
     required String functionUuid,
-    required String keyUUID,
+    required ApiKeyEntity apiKey,
     required String signature,
     required String payload,
     required int timestamp,
   }) async {
-    final apiKey = await getApiKeyByFunctionUUIDANDUUID(
-      functionUuid,
-      keyUUID,
-      isActive: true,
-    );
-    if (apiKey == null) {
-      return false; // No active API key
-    }
+    // final apiKey = await getApiKeyByFunctionUUIDANDUUID(
+    //   functionUuid,
+    //   keyUUID,
+    //   isActive: true,
+    // );
+    // if (apiKey == null) {
+    //   return false; // No active API key
+    // }
 
     // Check timestamp to prevent replay attacks (5 minute window)
     final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
@@ -225,6 +227,8 @@ class ApiKeyService {
       payload: payload,
       timestamp: timestamp,
     );
+    print('expectedSignature $expectedSignature');
+    print('signature $signature');
     return _secureCompare(signature, expectedSignature);
   }
 
