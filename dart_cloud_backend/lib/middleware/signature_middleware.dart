@@ -119,7 +119,7 @@ Middleware get signatureMiddleware {
       final payload = body['body'] != null ? jsonEncode(body['body']) : '';
       final isValid = await ApiKeyService.instance.verifySignature(
         functionUuid: functionUuid,
-        keyUUID: apiKey,
+        apiKey: apiKeyEntity!,
         signature: signature,
         payload: payload,
         timestamp: timestamp,
