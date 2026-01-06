@@ -1,14 +1,23 @@
 name: dart_cloud_deploy_cli
-description: A starting point for Dart libraries or applications.
+description: Dart Cloud deployment CLI for managing dev and production deployments with OpenBao secrets and Ansible integration.
 version: 1.0.0
-# repository: https://github.com/my_org/my_repo
+repository: https://github.com/liodali/ContainerPub
 
 environment:
   sdk: ^3.10.4
 
-# Add regular dependencies here.
+executables:
+  dart_cloud_deploy:
+    path: bin/dart_cloud_deploy.dart
+
 dependencies:
-  # path: ^1.9.0
+  args: ^2.6.0
+  yaml: ^3.1.3
+  toml: ^0.16.0
+  http: ^1.4.0
+  path: ^1.9.1
+  crypto: ^3.0.6
+  collection: ^1.19.1
 
 dev_dependencies:
   lints: ^6.0.0

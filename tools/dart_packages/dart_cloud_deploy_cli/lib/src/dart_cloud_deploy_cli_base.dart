@@ -1,6 +1,5 @@
-// TODO: Put public facing types in this file.
-
-/// Checks if you are awesome. Spoiler: you are.
-class Awesome {
-  bool get isAwesome => true;
-}
+// Re-export main components for library usage
+export 'models/deploy_config.dart';
+export 'services/openbao_service.dart';
+export 'services/container_service.dart';
+export 'services/ansible_service.dart';
