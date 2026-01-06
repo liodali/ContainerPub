@@ -61,7 +61,7 @@ class InvokeCommand extends BaseCommand {
           );
           exit(1);
         }
-      } catch (e) {
+      } catch (e, trace) {
         print('Warning: Failed to retrieve API key');
       }
 
