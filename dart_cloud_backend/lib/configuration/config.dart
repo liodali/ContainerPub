@@ -12,6 +12,8 @@ import 'package:dotenv/dotenv.dart';
 class Config {
   static late int port;
   static late String functionsDir;
+  static late String functionsDataDir;
+  static late String functionsDataBaseHostDir;
   static late String databaseUrl;
   static late bool databaseSSL;
   static late String jwtSecret;
@@ -61,6 +63,10 @@ class Config {
     port = int.parse(env['PORT'] ?? Platform.environment['PORT'] ?? '8080');
     functionsDir =
         getValueFromEnv('FUNCTIONS_DIR') ?? env['FUNCTIONS_DIR'] ?? './functions';
+    functionsDataDir =
+        getValueFromEnv('FUNCTIONS_DATA_DIR') ?? env['FUNCTIONS_DATA_DIR'] ?? '/app/functions/data';
+    functionsDataBaseHostDir =
+        getValueFromEnv('FUNCTIONS_DATA_BASE_HOST_DIR') ?? env['FUNCTIONS_DATA_BASE_HOST_DIR'] ?? '/app/functions/data';
     databaseUrl = //
         getValueFromEnv('DATABASE_URL') ??
         env['DATABASE_URL'] ??
