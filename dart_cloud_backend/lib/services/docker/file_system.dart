@@ -81,7 +81,6 @@ class RequestFileManager {
     String tempDir,
     Map<String, dynamic> input,
   ) async {
-    print('Creating request file at $tempDir , with content $input');
     final filePath = _fileSystem.joinPath(tempDir, 'request.json');
     await _fileSystem.writeFile(filePath, jsonEncode(input));
     return (filePath: filePath, tempDirPath: tempDir);
