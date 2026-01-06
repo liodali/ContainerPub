@@ -19,14 +19,16 @@ The HTTP server built with Dart Shelf framework:
 - **Authentication** - JWT-based auth with access and refresh tokens
 - **User Management** - User registration and profile management
 
-### 2. Container Runtime (Podman)
+### 2. Container Runtime (Podman + Python Client)
 
-Rootless container management:
+Rootless container management with Python API client:
 
 - **Build Images** - Create function container images
 - **Run Containers** - Execute functions in isolated environments
 - **Manage Resources** - CPU, memory, and disk limits
 - **Network Isolation** - Isolated container networks
+- **Python Client** - JSON-based communication via Podman API
+- **Shared Volumes** - Named volumes for function data exchange
 
 ### 3. Database (PostgreSQL)
 
@@ -79,9 +81,24 @@ Encrypted token storage and management:
 │  └──────────────────────────────────────┘  │
 │  ┌──────────────────────────────────────┐  │
 │  │  Container Runtime (Podman)          │  │
-│  │  - Build images                      │  │
-│  │  - Run containers                    │  │
-│  │  - Manage resources                  │  │
+│  │  ┌────────────────────────────────┐  │  │
+│  │  │  PodmanPyRuntime               │  │  │
+│  │  │  - Python client execution     │  │  │
+│  │  │  - JSON communication          │  │  │
+│  │  │  - Socket-based API access     │  │  │
+│  │  └────────────────────────────────┘  │  │
+│  │  ┌────────────────────────────────┐  │  │
+│  │  │  Python Podman Client          │  │  │
+│  │  │  - Build images                │  │  │
+│  │  │  - Run containers              │  │  │
+│  │  │  - Manage resources            │  │  │
+│  │  └────────────────────────────────┘  │  │
+│  │  ┌────────────────────────────────┐  │  │
+│  │  │  Shared Volume (functions_data)│  │  │
+│  │  │  - Function data exchange      │  │  │
+│  │  │  - Request/response files      │  │  │
+│  │  │  - Logs and environment        │  │  │
+│  │  └────────────────────────────────┘  │  │
 │  └──────────────────────────────────────┘  │
 │  ┌──────────────────────────────────────┐  │
 │  │  Database (PostgreSQL)               │  │
@@ -257,30 +274,113 @@ ContainerPub uses a dual-token authentication system:
 - **Encrypted Boxes**: auth_tokens, refresh_tokens, token_links
 - **Unencrypted Boxes**: blacklist_tokens (for performance)
 
+## Container Runtime Architecture
+
+### PodmanPyRuntime Flow
+
+```
+┌─────────────────────────────────────────────┐
+│         Dart Backend                        │
+│  ┌──────────────────────────────────────┐  │
+│  │  DockerService                       │  │
+│  │  - buildImage()                      │  │
+│  │  - runContainer()                    │  │
+│  └──────────────┬───────────────────────┘  │
+│                 │                           │
+│  ┌──────────────▼───────────────────────┐  │
+│  │  PodmanPyRuntime                     │  │
+│  │  - _executePythonCommand()           │  │
+│  │  - JSON request/response parsing     │  │
+│  │  - Timeout handling                  │  │
+│  └──────────────┬───────────────────────┘  │
+└─────────────────┼───────────────────────────┘
+                  │ Execute Python script
+                  │ with JSON args
+                  ▼
+┌─────────────────────────────────────────────┐
+│    Python Podman Client (podman_client.py)  │
+│  ┌──────────────────────────────────────┐  │
+│  │  PodmanCLI Class                     │  │
+│  │  - build_image()                     │  │
+│  │  - run_container()                   │  │
+│  │  - JSON output formatting            │  │
+│  └──────────────┬───────────────────────┘  │
+└─────────────────┼───────────────────────────┘
+                  │ Unix socket connection
+                  │ /run/podman/podman.sock
+                  ▼
+┌─────────────────────────────────────────────┐
+│         Podman API (REST)                   │
+│  - Container operations                     │
+│  - Image management                         │
+│  - Volume management                        │
+└─────────────────┬───────────────────────────┘
+                  │
+                  ▼
+┌─────────────────────────────────────────────┐
+│    Function Container + Shared Volume       │
+│  ┌──────────────────────────────────────┐  │
+│  │  Shared Volume Mount                 │  │
+│  │  functions_data:/app/functions       │  │
+│  │  ├── request.json                    │  │
+│  │  ├── .env.config                     │  │
+│  │  ├── logs.json                       │  │
+│  │  └── result.json                     │  │
+│  └──────────────────────────────────────┘  │
+└─────────────────────────────────────────────┘
+```
+
+### Shared Volume Architecture
+
+**Volume Name:** `functions_data` (configurable via `SHARED_VOLUME_NAME`)
+
+**Directory Structure:**
+
+```
+functions_data/
+└── {functionUUID}/
+    └── v{version}/
+        └── {containerName}/
+            ├── request.json      # Backend → Function
+            ├── .env.config       # Backend → Function
+            ├── logs.json         # Function → Backend
+            └── result.json       # Function → Backend
+```
+
+**Mount Configuration:**
+
+- **Backend:** Writes to `{functionsDataDir}/{uuid}/v{version}/{containerName}/`
+- **Function Container:** Mounts `functions_data:/app/functions:Z,rshared`
+- **Working Directory:** Set to shared path for relative file access
+- **SELinux:** `:Z` label for proper container access
+- **Propagation:** `rshared` for nested mount support
+
 ## Deployment Flow
 
 ### 1. Function Upload
 
-```dart
+```
 Developer → CLI → API Server → Storage
 ```
 
 ### 2. Image Building
 
-```dart
-Storage → Extract → Build Image → Podman Registry
+```
+Storage → Extract → PodmanPyRuntime → Python Client → Podman API → Image
 ```
 
 ### 3. Function Execution
 
-```dart
-API Request → Scheduler → Podman Container → Response
+```
+API Request → DockerService → Create Shared Dir → Write Files →
+PodmanPyRuntime → Python Client → Podman API → Container →
+Read Files → Parse Response → Return Result
 ```
 
 ### 4. Monitoring
 
-```dart
-Container → Metrics Collector → Database → Dashboard
+```
+Container → logs.json → Backend → Metrics Collector → Database → Dashboard
 ```
 
 ## Technology Stack
@@ -291,8 +391,9 @@ Container → Metrics Collector → Database → Dashboard
 - **Framework**: Shelf (HTTP server)
 - **Database**: PostgreSQL
 - **Token Storage**: Hive with encryption
-- **Container Runtime**: Podman
-- **Storage**: File system / Object storage
+- **Container Runtime**: Podman (via Python client)
+- **Python Client**: podman_client.py (Python 3.x)
+- **Storage**: File system / Shared volumes
 
 ### Security
 
@@ -300,6 +401,8 @@ Container → Metrics Collector → Database → Dashboard
 - **Encryption**: HiveAesCipher (256-bit)
 - **Container Isolation**: Podman rootless
 - **Token Management**: Blacklist + expiry
+- **Volume Isolation**: Per-function shared directories
+- **SELinux**: Volume labeling for container access
 
 ## Security Architecture
 
@@ -308,7 +411,9 @@ Container → Metrics Collector → Database → Dashboard
 - **Rootless Containers** - Podman runs without root
 - **User Namespaces** - Each container in isolated namespace
 - **Resource Limits** - CPU, memory, disk constraints
-- **Network Isolation** - Containers on isolated networks
+- **Network Isolation** - Containers run with `--network none`
+- **Volume Isolation** - Each function gets isolated shared directory
+- **Python Client** - Structured API access via JSON communication
 
 ### API Security
 
@@ -442,6 +547,33 @@ CREATE TABLE executions (
 - Security events
 - Token abuse
 
+## Python Client Benefits
+
+### Advantages
+
+1. **Structured Communication**
+
+   - JSON-based request/response format
+   - Type-safe error handling
+   - Consistent API surface
+
+2. **Podman API Access**
+
+   - Direct Python SDK usage
+   - No shell command parsing
+   - Better error messages
+
+3. **Maintainability**
+
+   - Separate concerns (Dart backend, Python client)
+   - Easy to test independently
+   - Clear interface contract
+
+4. **Flexibility**
+   - Configurable socket path
+   - Custom Python executable
+   - Environment-based configuration
+
 ## Future Enhancements
 
 - **Kubernetes Integration** - Deploy on K8s
@@ -451,9 +583,13 @@ CREATE TABLE executions (
 - **Serverless Workflows** - Function orchestration
 - **Token Rotation** - Automatic refresh token rotation
 - **Redis Cache** - Distributed token cache
+- **Volume Encryption** - Encrypt shared volume data
+- **Python Client Pool** - Connection pooling for Python processes
 
 ## Next Steps
 
+- Read [Function Execution](./function-execution.md) for shared volume details
+- Check [Podman Migration](../podman-migration.md) for Python client info
 - Read [API Reference](./api-reference.md)
 - Check [CLI Documentation](../cli/dart-cloud-cli.md)
 - Explore [Development Guide](../development.md)

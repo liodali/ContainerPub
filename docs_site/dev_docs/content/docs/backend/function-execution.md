@@ -51,21 +51,24 @@ When you deploy a function, the backend:
 1. User invokes function via API
 2. Backend receives request with body, query, headers
 3. DockerService.runContainer():
-   - Creates temp directory
+   - Creates shared directory at: functionsDir/functionUUID/version/containerName
    - Writes request.json with CloudRequest data
-   - Mounts request.json into container at /app/request.json
-   - Runs container with environment variables
+   - Writes .env.config with environment variables
+   - Creates empty logs.json and result.json placeholders
+   - Mounts shared volume (functions_data) into container
+   - Runs container with working directory set to shared path
 4. Container executes main.dart:
-   - Reads environment variables
-   - Reads request.json
+   - Reads environment variables from .env.config
+   - Reads request.json from shared volume
    - Creates CloudRequest object
    - Instantiates user's cloud function class
    - Calls handle(request: request, env: env)
-   - Writes CloudResponse to stdout
-5. Backend captures stdout
-6. Parses JSON response
+   - Writes logs to logs.json in shared volume
+   - Writes CloudResponse to result.json in shared volume
+5. Backend reads result.json from shared volume
+6. Backend reads logs.json from shared volume
 7. Returns result to user
-8. Cleans up temp directory
+8. Cleans up shared directory
 ```
 
 ## Generated main.dart Structure
@@ -179,11 +182,39 @@ class MyFunction extends CloudDartFunction {
 }
 ```
 
-## Data Flow
+## Shared Volume Architecture
 
-### Request Data (request.json)
+### Volume Structure
 
-```dart
+ContainerPub uses a **shared named volume** (`functions_data`) to exchange data between the backend and function containers:
+
+```
+functions_data/
+└── {functionUUID}/
+    └── v{version}/
+        └── {containerName}/
+            ├── request.json      # Input (backend → function)
+            ├── .env.config       # Environment (backend → function)
+            ├── logs.json         # Logs (function → backend)
+            └── result.json       # Output (function → backend)
+```
+
+**Volume Configuration:**
+
+- **Name:** Configurable via `SHARED_VOLUME_NAME` environment variable
+- **Default:** `functions_data`
+- **Mount:** `functions_data:/app/functions:Z,rshared`
+- **Propagation:** `rshared` for nested mounts
+
+### Data Flow
+
+#### 1. Request Data (request.json)
+
+**Written by:** Backend  
+**Read by:** Function container  
+**Location:** `{sharedDir}/request.json`
+
+```json
 {
   "method": "POST",
   "path": "/",
@@ -200,9 +231,44 @@ class MyFunction extends CloudDartFunction {
 }
 ```
 
-### Response Data (stdout)
+#### 2. Environment Config (.env.config)
 
-```dart
+**Written by:** Backend  
+**Read by:** Function container  
+**Location:** `{sharedDir}/.env.config`
+
+```bash
+DART_CLOUD_RESTRICTED=true
+FUNCTION_TIMEOUT_MS=5000
+FUNCTION_MAX_MEMORY_MB=128
+SHARED_PATH=/app/functions/{uuid}/v{version}/{containerName}
+```
+
+#### 3. Function Logs (logs.json)
+
+**Written by:** Function container  
+**Read by:** Backend  
+**Location:** `{sharedDir}/logs.json`
+
+```json
+{
+  "logs": [
+    {
+      "level": "info",
+      "message": "Processing request",
+      "timestamp": "2024-01-06T00:00:00.000Z"
+    }
+  ]
+}
+```
+
+#### 4. Response Data (result.json)
+
+**Written by:** Function container  
+**Read by:** Backend  
+**Location:** `{sharedDir}/result.json`
+
+```json
 {
   "statusCode": 200,
   "headers": {
@@ -216,28 +282,31 @@ class MyFunction extends CloudDartFunction {
 
 ## Environment Variables
 
-Available to functions via `env` parameter:
+Available to functions via `.env.config` file in shared volume:
 
-| Variable                 | Description                         |
-| ------------------------ | ----------------------------------- |
-| `DART_CLOUD_RESTRICTED`  | Always "true"                       |
-| `FUNCTION_TIMEOUT_MS`    | Execution timeout                   |
-| `FUNCTION_MAX_MEMORY_MB` | Memory limit                        |
-| `DATABASE_URL`           | Database connection (if configured) |
-| `DB_MAX_CONNECTIONS`     | Max DB connections                  |
-| `DB_TIMEOUT_MS`          | DB connection timeout               |
+| Variable                 | Description                         | Example                           |
+| ------------------------ | ----------------------------------- | --------------------------------- |
+| `DART_CLOUD_RESTRICTED`  | Always "true"                       | `true`                            |
+| `FUNCTION_TIMEOUT_MS`    | Execution timeout                   | `5000`                            |
+| `FUNCTION_MAX_MEMORY_MB` | Memory limit                        | `128`                             |
+| `SHARED_PATH`            | Path to shared volume directory     | `/app/functions/{uuid}/v1/{name}` |
+| `DATABASE_URL`           | Database connection (if configured) | `postgres://...`                  |
+| `DB_MAX_CONNECTIONS`     | Max DB connections                  | `5`                               |
+| `DB_TIMEOUT_MS`          | DB connection timeout               | `3000`                            |
 
 ## Security
 
-| Feature               | Description                          |
-| --------------------- | ------------------------------------ |
-| **Network Isolation** | Containers run with `--network none` |
-| **Memory Limits**     | Default 128MB per function           |
-| **CPU Limits**        | 0.5 cores per function               |
-| **Execution Timeout** | Default 5 seconds                    |
-| **Read-only Mount**   | request.json mounted as read-only    |
-| **Auto-cleanup**      | Containers removed after execution   |
-| **Temp File Cleanup** | request.json deleted after execution |
+| Feature               | Description                                  |
+| --------------------- | -------------------------------------------- |
+| **Network Isolation** | Containers run with `--network none`         |
+| **Memory Limits**     | Dynamic based on image size (min 20MB)       |
+| **CPU Limits**        | 0.5 cores per function                       |
+| **Execution Timeout** | Default 5 seconds                            |
+| **Volume Isolation**  | Each function gets isolated shared directory |
+| **SELinux Labels**    | Volume mounted with `:Z` for proper labeling |
+| **Propagation**       | `rshared` for nested mount support           |
+| **Auto-cleanup**      | Containers and shared directories removed    |
+| **File Cleanup**      | All files in shared directory deleted        |
 
 ## Error Handling
 
@@ -291,18 +360,73 @@ If function execution fails, error response is written to stdout:
 
 ### request.json not found
 
-- Check volume mount is working
-- Verify temp directory creation
-- Check file permissions
+- Check shared volume mount is working
+- Verify shared directory creation at: `functionsDir/{uuid}/v{version}/{containerName}`
+- Check volume name matches `SHARED_VOLUME_NAME` environment variable
+- Verify file permissions in shared volume
+- Test volume mount: `podman volume inspect functions_data`
+
+## Shared Volume Benefits
+
+### Advantages
+
+1. **Separation of Concerns**
+
+   - Function output (result.json) separate from debug logs (stdout/stderr)
+   - Clean separation between function logs and container logs
+
+2. **Persistent Storage**
+
+   - Shared volume persists across backend and function containers
+   - No need for temporary directories in backend container
+
+3. **Structured Data Exchange**
+
+   - JSON files for structured data
+   - Environment file for configuration
+   - Clear contract between backend and function
+
+4. **Debugging**
+   - Easy to inspect files in shared volume
+   - Logs and results available for troubleshooting
+   - Clear separation of concerns
+
+### Volume Management
+
+**Create Volume:**
+
+```bash
+podman volume create functions_data
+```
+
+**Inspect Volume:**
+
+```bash
+podman volume inspect functions_data
+```
+
+**List Files:**
+
+```bash
+podman run --rm -v functions_data:/data alpine ls -la /data
+```
+
+**Clean Volume:**
+
+```bash
+podman volume rm functions_data
+```
 
 ## Future Improvements
 
 1. **Caching** - Cache analyzed function metadata
 2. **Validation** - Pre-validate functions before deployment
 3. **Hot Reload** - Support function updates without rebuild
-4. **Streaming** - Support streaming responses
+4. **Streaming** - Support streaming responses via shared volume
 5. **Multi-file** - Support multiple function files
 6. **Dependencies** - Auto-detect and install dependencies
+7. **Volume Cleanup** - Automatic cleanup of old function directories
+8. **Volume Encryption** - Encrypt shared volume data at rest
 
 ## See Also
 

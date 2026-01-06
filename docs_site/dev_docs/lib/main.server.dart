@@ -104,6 +104,8 @@ void main() async {
                   SidebarLink(text: "API Keys & Signing", href: '/docs/backend/api-keys'),
                   SidebarLink(text: "Architecture", href: '/docs/backend/architecture'),
                   SidebarLink(text: "Function Execution", href: '/docs/backend/function-execution'),
+                  SidebarLink(text: "Python Podman Client", href: '/docs/backend/python-podman-client'),
+                  SidebarLink(text: "Statistics & Monitoring", href: '/docs/backend/statistics'),
                   SidebarLink(text: "API Reference", href: '/docs/backend/api-reference'),
                 ],
               ),
