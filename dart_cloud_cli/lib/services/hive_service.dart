@@ -56,7 +56,7 @@ class HiveService {
   /// [subPath]: Optional subdirectory under .containerpub (e.g., 'cache', 'api_keys')
   ///
   /// Returns the opened Box
-  static Future<Box<T>> initBox<T>(
+  static Future<LazyBox<T>> initBox<T>(
     String boxName, {
     String? subPath,
   }) async {
@@ -69,14 +69,14 @@ class HiveService {
       }
 
       Hive.init(hiveDir);
-      return await Hive.openBox<T>(boxName);
+      return Hive.openLazyBox<T>(boxName);
     } catch (e) {
       throw Exception('Failed to initialize Hive box "$boxName": $e');
     }
   }
 
   /// Close a specific Hive box
-  static Future<void> closeBox(Box? box) async {
+  static Future<void> closeBox(LazyBox? box) async {
     if (box != null && box.isOpen) {
       await box.close();
     }

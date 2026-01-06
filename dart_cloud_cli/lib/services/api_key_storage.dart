@@ -11,7 +11,7 @@ typedef ApiKeyStorageData = ({String uuid, String privateKey});
 /// - Value: base64-encoded private key
 mixin ApiKeyStorage {
   static const String _boxName = 'api_keys';
-  static late Box<String> _box;
+  static late LazyBox<String> _box;
   static bool _initialized = false;
 
   /// Initialize the Hive box for API key storage
@@ -60,12 +60,15 @@ mixin ApiKeyStorage {
     }
 
     try {
-      final encoded = _box.get(functionUuid);
+      final encoded = await _box.get(functionUuid);
       if (encoded == null) {
         return null;
       }
       if (!encoded.contains('keyUUID')) {
-        return (uuid: '', privateKey: utf8.decode(base64.decode(encoded)));
+        return (
+          uuid: '',
+          privateKey: utf8.decode(base64.decode(encoded)),
+        );
       }
       final data = json.decode(encoded);
       final privateKey = data['privateKey'];

@@ -3,9 +3,9 @@ import 'package:dart_cloud_cli/services/hive_service.dart';
 import 'package:hive_ce/hive.dart';
 
 mixin AuthCache {
-  static Box? _authBox;
+  static LazyBox? _authBox;
 
-  static Box get authBox {
+  static LazyBox get authBox {
     if (_authBox == null) {
       throw Exception('AuthCache not initialized');
     }
