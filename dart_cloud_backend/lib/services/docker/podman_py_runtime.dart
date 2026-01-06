@@ -298,18 +298,20 @@ class PodmanPyRuntime implements ContainerRuntime {
     //   args.addAll(['--workdir', workingDir]);
     // }
 
-    print('run container args: $args');
     final result = await _executePythonCommand(args, timeout: timeout);
-    print('run container result: ${result}');
-    if (result['success'] == true &&  result['data'] is String ) {
-      final data = json.decode(result['data']) as Map<String, dynamic>;
 
+    Map<String, dynamic>? resultData = result['data'] ?? null;
+    if (result['data'] != null && result['data'] is String) {
+      resultData = json.decode(result['data']) as Map<String, dynamic>;
+    }
+    if (result['success'] == true && resultData != null) {
       return ContainerProcessResult(
         exitCode: 0,
         stdout: {
-          'container_id': data['container_id'],
-          'name': data['name'],
-          'status': data['status'],
+          'container_id': resultData['container_id'],
+          'name': resultData['name'],
+          'status': resultData['status'],
+          'stdout': resultData['stdout'],
         },
         stderr: '',
         containerConfiguration: {
