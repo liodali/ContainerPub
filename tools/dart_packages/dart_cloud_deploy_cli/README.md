@@ -2,6 +2,8 @@
 
 A robust deployment CLI for managing Dart Cloud Backend deployments with OpenBao secrets management and Ansible integration.
 
+> **New to the CLI?** Check out the [QUICKSTART.md](QUICKSTART.md) guide for simple examples.
+
 ## Features
 
 - **Local Deployment**: Deploy locally using Podman/Docker without Ansible
@@ -11,6 +13,8 @@ A robust deployment CLI for managing Dart Cloud Backend deployments with OpenBao
 - **Python Venv Management**: Auto-creates Python venv and installs Ansible
 - **Dynamic Playbooks**: Generates playbooks on-demand with modern Ansible syntax (`ansible.builtin.*`)
 - **Auto Cleanup**: Removes generated playbooks after deployment
+- **Interactive Menus**: User-friendly prompts for service management
+- **Health Checks**: Automatic service health verification after deployment
 
 ## Installation
 
@@ -44,14 +48,22 @@ dart pub global activate --source path .
 
 ## Quick Start
 
+For detailed examples and use cases, see [QUICKSTART.md](QUICKSTART.md).
+
 ### 1. Initialize Environment
 
 ```bash
 # Initialize Python venv and install Ansible
 dart_cloud_deploy init
 
-# Force reinstall
+# Custom venv path
+dart_cloud_deploy init --venv-path /path/to/venv
+
+# Force reinstall everything
 dart_cloud_deploy init --force
+
+# Skip Ansible collections installation
+dart_cloud_deploy init --skip-collections
 ```
 
 ### 2. Initialize Configuration
@@ -62,6 +74,12 @@ dart_cloud_deploy config init -e local
 
 # Create a YAML config for dev environment
 dart_cloud_deploy config init -e dev -o deploy-dev.yaml
+
+# Create a TOML config
+dart_cloud_deploy config init -f toml -e production
+
+# Validate configuration
+dart_cloud_deploy config validate -c deploy.yaml
 ```
 
 ### 3. Fetch Secrets (Optional)
@@ -70,8 +88,17 @@ dart_cloud_deploy config init -e dev -o deploy-dev.yaml
 # Fetch secrets and write to .env
 dart_cloud_deploy secrets fetch
 
+# Fetch to custom output file
+dart_cloud_deploy secrets fetch -o .env.local
+
+# Override secret path
+dart_cloud_deploy secrets fetch -p secret/data/myapp/prod
+
 # Check OpenBao connection
 dart_cloud_deploy secrets check
+
+# List available secrets
+dart_cloud_deploy secrets list -p secret/metadata/myapp
 ```
 
 ### 4. Deploy Locally
@@ -82,6 +109,16 @@ dart_cloud_deploy deploy-local
 
 # Deploy with forced rebuild
 dart_cloud_deploy deploy-local --force
+
+# Deploy specific service only
+dart_cloud_deploy deploy-local -s backend
+dart_cloud_deploy deploy-local -s postgres
+
+# Skip secrets fetch
+dart_cloud_deploy deploy-local --skip-secrets
+
+# Skip build (use existing images)
+dart_cloud_deploy deploy-local --no-build
 ```
 
 ### 5. Deploy to Dev Server
@@ -99,8 +136,20 @@ dart_cloud_deploy deploy-dev -t database
 # Run backup
 dart_cloud_deploy deploy-dev -t backup
 
-# Dry run
+# Dry run (preview without executing)
 dart_cloud_deploy deploy-dev --dry-run
+
+# Verbose Ansible output
+dart_cloud_deploy deploy-dev -v
+
+# Pass extra variables
+dart_cloud_deploy deploy-dev -e app_version=1.2.0 -e debug=true
+
+# Run specific Ansible tags
+dart_cloud_deploy deploy-dev --tags setup,deploy
+
+# Skip specific tags
+dart_cloud_deploy deploy-dev --skip-tags cleanup
 ```
 
 ## Configuration File (deploy.yaml)
@@ -137,18 +186,95 @@ ansible:
     postgres_db: dart_cloud
 ```
 
-## Commands
+## Commands Reference
 
-| Command           | Description                                |
-| ----------------- | ------------------------------------------ |
-| `init`            | Initialize Python venv and install Ansible |
-| `config init`     | Initialize deployment configuration        |
-| `config validate` | Validate configuration file                |
-| `deploy-local`    | Deploy locally using Podman/Docker         |
-| `deploy-dev`      | Deploy to dev server using Ansible         |
-| `secrets fetch`   | Fetch secrets from OpenBao                 |
-| `secrets check`   | Check OpenBao connection                   |
-| `show`            | Show current configuration                 |
+### `init` - Initialize Environment
+
+Initializes Python virtual environment and installs Ansible with required collections.
+
+| Option               | Short | Description                            | Default |
+| -------------------- | ----- | -------------------------------------- | ------- |
+| `--venv-path`        |       | Path for Python virtual environment    | `.venv` |
+| `--force`            | `-f`  | Force reinstall even if already exists | `false` |
+| `--skip-collections` |       | Skip installing Ansible collections    | `false` |
+
+### `config` - Configuration Management
+
+#### `config init` - Create Configuration
+
+| Option          | Short | Description                                       | Default       |
+| --------------- | ----- | ------------------------------------------------- | ------------- |
+| `--format`      | `-f`  | Configuration file format (`yaml`, `toml`)        | `yaml`        |
+| `--output`      | `-o`  | Output file path                                  | `deploy.yaml` |
+| `--environment` | `-e`  | Target environment (`local`, `dev`, `production`) | `local`       |
+
+#### `config validate` - Validate Configuration
+
+| Option     | Short | Description             | Default       |
+| ---------- | ----- | ----------------------- | ------------- |
+| `--config` | `-c`  | Configuration file path | `deploy.yaml` |
+
+#### `config set` - Set Configuration Value
+
+| Option     | Short | Description                      | Default       |
+| ---------- | ----- | -------------------------------- | ------------- |
+| `--config` | `-c`  | Configuration file path          | `deploy.yaml` |
+| `--key`    | `-k`  | Configuration key (dot notation) | required      |
+| `--value`  | `-v`  | Configuration value              | required      |
+
+### `deploy-local` - Local Deployment
+
+Deploy locally using Podman/Docker without Ansible.
+
+| Option           | Short | Description                                          | Default       |
+| ---------------- | ----- | ---------------------------------------------------- | ------------- |
+| `--config`       | `-c`  | Configuration file path                              | `deploy.yaml` |
+| `--build`        | `-b`  | Force rebuild containers                             | `true`        |
+| `--force`        | `-f`  | Force recreate containers                            | `false`       |
+| `--skip-secrets` |       | Skip fetching secrets from OpenBao                   | `false`       |
+| `--service`      | `-s`  | Deploy specific service only (`backend`, `postgres`) | all           |
+
+### `deploy-dev` - Remote Deployment
+
+Deploy to dev/production server using Ansible.
+
+| Option           | Short | Description                                                | Default       |
+| ---------------- | ----- | ---------------------------------------------------------- | ------------- |
+| `--config`       | `-c`  | Configuration file path                                    | `deploy.yaml` |
+| `--target`       | `-t`  | Deployment target (`all`, `backend`, `database`, `backup`) | `all`         |
+| `--skip-secrets` |       | Skip fetching secrets from OpenBao                         | `false`       |
+| `--verbose`      | `-v`  | Verbose Ansible output                                     | `false`       |
+| `--dry-run`      |       | Show what would be done without executing                  | `false`       |
+| `--tags`         |       | Ansible tags to run (multiple allowed)                     | none          |
+| `--skip-tags`    |       | Ansible tags to skip (multiple allowed)                    | none          |
+| `--extra-vars`   | `-e`  | Extra variables as `key=value` (multiple allowed)          | none          |
+
+### `secrets` - Secrets Management
+
+#### `secrets fetch` - Fetch Secrets
+
+| Option     | Short | Description                     | Default       |
+| ---------- | ----- | ------------------------------- | ------------- |
+| `--config` | `-c`  | Configuration file path         | `deploy.yaml` |
+| `--output` | `-o`  | Output .env file path           | from config   |
+| `--path`   | `-p`  | Override secret path in OpenBao | from config   |
+
+#### `secrets list` - List Secrets
+
+| Option     | Short | Description               | Default                      |
+| ---------- | ----- | ------------------------- | ---------------------------- |
+| `--config` | `-c`  | Configuration file path   | `deploy.yaml`                |
+| `--path`   | `-p`  | Path to list secrets from | `secret/metadata/dart_cloud` |
+
+#### `secrets check` - Check Connection
+
+| Option     | Short | Description             | Default       |
+| ---------- | ----- | ----------------------- | ------------- |
+| `--config` | `-c`  | Configuration file path | `deploy.yaml` |
+
+### `show` - Show Configuration
+
+Display current configuration settings.
 
 ## Architecture
 
@@ -195,3 +321,117 @@ The CLI stores configuration in `~/.dart-cloud-deploy/`:
 - **Python**: 3.8+ (for Ansible venv)
 - **Container Runtime**: Podman or Docker (for local deployment)
 - **OpenBao/Vault**: Optional, for secrets management
+
+## Generic Usage Patterns
+
+### Using with Any Dart Backend
+
+The CLI is designed to work with any containerized Dart backend:
+
+1. Create a `docker-compose.yml` with your services
+2. Initialize configuration: `dart_cloud_deploy config init -e local`
+3. Update `deploy.yaml` with your service names
+4. Deploy: `dart_cloud_deploy deploy-local`
+
+### Multi-Environment Setup
+
+```bash
+# Create configs for each environment
+dart_cloud_deploy config init -e local -o deploy-local.yaml
+dart_cloud_deploy config init -e dev -o deploy-dev.yaml
+dart_cloud_deploy config init -e production -o deploy-prod.yaml
+
+# Deploy to specific environment
+dart_cloud_deploy deploy-local -c deploy-local.yaml
+dart_cloud_deploy deploy-dev -c deploy-dev.yaml
+```
+
+### CI/CD Integration
+
+```yaml
+# GitHub Actions example
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dart-lang/setup-dart@v1
+      - name: Install CLI
+        run: dart pub global activate --source path tools/dart_packages/dart_cloud_deploy_cli
+      - name: Initialize
+        run: dart_cloud_deploy init
+      - name: Deploy
+        run: dart_cloud_deploy deploy-dev -c deploy-prod.yaml
+```
+
+### Without OpenBao (Manual Secrets)
+
+If you don't use OpenBao, create `.env` manually:
+
+```bash
+# Skip secrets fetch during deployment
+dart_cloud_deploy deploy-local --skip-secrets
+
+# Or create .env from example
+cp .env.example .env
+# Edit .env with your values
+dart_cloud_deploy deploy-local
+```
+
+## Troubleshooting
+
+### Common Issues
+
+**Python not found**
+
+```bash
+# macOS
+brew install python3
+
+# Ubuntu/Debian
+sudo apt install python3 python3-venv
+
+# Fedora
+sudo dnf install python3
+```
+
+**Container runtime not found**
+
+```bash
+# Check if podman/docker is installed
+podman --version
+docker --version
+
+# Update config to use available runtime
+# In deploy.yaml: container.runtime: docker
+```
+
+**OpenBao connection failed**
+
+```bash
+# Check OpenBao status
+dart_cloud_deploy secrets check
+
+# Verify token is valid
+cat ~/.openbao/token
+
+# Skip secrets if not needed
+dart_cloud_deploy deploy-local --skip-secrets
+```
+
+**Ansible connection failed**
+
+```bash
+# Test SSH connection manually
+ssh -i ~/.ssh/id_rsa user@host
+
+# Check inventory
+cat .deploy_inventory/inventory.ini
+
+# Run with verbose output
+dart_cloud_deploy deploy-dev -v
+```
+
+## License
+
+MIT License - see LICENSE file for details.
