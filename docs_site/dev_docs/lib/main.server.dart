@@ -122,6 +122,16 @@ void main() async {
                   SidebarLink(text: "Backup Reference", href: '/docs/database/backup-quick-reference'),
                 ],
               ),
+              // Deploy CLI Documentation
+              SidebarGroup(
+                title: 'Deploy CLI',
+                links: [
+                  SidebarLink(text: "Overview", href: '/docs/deploy-cli'),
+                  SidebarLink(text: "Quick Start", href: '/docs/deploy-cli/quickstart'),
+                  SidebarLink(text: "Commands Reference", href: '/docs/deploy-cli/commands'),
+                  SidebarLink(text: "CI/CD Integration", href: '/docs/deploy-cli/cicd'),
+                ],
+              ),
               // Migration Documentation
               SidebarGroup(
                 title: 'Migration',
