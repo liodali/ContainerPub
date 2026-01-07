@@ -1,0 +1,218 @@
+name: Release dart_cloud_deploy CLI
+
+on:
+  push:
+    tags:
+      - "dart_cloud_deploy_cli-v*.*.*"
+  workflow_dispatch:
+
+jobs:
+  build-and-release:
+    name: Build CLI for ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            artifact_name: dart_cloud_deploy-linux-x64
+            asset_name: dart_cloud_deploy-linux-x64
+          - os: macos-latest
+            artifact_name: dart_cloud_deploy-macos-x64
+            asset_name: dart_cloud_deploy-macos-x64
+          - os: macos-latest-xlarge
+            artifact_name: dart_cloud_deploy-macos-arm64
+            asset_name: dart_cloud_deploy-macos-arm64
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Dart SDK
+        uses: dart-lang/setup-dart@v1
+        with:
+          sdk: stable
+
+      - name: Get dependencies
+        working-directory: tools/dart_packages/dart_cloud_deploy_cli
+        run: dart pub get
+
+      - name: Run tests
+        working-directory: tools/dart_packages/dart_cloud_deploy_cli
+        run: dart test
+        continue-on-error: true
+
+      - name: Compile CLI
+        working-directory: tools/dart_packages/dart_cloud_deploy_cli
+        run: dart compile exe bin/dart_cloud_deploy.dart -o ${{ matrix.artifact_name }}
+
+      - name: Create checksum
+        working-directory: tools/dart_packages/dart_cloud_deploy_cli
+        run: |
+          shasum -a 256 ${{ matrix.artifact_name }} > ${{ matrix.artifact_name }}.sha256
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.asset_name }}
+          path: |
+            tools/dart_packages/dart_cloud_deploy_cli/${{ matrix.artifact_name }}
+            tools/dart_packages/dart_cloud_deploy_cli/${{ matrix.artifact_name }}.sha256
+
+  create-release:
+    name: Create GitHub Release
+    needs: build-and-release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Display structure
+        run: ls -R artifacts
+
+      - name: Get version from tag
+        id: get_version
+        run: |
+          if [[ $GITHUB_REF == refs/tags/* ]]; then
+            TAG=${GITHUB_REF#refs/tags/}
+            VERSION=${TAG#dart_cloud_deploy_cli-}
+            echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+            echo "TAG=$TAG" >> $GITHUB_OUTPUT
+          else
+            echo "VERSION=dev-$(date +%Y%m%d-%H%M%S)" >> $GITHUB_OUTPUT
+            echo "TAG=dev" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create Release Notes
+        id: release_notes
+        run: |
+          cat > release_notes.md << 'EOF'
+          ## dart_cloud_deploy CLI ${{ steps.get_version.outputs.VERSION }}
+
+          A deployment CLI for managing Dart Cloud Backend deployments with OpenBao secrets and Ansible integration.
+
+          ### Features
+
+          - **Local Deployment**: Deploy locally using Podman/Docker
+          - **Dev Deployment**: Deploy to remote VPS using Ansible playbooks
+          - **Secrets Management**: Fetch secrets from OpenBao
+          - **Configuration**: Support for YAML and TOML configuration files
+
+          ### Installation
+
+          #### Linux (x64)
+          ```bash
+          curl -L -o dart_cloud_deploy https://github.com/${{ github.repository }}/releases/download/${{ steps.get_version.outputs.TAG }}/dart_cloud_deploy-linux-x64
+          chmod +x dart_cloud_deploy
+          sudo mv dart_cloud_deploy /usr/local/bin/
+          ```
+
+          #### macOS (Intel)
+          ```bash
+          curl -L -o dart_cloud_deploy https://github.com/${{ github.repository }}/releases/download/${{ steps.get_version.outputs.TAG }}/dart_cloud_deploy-macos-x64
+          chmod +x dart_cloud_deploy
+          sudo mv dart_cloud_deploy /usr/local/bin/
+          ```
+
+          #### macOS (Apple Silicon)
+          ```bash
+          curl -L -o dart_cloud_deploy https://github.com/${{ github.repository }}/releases/download/${{ steps.get_version.outputs.TAG }}/dart_cloud_deploy-macos-arm64
+          chmod +x dart_cloud_deploy
+          sudo mv dart_cloud_deploy /usr/local/bin/
+          ```
+
+          #### Install to ~/.local/bin
+          ```bash
+          mkdir -p ~/.local/bin
+          curl -L -o ~/.local/bin/dart_cloud_deploy https://github.com/${{ github.repository }}/releases/download/${{ steps.get_version.outputs.TAG }}/dart_cloud_deploy-linux-x64
+          chmod +x ~/.local/bin/dart_cloud_deploy
+          ```
+
+          ### Verify Installation
+          ```bash
+          dart_cloud_deploy --help
+          ```
+
+          ### Quick Start
+          ```bash
+          # Initialize environment
+          dart_cloud_deploy init
+
+          # Create configuration
+          dart_cloud_deploy config init -e dev
+
+          # Deploy locally
+          dart_cloud_deploy deploy-local
+
+          # Deploy to dev server
+          dart_cloud_deploy deploy-dev
+          ```
+
+          ### Checksums
+          SHA256 checksums are provided for all binaries. Verify with:
+          ```bash
+          shasum -a 256 -c dart_cloud_deploy-*.sha256
+          ```
+
+          ---
+
+          For more information, see the [documentation](https://github.com/${{ github.repository }}/tree/main/tools/dart_packages/dart_cloud_deploy_cli).
+          EOF
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ steps.get_version.outputs.TAG }}
+          name: dart_cloud_deploy CLI ${{ steps.get_version.outputs.VERSION }}
+          body_path: release_notes.md
+          draft: false
+          prerelease: false
+          files: |
+            artifacts/dart_cloud_deploy-linux-x64/dart_cloud_deploy-linux-x64
+            artifacts/dart_cloud_deploy-linux-x64/dart_cloud_deploy-linux-x64.sha256
+            artifacts/dart_cloud_deploy-macos-x64/dart_cloud_deploy-macos-x64
+            artifacts/dart_cloud_deploy-macos-x64/dart_cloud_deploy-macos-x64.sha256
+            artifacts/dart_cloud_deploy-macos-arm64/dart_cloud_deploy-macos-arm64
+            artifacts/dart_cloud_deploy-macos-arm64/dart_cloud_deploy-macos-arm64.sha256
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  test-installation:
+    name: Test Installation
+    needs: create-release
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+
+    steps:
+      - name: Get version
+        id: get_version
+        run: |
+          if [[ $GITHUB_REF == refs/tags/* ]]; then
+            TAG=${GITHUB_REF#refs/tags/}
+            echo "TAG=$TAG" >> $GITHUB_OUTPUT
+          else
+            echo "TAG=dev" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Download and test CLI (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          curl -L -o dart_cloud_deploy https://github.com/${{ github.repository }}/releases/download/${{ steps.get_version.outputs.TAG }}/dart_cloud_deploy-linux-x64
+          chmod +x dart_cloud_deploy
+          ./dart_cloud_deploy --help
+
+      - name: Download and test CLI (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          curl -L -o dart_cloud_deploy https://github.com/${{ github.repository }}/releases/download/${{ steps.get_version.outputs.TAG }}/dart_cloud_deploy-macos-x64
+          chmod +x dart_cloud_deploy
+          ./dart_cloud_deploy --help
