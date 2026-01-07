@@ -1,10 +1,10 @@
-name: Release CLI
+name: Release dart_cloud CLI
 
 on:
   push:
     tags:
-      - 'v*.*.*'  # Triggers on version tags like v1.0.0
-  workflow_dispatch:  # Allows manual trigger
+      - "dart_cloud_cli-v*.*.*" # Triggers on version tags like dart_cloud_cli-v1.0.0
+  workflow_dispatch: # Allows manual trigger
 
 jobs:
   build-and-release:
@@ -19,7 +19,7 @@ jobs:
           - os: macos-latest
             artifact_name: dart_cloud-macos-x64
             asset_name: dart_cloud-macos-x64
-          - os: macos-latest-xlarge  # M1/M2 Mac
+          - os: macos-latest-xlarge # M1/M2 Mac
             artifact_name: dart_cloud-macos-arm64
             asset_name: dart_cloud-macos-arm64
           - os: windows-latest
@@ -42,7 +42,7 @@ jobs:
       - name: Run tests
         working-directory: dart_cloud_cli
         run: dart test
-        continue-on-error: true  # Don't fail if no tests exist
+        continue-on-error: true # Don't fail if no tests exist
 
       - name: Compile CLI (Unix)
         if: runner.os != 'Windows'
@@ -99,36 +99,41 @@ jobs:
         id: get_version
         run: |
           if [[ $GITHUB_REF == refs/tags/* ]]; then
-            echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+            # Extract version from tag like dart_cloud_cli-v1.0.0 -> v1.0.0
+            TAG=${GITHUB_REF#refs/tags/}
+            VERSION=${TAG#dart_cloud_cli-}
+            echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+            echo "TAG=$TAG" >> $GITHUB_OUTPUT
           else
             echo "VERSION=dev-$(date +%Y%m%d-%H%M%S)" >> $GITHUB_OUTPUT
+            echo "TAG=dev" >> $GITHUB_OUTPUT
           fi
 
       - name: Create Release Notes
         id: release_notes
         run: |
           cat > release_notes.md << 'EOF'
-          ## ContainerPub CLI ${{ steps.get_version.outputs.VERSION }}
+          ## dart_cloud CLI ${{ steps.get_version.outputs.VERSION }}
 
           ### Installation
 
           #### Linux (x64)
           ```bash
-          curl -L -o dart_cloud https://github.com/${{ github.repository }}/releases/download/${{ steps.get_version.outputs.VERSION }}/dart_cloud-linux-x64
+          curl -L -o dart_cloud https://github.com/${{ github.repository }}/releases/download/${{ steps.get_version.outputs.TAG }}/dart_cloud-linux-x64
           chmod +x dart_cloud
           sudo mv dart_cloud /usr/local/bin/
           ```
 
           #### macOS (Intel)
           ```bash
-          curl -L -o dart_cloud https://github.com/${{ github.repository }}/releases/download/${{ steps.get_version.outputs.VERSION }}/dart_cloud-macos-x64
+          curl -L -o dart_cloud https://github.com/${{ github.repository }}/releases/download/${{ steps.get_version.outputs.TAG }}/dart_cloud-macos-x64
           chmod +x dart_cloud
           sudo mv dart_cloud /usr/local/bin/
           ```
 
           #### macOS (Apple Silicon)
           ```bash
-          curl -L -o dart_cloud https://github.com/${{ github.repository }}/releases/download/${{ steps.get_version.outputs.VERSION }}/dart_cloud-macos-arm64
+          curl -L -o dart_cloud https://github.com/${{ github.repository }}/releases/download/${{ steps.get_version.outputs.TAG }}/dart_cloud-macos-arm64
           chmod +x dart_cloud
           sudo mv dart_cloud /usr/local/bin/
           ```
@@ -167,8 +172,8 @@ jobs:
       - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
-          tag_name: ${{ steps.get_version.outputs.VERSION }}
-          name: Release ${{ steps.get_version.outputs.VERSION }}
+          tag_name: ${{ steps.get_version.outputs.TAG }}
+          name: dart_cloud CLI ${{ steps.get_version.outputs.VERSION }}
           body_path: release_notes.md
           draft: false
           prerelease: false
@@ -197,21 +202,22 @@ jobs:
         id: get_version
         run: |
           if [[ $GITHUB_REF == refs/tags/* ]]; then
-            echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+            TAG=${GITHUB_REF#refs/tags/}
+            echo "TAG=$TAG" >> $GITHUB_OUTPUT
           else
-            echo "VERSION=dev-$(date +%Y%m%d-%H%M%S)" >> $GITHUB_OUTPUT
+            echo "TAG=dev" >> $GITHUB_OUTPUT
           fi
 
       - name: Download and test CLI (Linux)
         if: runner.os == 'Linux'
         run: |
-          curl -L -o dart_cloud https://github.com/${{ github.repository }}/releases/download/${{ steps.get_version.outputs.VERSION }}/dart_cloud-linux-x64
+          curl -L -o dart_cloud https://github.com/${{ github.repository }}/releases/download/${{ steps.get_version.outputs.TAG }}/dart_cloud-linux-x64
           chmod +x dart_cloud
           ./dart_cloud --version
 
       - name: Download and test CLI (macOS)
         if: runner.os == 'macOS'
         run: |
-          curl -L -o dart_cloud https://github.com/${{ github.repository }}/releases/download/${{ steps.get_version.outputs.VERSION }}/dart_cloud-macos-x64
+          curl -L -o dart_cloud https://github.com/${{ github.repository }}/releases/download/${{ steps.get_version.outputs.TAG }}/dart_cloud-macos-x64
           chmod +x dart_cloud
           ./dart_cloud --version

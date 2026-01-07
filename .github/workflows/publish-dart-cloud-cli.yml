@@ -1,0 +1,35 @@
+name: Publish dart_cloud_cli to pub.dev
+
+on:
+  push:
+    tags:
+      - "dart_cloud_cli-v*.*.*"
+  workflow_dispatch:
+
+jobs:
+  publish:
+    name: Publish to pub.dev
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Dart SDK
+        uses: dart-lang/setup-dart@v1
+        with:
+          sdk: stable
+
+      - name: Get dependencies
+        working-directory: dart_cloud_cli
+        run: dart pub get
+
+      - name: Verify package
+        working-directory: dart_cloud_cli
+        run: dart pub publish --dry-run
+
+      - name: Publish to pub.dev
+        working-directory: dart_cloud_cli
+        run: dart pub publish --force
