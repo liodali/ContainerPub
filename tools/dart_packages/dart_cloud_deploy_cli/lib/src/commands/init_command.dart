@@ -1,6 +1,7 @@
 import 'package:args/command_runner.dart';
 import '../services/venv_service.dart';
 import '../utils/console.dart';
+import '../utils/config_paths.dart';
 
 class InitCommand extends Command<void> {
   @override
@@ -43,6 +44,11 @@ class InitCommand extends Command<void> {
     }
 
     Console.header('Initializing Deployment Environment');
+
+    // Ensure config directory exists
+    Console.info('Creating config directory...');
+    await ConfigPaths.ensureAllDirsExist();
+    Console.success('Config directory: ${ConfigPaths.configDir}');
 
     // Check Python
     Console.info('Checking Python installation...');
@@ -93,6 +99,7 @@ class InitCommand extends Command<void> {
     // Print summary
     Console.header('Initialization Complete');
     Console.divider();
+    Console.keyValue('Config Directory', ConfigPaths.configDir);
     Console.keyValue('Virtual Environment', venvPath);
     Console.keyValue(
       'Ansible',

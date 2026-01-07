@@ -2,6 +2,14 @@ name: dart_cloud_deploy_cli
 description: Dart Cloud deployment CLI for managing dev and production deployments with OpenBao secrets and Ansible integration.
 version: 1.0.0
 repository: https://github.com/liodali/ContainerPub
+homepage: https://github.com/liodali/ContainerPub/tree/main/tools/dart_packages/dart_cloud_deploy_cli
+issue_tracker: https://github.com/liodali/ContainerPub/issues
+topics:
+  - cli
+  - deployment
+  - devops
+  - ansible
+  - secrets
 
 environment:
   sdk: ^3.10.4

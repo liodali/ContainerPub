@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart' as http;
 import '../utils/console.dart';
+import '../utils/config_paths.dart';
 
 class OpenBaoService {
   final String address;
@@ -21,7 +22,8 @@ class OpenBaoService {
   }
 
   void _loadTokenFromFile(String path) {
-    final file = File(path);
+    final expandedPath = ConfigPaths.expandPath(path);
+    final file = File(expandedPath);
     if (file.existsSync()) {
       _token = file.readAsStringSync().trim();
     }

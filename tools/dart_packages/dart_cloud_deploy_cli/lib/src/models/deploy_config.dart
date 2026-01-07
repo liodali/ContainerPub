@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:yaml/yaml.dart';
 import 'package:toml/toml.dart';
 import 'package:path/path.dart' as p;
+import '../utils/config_paths.dart';
 
 enum Environment { local, dev, production }
 
@@ -21,11 +22,14 @@ class HostConfig {
   });
 
   factory HostConfig.fromMap(Map<String, dynamic> map) {
+    final sshKeyPath = map['ssh_key_path'] as String?;
     return HostConfig(
       host: map['host'] as String,
       port: map['port'] as int? ?? 22,
       user: map['user'] as String,
-      sshKeyPath: map['ssh_key_path'] as String?,
+      sshKeyPath: sshKeyPath != null
+          ? ConfigPaths.expandPath(sshKeyPath)
+          : null,
       password: map['password'] as String?,
     );
   }
@@ -55,10 +59,11 @@ class OpenBaoConfig {
   });
 
   factory OpenBaoConfig.fromMap(Map<String, dynamic> map) {
+    final tokenPath = map['token_path'] as String?;
     return OpenBaoConfig(
       address: map['address'] as String,
       token: map['token'] as String?,
-      tokenPath: map['token_path'] as String?,
+      tokenPath: tokenPath != null ? ConfigPaths.expandPath(tokenPath) : null,
       secretPath: map['secret_path'] as String,
       namespace: map['namespace'] as String?,
     );

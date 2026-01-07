@@ -14,12 +14,32 @@ A robust deployment CLI for managing Dart Cloud Backend deployments with OpenBao
 
 ## Installation
 
+### Quick Install (Recommended)
+
+```bash
+# Clone the repository
+git clone https://github.com/liodali/ContainerPub.git
+cd ContainerPub/tools/dart_packages/dart_cloud_deploy_cli
+
+# Build and install
+./scripts/build.sh
+./scripts/install.sh
+```
+
+### Manual Installation
+
 ```bash
 # From the package directory
 dart pub get
 
 # Activate globally
 dart pub global activate --source path .
+```
+
+### Uninstall
+
+```bash
+./scripts/uninstall.sh
 ```
 
 ## Quick Start
@@ -157,6 +177,17 @@ The CLI manages its own Python venv:
 - Location: `.venv/` in project directory
 - Auto-installs: `ansible`, `ansible.posix`, `community.general`
 - Isolated from system Python
+
+### Configuration Directory
+
+The CLI stores configuration in `~/.dart-cloud-deploy/`:
+
+- `config.yaml` - Global configuration
+- `credentials.yaml` - Stored credentials
+- `cache/` - Cached data
+- `logs/` - Log files
+- `playbooks/` - Generated playbooks
+- `inventory/` - Ansible inventory files
 
 ## Requirements
 
