@@ -20,7 +20,7 @@ The Python Podman Client (`podman_client.py`) is a command-line tool that provid
 
 **Architecture:**
 
-```
+```dart
 Dart Backend → PodmanPyRuntime → Python Client → Podman API → Containers
 ```
 
@@ -32,7 +32,7 @@ All commands return structured JSON responses:
 
 **Success Response:**
 
-```json
+```dart
 {
   "success": true,
   "data": {
@@ -45,7 +45,7 @@ All commands return structured JSON responses:
 
 **Error Response:**
 
-```json
+```dart
 {
   "success": false,
   "error": "Container execution failed",
@@ -57,7 +57,7 @@ All commands return structured JSON responses:
 
 Connects to Podman via Unix socket:
 
-```bash
+```dart
 --socket /run/podman/podman.sock
 ```
 
@@ -97,13 +97,13 @@ Complete image operations:
 
 Get Podman version information.
 
-```bash
+```dart
 python3 podman_client.py --socket /run/podman/podman.sock version
 ```
 
 **Response:**
 
-```json
+```dart
 {
   "success": true,
   "data": "5.0.0"
@@ -114,13 +114,13 @@ python3 podman_client.py --socket /run/podman/podman.sock version
 
 Test connection to Podman API.
 
-```bash
+```dart
 python3 podman_client.py --socket /run/podman/podman.sock ping
 ```
 
 **Response:**
 
-```json
+```dart
 {
   "success": true,
   "data": "Pong"
@@ -131,13 +131,13 @@ python3 podman_client.py --socket /run/podman/podman.sock ping
 
 Get system information.
 
-```bash
+```dart
 python3 podman_client.py --socket /run/podman/podman.sock info
 ```
 
 **With format:**
 
-```bash
+```dart
 python3 podman_client.py --socket /run/podman/podman.sock info --format "{{.Host.Arch}}"
 ```
 
@@ -147,7 +147,7 @@ python3 podman_client.py --socket /run/podman/podman.sock info --format "{{.Host
 
 Build a container image from Dockerfile.
 
-```bash
+```dart
 python3 podman_client.py --socket /run/podman/podman.sock build . \
   --tag myapp:latest \
   --file Dockerfile \
@@ -165,7 +165,7 @@ python3 podman_client.py --socket /run/podman/podman.sock build . \
 
 **Response:**
 
-```json
+```dart
 {
   "success": true,
   "data": {
@@ -181,19 +181,19 @@ python3 podman_client.py --socket /run/podman/podman.sock build . \
 
 List all images.
 
-```bash
+```dart
 python3 podman_client.py --socket /run/podman/podman.sock images
 ```
 
 **With all images:**
 
-```bash
+```dart
 python3 podman_client.py --socket /run/podman/podman.sock images --all
 ```
 
 **Response:**
 
-```json
+```dart
 {
   "success": true,
   "data": [
@@ -212,13 +212,13 @@ python3 podman_client.py --socket /run/podman/podman.sock images --all
 
 Check if an image exists.
 
-```bash
+```dart
 python3 podman_client.py --socket /run/podman/podman.sock exists myapp:latest
 ```
 
 **Response:**
 
-```json
+```dart
 {
   "success": true,
   "data": true
@@ -229,20 +229,20 @@ python3 podman_client.py --socket /run/podman/podman.sock exists myapp:latest
 
 Inspect an image.
 
-```bash
+```dart
 python3 podman_client.py --socket /run/podman/podman.sock inspect myapp:latest
 ```
 
 **With format:**
 
-```bash
+```dart
 python3 podman_client.py --socket /run/podman/podman.sock inspect myapp:latest \
   --format "{{.Size}}"
 ```
 
 **Response:**
 
-```json
+```dart
 {
   "success": true,
   "data": {
@@ -258,19 +258,19 @@ python3 podman_client.py --socket /run/podman/podman.sock inspect myapp:latest \
 
 Remove an image.
 
-```bash
+```dart
 python3 podman_client.py --socket /run/podman/podman.sock rmi myapp:latest
 ```
 
 **With force:**
 
-```bash
+```dart
 python3 podman_client.py --socket /run/podman/podman.sock rmi myapp:latest --force
 ```
 
 **Response:**
 
-```json
+```dart
 {
   "success": true,
   "data": {
@@ -284,13 +284,13 @@ python3 podman_client.py --socket /run/podman/podman.sock rmi myapp:latest --for
 
 Remove unused images.
 
-```bash
+```dart
 python3 podman_client.py --socket /run/podman/podman.sock prune
 ```
 
 **Response:**
 
-```json
+```dart
 {
   "success": true,
   "data": {
@@ -307,7 +307,7 @@ python3 podman_client.py --socket /run/podman/podman.sock prune
 
 Run a container from an image.
 
-```bash
+```dart
 python3 podman_client.py --socket /run/podman/podman.sock run myapp:latest \
   --name mycontainer \
   --env KEY=VALUE \
@@ -337,7 +337,7 @@ python3 podman_client.py --socket /run/podman/podman.sock run myapp:latest \
 
 **Mount Format:**
 
-```
+```dart
 source:target:relabel,propagation,size
 ```
 
@@ -349,7 +349,7 @@ source:target:relabel,propagation,size
 
 **Response:**
 
-```json
+```dart
 {
   "success": true,
   "data": {
@@ -371,19 +371,19 @@ source:target:relabel,propagation,size
 
 List containers.
 
-```bash
+```dart
 python3 podman_client.py --socket /run/podman/podman.sock ps
 ```
 
 **With all containers:**
 
-```bash
+```dart
 python3 podman_client.py --socket /run/podman/podman.sock ps --all
 ```
 
 **Response:**
 
-```json
+```dart
 {
   "success": true,
   "data": [
@@ -402,19 +402,19 @@ python3 podman_client.py --socket /run/podman/podman.sock ps --all
 
 Kill a running container.
 
-```bash
+```dart
 python3 podman_client.py --socket /run/podman/podman.sock kill mycontainer
 ```
 
 **With signal:**
 
-```bash
+```dart
 python3 podman_client.py --socket /run/podman/podman.sock kill mycontainer --signal SIGTERM
 ```
 
 **Response:**
 
-```json
+```dart
 {
   "success": true,
   "data": {
@@ -428,19 +428,19 @@ python3 podman_client.py --socket /run/podman/podman.sock kill mycontainer --sig
 
 Remove a container.
 
-```bash
+```dart
 python3 podman_client.py --socket /run/podman/podman.sock rm mycontainer
 ```
 
 **With force:**
 
-```bash
+```dart
 python3 podman_client.py --socket /run/podman/podman.sock rm mycontainer --force
 ```
 
 **Response:**
 
-```json
+```dart
 {
   "success": true,
   "data": {
@@ -458,7 +458,7 @@ python3 podman_client.py --socket /run/podman/podman.sock rm mycontainer --force
 
 **Key Methods:**
 
-```python
+```dart
 class PodmanCLI:
     def __init__(self, socket_path: str):
         """Initialize with Podman socket path"""
@@ -486,14 +486,14 @@ class PodmanCLI:
 
 **Success Output:**
 
-```python
+```dart
 def _output_success(self, data: Any):
     print(json.dumps({"success": True, "data": data}))
 ```
 
 **Error Output:**
 
-```python
+```dart
 def _output_error(self, message: str):
     print(json.dumps({"success": False, "error": message}), file=sys.stderr)
 ```
@@ -502,7 +502,7 @@ def _output_error(self, message: str):
 
 Supports Go-style template formatting:
 
-```python
+```dart
 def format_inspect(self, attrs, format_str):
     """Replaces {{.Path}} with values from attributes"""
     patterns = re.findall(r'\{\{\s*\.(.*?)\s*\}\}', format_str)
@@ -511,7 +511,7 @@ def format_inspect(self, attrs, format_str):
 
 **Example:**
 
-```bash
+```dart
 python3 podman_client.py inspect myapp --format "{{.Size}}"
 # Output: {"success": true, "data": "1234567890"}
 ```
@@ -598,19 +598,19 @@ if (result['success'] == true) {
 
 **Default:**
 
-```bash
+```dart
 /run/podman/podman.sock
 ```
 
 **Custom via Command Line:**
 
-```bash
+```dart
 python3 podman_client.py --socket /custom/path/podman.sock <command>
 ```
 
 **Custom via Environment:**
 
-```bash
+```dart
 export PODMAN_SOCKET_PATH=/custom/path/podman.sock
 ```
 
@@ -642,13 +642,13 @@ final runtime = PodmanPyRuntime(
 
 ### Python Requirements
 
-```python
+```dart
 podman>=5.0.0  # Podman Python SDK
 ```
 
 **Installation:**
 
-```bash
+```dart
 pip3 install podman
 ```
 
@@ -664,7 +664,7 @@ pip3 install podman
 
 **Error:**
 
-```json
+```dart
 {
   "success": false,
   "error": "Failed to connect to Podman socket: ..."
@@ -673,7 +673,7 @@ pip3 install podman
 
 **Solution:**
 
-```bash
+```dart
 # Check socket exists
 ls -la /run/podman/podman.sock
 
@@ -688,13 +688,13 @@ python3 podman_client.py --socket /run/podman/podman.sock ping
 
 **Error:**
 
-```
+```dart
 ModuleNotFoundError: No module named 'podman'
 ```
 
 **Solution:**
 
-```bash
+```dart
 # Install Podman SDK
 pip3 install podman
 
@@ -706,7 +706,7 @@ python3 -c "import podman; print(podman.__version__)"
 
 **Error:**
 
-```json
+```dart
 {
   "success": false,
   "error": "Failed to parse JSON response: ..."
@@ -715,7 +715,7 @@ python3 -c "import podman; print(podman.__version__)"
 
 **Solution:**
 
-```bash
+```dart
 # Test Python client directly
 python3 podman_client.py --socket /run/podman/podman.sock version
 
@@ -727,7 +727,7 @@ python3 podman_client.py --socket /run/podman/podman.sock version
 
 **Error:**
 
-```json
+```dart
 {
   "success": false,
   "error": "Container 'name' exceeded timeout of 5s and was killed"
@@ -736,7 +736,7 @@ python3 podman_client.py --socket /run/podman/podman.sock version
 
 **Solution:**
 
-```bash
+```dart
 # Increase timeout
 python3 podman_client.py run myapp --timeout 30
 
@@ -753,7 +753,7 @@ final result = await _executePythonCommand(
 
 Always check `success` field in response:
 
-```python
+```dart
 result = json.loads(output)
 if result['success']:
     data = result['data']
@@ -767,7 +767,7 @@ else:
 
 Set appropriate timeouts for operations:
 
-```bash
+```dart
 # Short timeout for quick operations
 python3 podman_client.py run myapp --timeout 5
 
@@ -779,7 +779,7 @@ python3 podman_client.py run myapp --timeout 30
 
 Always specify resource limits:
 
-```bash
+```dart
 python3 podman_client.py run myapp \
   --memory 20m \
   --memory-swap 50m \
@@ -790,7 +790,7 @@ python3 podman_client.py run myapp \
 
 Use proper SELinux labels and propagation:
 
-```bash
+```dart
 # SELinux label for container access
 --mount /host/path:/container/path:Z,rshared
 
@@ -803,7 +803,7 @@ Use proper SELinux labels and propagation:
 
 Use network isolation for security:
 
-```bash
+```dart
 python3 podman_client.py run myapp --network-mode none
 ```
 

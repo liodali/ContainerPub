@@ -59,7 +59,7 @@ The Deploy CLI enables DevOps and developers to:
 
 ### Quick Install
 
-```bash
+```dart
 cd ContainerPub/tools/dart_packages/dart_cloud_deploy_cli
 ./scripts/build.sh
 ./scripts/install.sh
@@ -67,7 +67,7 @@ cd ContainerPub/tools/dart_packages/dart_cloud_deploy_cli
 
 ### Manual Install
 
-```bash
+```dart
 cd tools/dart_packages/dart_cloud_deploy_cli
 dart pub get
 dart pub global activate --source path .
@@ -75,13 +75,13 @@ dart pub global activate --source path .
 
 ### Verify Installation
 
-```bash
+```dart
 dart_cloud_deploy --help
 ```
 
 ## Quick Start
 
-```bash
+```dart
 # 1. Initialize environment (Python venv + Ansible)
 dart_cloud_deploy init
 
@@ -96,7 +96,7 @@ dart_cloud_deploy deploy-local
 
 ### Workflow
 
-```
+```dart
 ┌─────────────────────────────────────────────────────────────┐
 │                    dart_cloud_deploy                         │
 ├─────────────────────────────────────────────────────────────┤
@@ -136,7 +136,7 @@ dart_cloud_deploy deploy-local
 
 ## Configuration Example
 
-```yaml
+```dart
 name: dart_cloud_backend
 environment: dev
 project_path: .
@@ -177,7 +177,7 @@ ansible:
 
 ## Directory Structure
 
-```
+```dart
 ~/.dart-cloud-deploy/
 ├── config.yaml       # Global configuration
 ├── credentials.yaml  # Stored credentials

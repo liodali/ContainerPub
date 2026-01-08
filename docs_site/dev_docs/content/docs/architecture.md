@@ -32,7 +32,7 @@ The core platform:
 
 ## Architecture Diagram
 
-```
+```dart
 ┌─────────────────────────────────────────────┐
 │         Developer Machine                   │
 │  ┌──────────────────────────────────────┐  │
@@ -70,22 +70,22 @@ The core platform:
 ## Deployment Flow
 
 ### 1. Function Upload
-```
+```dart
 Developer → CLI → API Server → Storage
 ```
 
 ### 2. Image Building
-```
+```dart
 Storage → Extract → Build Image → Podman Registry
 ```
 
 ### 3. Function Execution
-```
+```dart
 API Request → Scheduler → Podman Container → Response
 ```
 
 ### 4. Monitoring
-```
+```dart
 Container → Metrics Collector → Database → Dashboard
 ```
 
@@ -217,5 +217,4 @@ CREATE TABLE executions (
 ## Next Steps
 
 - Read [Development Guide](/docs/development)
-- Explore [Database Schema](/docs/architecture/database)
-- Check [Security Model](/docs/architecture/security)
+- Explore [Database Schema](/docs/database/database-system)

@@ -17,7 +17,7 @@ Before you begin, ensure you have:
 
 ## Installation
 
-```bash
+```dart
 # Navigate to the CLI package
 cd ContainerPub/tools/dart_packages/dart_cloud_deploy_cli
 
@@ -35,7 +35,7 @@ The simplest way to deploy your Dart backend locally.
 
 ### Step 1: Initialize Environment
 
-```bash
+```dart
 dart_cloud_deploy init
 ```
 
@@ -56,7 +56,7 @@ This creates a Python virtual environment and installs Ansible with required col
 
 ### Step 2: Create Configuration
 
-```bash
+```dart
 dart_cloud_deploy config init -e local
 ```
 
@@ -64,7 +64,7 @@ This creates `deploy.yaml` with local deployment settings.
 
 **Generated `deploy.yaml`:**
 
-```yaml
+```dart
 name: dart_cloud_backend
 environment: local
 project_path: .
@@ -81,13 +81,13 @@ container:
 
 ### Step 3: Deploy
 
-```bash
+```dart
 dart_cloud_deploy deploy-local
 ```
 
 **Output:**
 
-```
+```dart
 ═══════════════════════════════════════════════════════════════
   Dart Cloud Local Deployment
 ═══════════════════════════════════════════════════════════════
@@ -113,7 +113,7 @@ Service Endpoints:
 
 ### Step 4: Verify
 
-```bash
+```dart
 # Check health endpoint
 curl http://localhost:8080/health
 
@@ -127,13 +127,13 @@ Deploy to a remote server using Ansible.
 
 ### Step 1: Initialize Environment
 
-```bash
+```dart
 dart_cloud_deploy init
 ```
 
 ### Step 2: Create Dev Configuration
 
-```bash
+```dart
 dart_cloud_deploy config init -e dev -o deploy-dev.yaml
 ```
 
@@ -141,7 +141,7 @@ dart_cloud_deploy config init -e dev -o deploy-dev.yaml
 
 Edit `deploy-dev.yaml` with your server details:
 
-```yaml
+```dart
 name: dart_cloud_backend
 environment: dev
 project_path: .
@@ -170,7 +170,7 @@ ansible:
 
 ### Step 4: Deploy
 
-```bash
+```dart
 # Preview what will happen (dry run)
 dart_cloud_deploy deploy-dev -c deploy-dev.yaml --dry-run
 
@@ -184,7 +184,7 @@ dart_cloud_deploy deploy-dev -c deploy-dev.yaml
 
 Add OpenBao configuration to your `deploy.yaml`:
 
-```yaml
+```dart
 openbao:
   address: http://localhost:8200
   token_path: ~/.openbao/token
@@ -193,7 +193,7 @@ openbao:
 
 Fetch secrets:
 
-```bash
+```dart
 # Check connection
 dart_cloud_deploy secrets check
 
@@ -205,7 +205,7 @@ dart_cloud_deploy secrets fetch
 
 If you don't use OpenBao:
 
-```bash
+```dart
 # Create .env from example
 cp .env.example .env
 
@@ -222,7 +222,7 @@ dart_cloud_deploy deploy-local --skip-secrets
 
 When you've made code changes:
 
-```bash
+```dart
 dart_cloud_deploy deploy-local
 # Select: "Rebuild backend only (keep PostgreSQL and data)"
 ```
@@ -231,13 +231,13 @@ dart_cloud_deploy deploy-local
 
 Start fresh:
 
-```bash
+```dart
 dart_cloud_deploy deploy-local --force
 ```
 
 ### Deploy Specific Service
 
-```bash
+```dart
 # Backend only
 dart_cloud_deploy deploy-local -s backend
 
@@ -247,13 +247,13 @@ dart_cloud_deploy deploy-local -s postgres
 
 ### View Configuration
 
-```bash
+```dart
 dart_cloud_deploy show
 ```
 
 ### Validate Configuration
 
-```bash
+```dart
 dart_cloud_deploy config validate -c deploy.yaml
 ```
 
@@ -261,7 +261,7 @@ dart_cloud_deploy config validate -c deploy.yaml
 
 Create separate configs for each environment:
 
-```bash
+```dart
 # Local development
 dart_cloud_deploy config init -e local -o deploy-local.yaml
 
@@ -274,7 +274,7 @@ dart_cloud_deploy config init -e production -o deploy-prod.yaml
 
 Deploy to specific environment:
 
-```bash
+```dart
 # Local
 dart_cloud_deploy deploy-local -c deploy-local.yaml
 
@@ -289,7 +289,7 @@ dart_cloud_deploy deploy-dev -c deploy-prod.yaml
 
 ### Python Not Found
 
-```bash
+```dart
 # macOS
 brew install python3
 
@@ -302,7 +302,7 @@ sudo dnf install python3
 
 ### Container Runtime Not Found
 
-```bash
+```dart
 # Check if installed
 podman --version
 docker --version
@@ -313,7 +313,7 @@ docker --version
 
 ### OpenBao Connection Failed
 
-```bash
+```dart
 # Check status
 dart_cloud_deploy secrets check
 
@@ -326,7 +326,7 @@ dart_cloud_deploy deploy-local --skip-secrets
 
 ### Ansible Connection Failed
 
-```bash
+```dart
 # Test SSH manually
 ssh -i ~/.ssh/id_rsa user@host
 

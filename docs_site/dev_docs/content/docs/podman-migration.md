@@ -87,7 +87,7 @@ ContainerPub uses a **Python-based Podman client** (`podman_client.py`) that com
 
 **Communication Flow:**
 
-```
+```dart
 Dart Backend → PodmanPyRuntime → Python Script → Podman API → Container
 ```
 
@@ -118,7 +118,7 @@ The `PodmanPyRuntime` class implements the `ContainerRuntime` interface and mana
 
 ### Building Functions
 
-```bash
+```dart
 # Automatic - uses Podman internally via Python client
 dart_cloud deploy ./my_function
 ```
@@ -127,7 +127,7 @@ dart_cloud deploy ./my_function
 
 The Python client supports all Podman operations:
 
-```bash
+```dart
 # Build image
 python3 podman_client.py --socket /run/podman/podman.sock build . --tag my-function
 
@@ -146,7 +146,7 @@ python3 podman_client.py --socket /run/podman/podman.sock version
 
 ### Manual Container Operations
 
-```bash
+```dart
 # Build image
 podman build -t my-function .
 
@@ -183,7 +183,7 @@ podman rmi my-function
 
 **Success Response:**
 
-```json
+```dart
 {
   "success": true,
   "data": {
@@ -196,7 +196,7 @@ podman rmi my-function
 
 **Error Response:**
 
-```json
+```dart
 {
   "success": false,
   "error": "Container execution failed",
@@ -287,13 +287,13 @@ podman build -t test . --log-level=debug
 
 **Python Requirements:**
 
-```python
+```dart
 podman>=5.0.0  # Podman Python SDK
 ```
 
 **Installation:**
 
-```bash
+```dart
 pip3 install podman
 ```
 
@@ -354,19 +354,19 @@ pip3 install podman
 
 **Default Socket:**
 
-```bash
+```dart
 /run/podman/podman.sock
 ```
 
 **Custom Socket (via dart-define):**
 
-```bash
+```dart
 dart run --dart-define=PODMAN_SOCKET_PATH=/custom/path/podman.sock bin/server.dart
 ```
 
 **Environment Variable:**
 
-```bash
+```dart
 export PODMAN_SOCKET_PATH=/custom/path/podman.sock
 ```
 
@@ -390,7 +390,7 @@ final runtime = PodmanPyRuntime(
 
 ### Python Client Not Found
 
-```bash
+```dart
 # Verify Python installation
 python3 --version
 
@@ -403,7 +403,7 @@ python3 podman_client.py --socket /run/podman/podman.sock ping
 
 ### Socket Connection Failed
 
-```bash
+```dart
 # Check Podman socket
 ls -la /run/podman/podman.sock
 
@@ -416,7 +416,7 @@ curl --unix-socket /run/podman/podman.sock http://localhost/v4.0.0/libpod/info
 
 ### JSON Parse Error
 
-```bash
+```dart
 # Test Python client output
 python3 podman_client.py --socket /run/podman/podman.sock version
 

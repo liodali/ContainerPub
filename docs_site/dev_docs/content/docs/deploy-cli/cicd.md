@@ -20,7 +20,7 @@ The `dart_cloud_deploy` CLI is designed to work seamlessly in CI/CD environments
 
 ### Basic Deployment Workflow
 
-```yaml
+```dart
 name: Deploy Backend
 
 on:
@@ -107,7 +107,7 @@ jobs:
 
 ### Multi-Environment Workflow
 
-```yaml
+```dart
 name: Deploy
 
 on:
@@ -179,7 +179,7 @@ jobs:
 
 ### Deployment with Approval
 
-```yaml
+```dart
 name: Production Deploy
 
 on:
@@ -224,7 +224,7 @@ jobs:
 
 ### Basic Pipeline
 
-```yaml
+```dart
 stages:
   - build
   - deploy
@@ -292,7 +292,7 @@ deploy_prod:
 
 ### Jenkinsfile
 
-```groovy
+```dart
 pipeline {
     agent any
 
@@ -381,7 +381,7 @@ pipeline {
 
 ### config.yml
 
-```yaml
+```dart
 version: 2.1
 
 orbs:
@@ -460,7 +460,7 @@ workflows:
 
 Create separate configuration files for each environment:
 
-```
+```dart
 deploy-local.yaml
 deploy-dev.yaml
 deploy-staging.yaml
@@ -480,7 +480,7 @@ Never commit secrets to version control. Use:
 
 Always test with `--dry-run` first:
 
-```yaml
+```dart
 - name: Dry Run
   run: dart_cloud_deploy deploy-dev --dry-run
 
@@ -492,7 +492,7 @@ Always test with `--dry-run` first:
 
 Verify deployment success:
 
-```yaml
+```dart
 - name: Deploy
   run: dart_cloud_deploy deploy-dev
 
@@ -506,7 +506,7 @@ Verify deployment success:
 
 Configure environments for approval workflows:
 
-```yaml
+```dart
 environment:
   name: production
   url: https://api.example.com
@@ -516,7 +516,7 @@ environment:
 
 Speed up pipelines by caching:
 
-```yaml
+```dart
 - name: Cache Dart packages
   uses: actions/cache@v3
   with:
@@ -534,7 +534,7 @@ Speed up pipelines by caching:
 
 Implement rollback capability:
 
-```yaml
+```dart
 - name: Deploy
   id: deploy
   run: dart_cloud_deploy deploy-dev
@@ -553,7 +553,7 @@ Implement rollback capability:
 
 If you have OpenBao/Vault available in your CI environment:
 
-```yaml
+```dart
 - name: Setup OpenBao Token
   run: |
     mkdir -p ~/.openbao
@@ -567,7 +567,7 @@ If you have OpenBao/Vault available in your CI environment:
 
 For environments without OpenBao:
 
-```yaml
+```dart
 - name: Create .env
   run: |
     cat > .env << EOF
@@ -584,7 +584,7 @@ For environments without OpenBao:
 
 ### SSH Connection Issues
 
-```yaml
+```dart
 - name: Debug SSH
   run: |
     ssh -vvv -i ~/.ssh/id_rsa $USER@$HOST echo "Connection successful"
@@ -592,14 +592,14 @@ For environments without OpenBao:
 
 ### Ansible Verbose Output
 
-```yaml
+```dart
 - name: Deploy with Debug
   run: dart_cloud_deploy deploy-dev -v
 ```
 
 ### Check Exit Codes
 
-```yaml
+```dart
 - name: Deploy
   run: |
     dart_cloud_deploy deploy-dev

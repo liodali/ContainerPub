@@ -30,7 +30,7 @@ Initialize the deployment environment by creating a Python virtual environment a
 
 ### Usage
 
-```bash
+```dart
 dart_cloud_deploy init [options]
 ```
 
@@ -44,7 +44,7 @@ dart_cloud_deploy init [options]
 
 ### Examples
 
-```bash
+```dart
 # Basic initialization
 dart_cloud_deploy init
 
@@ -80,7 +80,7 @@ Create a new deployment configuration file.
 
 #### Usage
 
-```bash
+```dart
 dart_cloud_deploy config init [options]
 ```
 
@@ -94,7 +94,7 @@ dart_cloud_deploy config init [options]
 
 #### Examples
 
-```bash
+```dart
 # Local YAML config
 dart_cloud_deploy config init -e local
 
@@ -111,7 +111,7 @@ Validate a deployment configuration file.
 
 #### Usage
 
-```bash
+```dart
 dart_cloud_deploy config validate [options]
 ```
 
@@ -123,7 +123,7 @@ dart_cloud_deploy config validate [options]
 
 #### Examples
 
-```bash
+```dart
 # Validate default config
 dart_cloud_deploy config validate
 
@@ -144,7 +144,7 @@ Set a configuration value (manual editing recommended for complex changes).
 
 #### Usage
 
-```bash
+```dart
 dart_cloud_deploy config set [options]
 ```
 
@@ -158,7 +158,7 @@ dart_cloud_deploy config set [options]
 
 #### Examples
 
-```bash
+```dart
 dart_cloud_deploy config set -k host.host -v server.example.com
 dart_cloud_deploy config set -k container.runtime -v docker
 ```
@@ -171,7 +171,7 @@ Deploy locally using Podman or Docker without Ansible.
 
 ### Usage
 
-```bash
+```dart
 dart_cloud_deploy deploy-local [options]
 ```
 
@@ -187,7 +187,7 @@ dart_cloud_deploy deploy-local [options]
 
 ### Examples
 
-```bash
+```dart
 # Deploy all services
 dart_cloud_deploy deploy-local
 
@@ -211,7 +211,7 @@ dart_cloud_deploy deploy-local --skip-secrets
 
 When services already exist, you'll see an interactive menu:
 
-```
+```dart
 ═══════════════════════════════════════════════════════════════
   Services Already Exist
 ═══════════════════════════════════════════════════════════════
@@ -238,7 +238,7 @@ Deploy to a remote server using Ansible playbooks.
 
 ### Usage
 
-```bash
+```dart
 dart_cloud_deploy deploy-dev [options]
 ```
 
@@ -266,7 +266,7 @@ dart_cloud_deploy deploy-dev [options]
 
 ### Examples
 
-```bash
+```dart
 # Deploy everything
 dart_cloud_deploy deploy-dev
 
@@ -316,7 +316,7 @@ Fetch secrets from OpenBao and write to `.env` file.
 
 #### Usage
 
-```bash
+```dart
 dart_cloud_deploy secrets fetch [options]
 ```
 
@@ -330,7 +330,7 @@ dart_cloud_deploy secrets fetch [options]
 
 #### Examples
 
-```bash
+```dart
 # Fetch with default settings
 dart_cloud_deploy secrets fetch
 
@@ -350,7 +350,7 @@ List available secrets in OpenBao.
 
 #### Usage
 
-```bash
+```dart
 dart_cloud_deploy secrets list [options]
 ```
 
@@ -363,7 +363,7 @@ dart_cloud_deploy secrets list [options]
 
 #### Examples
 
-```bash
+```dart
 # List with default path
 dart_cloud_deploy secrets list
 
@@ -377,7 +377,7 @@ Check OpenBao connection and authentication.
 
 #### Usage
 
-```bash
+```dart
 dart_cloud_deploy secrets check [options]
 ```
 
@@ -389,7 +389,7 @@ dart_cloud_deploy secrets check [options]
 
 #### Examples
 
-```bash
+```dart
 # Check connection
 dart_cloud_deploy secrets check
 
@@ -423,7 +423,7 @@ Display current configuration settings.
 
 ### Usage
 
-```bash
+```dart
 dart_cloud_deploy show [options]
 ```
 
@@ -435,7 +435,7 @@ dart_cloud_deploy show [options]
 
 ### Examples
 
-```bash
+```dart
 # Show default config
 dart_cloud_deploy show
 
@@ -458,7 +458,7 @@ These options are available for all commands:
 
 ### Minimal Local Config
 
-```yaml
+```dart
 name: my_app
 environment: local
 project_path: .
@@ -471,7 +471,7 @@ container:
 
 ### Full Config with All Options
 
-```yaml
+```dart
 name: my_app
 environment: dev
 project_path: .
