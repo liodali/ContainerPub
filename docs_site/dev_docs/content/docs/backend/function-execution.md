@@ -29,7 +29,7 @@ When you deploy a function, the backend:
 
 ## Deployment Flow
 
-```
+```dart
 1. User uploads function archive (tar.gz)
 2. Backend extracts archive to function directory
 3. FunctionMainInjection analyzes code:
@@ -47,7 +47,7 @@ When you deploy a function, the backend:
 
 ## Execution Flow
 
-```
+```dart
 1. User invokes function via API
 2. Backend receives request with body, query, headers
 3. DockerService.runContainer():
@@ -188,7 +188,7 @@ class MyFunction extends CloudDartFunction {
 
 ContainerPub uses a **shared named volume** (`functions_data`) to exchange data between the backend and function containers:
 
-```
+```dart
 functions_data/
 └── {functionUUID}/
     └── v{version}/
@@ -214,7 +214,7 @@ functions_data/
 **Read by:** Function container  
 **Location:** `{sharedDir}/request.json`
 
-```json
+```dart
 {
   "method": "POST",
   "path": "/",
@@ -237,7 +237,7 @@ functions_data/
 **Read by:** Function container  
 **Location:** `{sharedDir}/.env.config`
 
-```bash
+```dart
 DART_CLOUD_RESTRICTED=true
 FUNCTION_TIMEOUT_MS=5000
 FUNCTION_MAX_MEMORY_MB=128
@@ -250,7 +250,7 @@ SHARED_PATH=/app/functions/{uuid}/v{version}/{containerName}
 **Read by:** Backend  
 **Location:** `{sharedDir}/logs.json`
 
-```json
+```dart
 {
   "logs": [
     {
@@ -268,7 +268,7 @@ SHARED_PATH=/app/functions/{uuid}/v{version}/{containerName}
 **Read by:** Backend  
 **Location:** `{sharedDir}/result.json`
 
-```json
+```dart
 {
   "statusCode": 200,
   "headers": {
@@ -314,7 +314,7 @@ Available to functions via `.env.config` file in shared volume:
 
 If injection fails, deployment is aborted with error message:
 
-```
+```dart
 Failed to inject main.dart. Ensure function has exactly one class
 extending CloudDartFunction with @cloudFunction annotation.
 ```
@@ -395,25 +395,25 @@ If function execution fails, error response is written to stdout:
 
 **Create Volume:**
 
-```bash
+```dart
 podman volume create functions_data
 ```
 
 **Inspect Volume:**
 
-```bash
+```dart
 podman volume inspect functions_data
 ```
 
 **List Files:**
 
-```bash
+```dart
 podman run --rm -v functions_data:/data alpine ls -la /data
 ```
 
 **Clean Volume:**
 
-```bash
+```dart
 podman volume rm functions_data
 ```
 
