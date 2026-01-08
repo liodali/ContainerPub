@@ -4,7 +4,6 @@ import 'dart:io';
 import 'package:dart_cloud_backend/configuration/config.dart';
 import 'package:dart_cloud_backend/handlers/logs_utils/log_utils.dart';
 import 'package:dart_cloud_backend/utils/commons.dart';
-import 'package:sentry/sentry.dart';
 
 import 'container_runtime.dart';
 import 'dockerfile_generator.dart';
