@@ -85,8 +85,14 @@ dart_cloud_deploy config validate -c deploy.yaml
 ### 3. Fetch Secrets (Optional)
 
 ```bash
-# Fetch secrets and write to .env
+# Fetch secrets for local environment (default)
 dart_cloud_deploy secrets fetch
+
+# Fetch secrets for staging environment
+dart_cloud_deploy secrets fetch -e staging
+
+# Fetch secrets for production environment
+dart_cloud_deploy secrets fetch -e production
 
 # Fetch to custom output file
 dart_cloud_deploy secrets fetch -o .env.local
@@ -94,8 +100,8 @@ dart_cloud_deploy secrets fetch -o .env.local
 # Override secret path
 dart_cloud_deploy secrets fetch -p secret/data/myapp/prod
 
-# Check OpenBao connection
-dart_cloud_deploy secrets check
+# Check OpenBao connection for specific environment
+dart_cloud_deploy secrets check -e staging
 
 # List available secrets
 dart_cloud_deploy secrets list -p secret/metadata/myapp
@@ -162,8 +168,22 @@ env_file_path: .env
 
 openbao:
   address: http://localhost:8200
-  token_path: ~/.openbao/token
-  secret_path: secret/data/dart_cloud/dev
+  # Per-environment token managers and policies
+  # token_manager can be:
+  #   - A file path containing base64-encoded token (e.g., ~/.openbao/token)
+  #   - A direct base64-encoded token string
+  local:
+    token_manager: ~/.openbao/local_token # file path with base64 token
+    policy: dart-cloud-local
+    secret_path: secret/data/dart_cloud/local
+  staging:
+    token_manager: ~/.openbao/staging_token # file path with base64 token
+    policy: dart-cloud-staging
+    secret_path: secret/data/dart_cloud/staging
+  production:
+    token_manager: aHZzLnByb2R1Y3Rpb24tdG9rZW4= # direct base64 token
+    policy: dart-cloud-production
+    secret_path: secret/data/dart_cloud/production
 
 container:
   runtime: podman
@@ -253,24 +273,27 @@ Deploy to dev/production server using Ansible.
 
 #### `secrets fetch` - Fetch Secrets
 
-| Option     | Short | Description                     | Default       |
-| ---------- | ----- | ------------------------------- | ------------- |
-| `--config` | `-c`  | Configuration file path         | `deploy.yaml` |
-| `--output` | `-o`  | Output .env file path           | from config   |
-| `--path`   | `-p`  | Override secret path in OpenBao | from config   |
+| Option     | Short | Description                                           | Default       |
+| ---------- | ----- | ----------------------------------------------------- | ------------- |
+| `--config` | `-c`  | Configuration file path                               | `deploy.yaml` |
+| `--output` | `-o`  | Output .env file path                                 | from config   |
+| `--path`   | `-p`  | Override secret path in OpenBao                       | from config   |
+| `--env`    | `-e`  | Environment to use (`local`, `staging`, `production`) | `local`       |
 
 #### `secrets list` - List Secrets
 
-| Option     | Short | Description               | Default                      |
-| ---------- | ----- | ------------------------- | ---------------------------- |
-| `--config` | `-c`  | Configuration file path   | `deploy.yaml`                |
-| `--path`   | `-p`  | Path to list secrets from | `secret/metadata/dart_cloud` |
+| Option     | Short | Description                                           | Default                      |
+| ---------- | ----- | ----------------------------------------------------- | ---------------------------- |
+| `--config` | `-c`  | Configuration file path                               | `deploy.yaml`                |
+| `--path`   | `-p`  | Path to list secrets from                             | `secret/metadata/dart_cloud` |
+| `--env`    | `-e`  | Environment to use (`local`, `staging`, `production`) | `local`                      |
 
 #### `secrets check` - Check Connection
 
-| Option     | Short | Description             | Default       |
-| ---------- | ----- | ----------------------- | ------------- |
-| `--config` | `-c`  | Configuration file path | `deploy.yaml` |
+| Option     | Short | Description                                           | Default       |
+| ---------- | ----- | ----------------------------------------------------- | ------------- |
+| `--config` | `-c`  | Configuration file path                               | `deploy.yaml` |
+| `--env`    | `-e`  | Environment to use (`local`, `staging`, `production`) | `local`       |
 
 ### `show` - Show Configuration
 

@@ -118,23 +118,57 @@ dart_cloud_deploy deploy-dev -c deploy-dev.yaml --dry-run
 
 ### Option A: Using OpenBao/Vault
 
-Configure OpenBao in your `deploy.yaml`:
+Configure OpenBao with per-environment token managers in your `deploy.yaml`:
 
 ```yaml
 openbao:
   address: http://localhost:8200
-  token_path: ~/.openbao/token
-  secret_path: secret/data/myapp/dev
+  # Per-environment configuration
+  # token_manager can be:
+  #   - A file path containing base64-encoded token
+  #   - A direct base64-encoded token string
+  local:
+    token_manager: ~/.openbao/local_token # file path
+    policy: myapp-local
+    secret_path: secret/data/myapp/local
+  staging:
+    token_manager: ~/.openbao/staging_token # file path
+    policy: myapp-staging
+    secret_path: secret/data/myapp/staging
+  production:
+    token_manager: aHZzLnByb2R1Y3Rpb24tdG9rZW4= # direct base64 token
+    policy: myapp-production
+    secret_path: secret/data/myapp/production
+```
+
+To create a base64-encoded token file:
+
+```bash
+# Encode your OpenBao token and save to file
+echo -n "hvs.your-openbao-token" | base64 > ~/.openbao/local_token
+
+# Or use direct base64 in config (no file needed)
+echo -n "hvs.your-openbao-token" | base64
+# Output: aHZzLnlvdXItb3BlbmJhby10b2tlbg==
 ```
 
 Fetch secrets:
 
 ```bash
-# Check connection first
+# Check connection for local environment (default)
 dart_cloud_deploy secrets check
 
-# Fetch and write to .env
+# Check connection for staging
+dart_cloud_deploy secrets check -e staging
+
+# Fetch secrets for local environment (default)
 dart_cloud_deploy secrets fetch
+
+# Fetch secrets for staging
+dart_cloud_deploy secrets fetch -e staging
+
+# Fetch secrets for production
+dart_cloud_deploy secrets fetch -e production
 ```
 
 ### Option B: Manual .env File
@@ -341,14 +375,25 @@ container:
 
 ```yaml
 name: my_app
-environment: dev
+environment: staging
 project_path: .
 env_file_path: .env
 
 openbao:
   address: http://vault.example.com:8200
-  token_path: ~/.openbao/token
-  secret_path: secret/data/my_app/dev
+  # token_manager files contain base64-encoded tokens
+  local:
+    token_manager: ~/.openbao/local_token # base64-encoded
+    policy: my-app-local
+    secret_path: secret/data/my_app/local
+  staging:
+    token_manager: ~/.openbao/staging_token # base64-encoded
+    policy: my-app-staging
+    secret_path: secret/data/my_app/staging
+  production:
+    token_manager: ~/.openbao/prod_token # base64-encoded
+    policy: my-app-production
+    secret_path: secret/data/my_app/production
 
 container:
   runtime: podman
@@ -399,20 +444,20 @@ ssh_key_path = "~/.ssh/id_rsa"
 
 ## Quick Reference
 
-| Task                   | Command                                  |
-| ---------------------- | ---------------------------------------- |
-| Initialize environment | `dart_cloud_deploy init`                 |
-| Create local config    | `dart_cloud_deploy config init -e local` |
-| Create dev config      | `dart_cloud_deploy config init -e dev`   |
-| Validate config        | `dart_cloud_deploy config validate`      |
-| Deploy locally         | `dart_cloud_deploy deploy-local`         |
-| Deploy to server       | `dart_cloud_deploy deploy-dev`           |
-| Fetch secrets          | `dart_cloud_deploy secrets fetch`        |
-| Check secrets          | `dart_cloud_deploy secrets check`        |
-| Show config            | `dart_cloud_deploy show`                 |
-| Dry run                | `dart_cloud_deploy deploy-dev --dry-run` |
-| Verbose mode           | `dart_cloud_deploy deploy-dev -v`        |
-| Force rebuild          | `dart_cloud_deploy deploy-local --force` |
+| Task                   | Command                                    |
+| ---------------------- | ------------------------------------------ |
+| Initialize environment | `dart_cloud_deploy init`                   |
+| Create local config    | `dart_cloud_deploy config init -e local`   |
+| Create staging config  | `dart_cloud_deploy config init -e staging` |
+| Validate config        | `dart_cloud_deploy config validate`        |
+| Deploy locally         | `dart_cloud_deploy deploy-local`           |
+| Deploy to server       | `dart_cloud_deploy deploy-dev`             |
+| Fetch secrets          | `dart_cloud_deploy secrets fetch`          |
+| Check secrets          | `dart_cloud_deploy secrets check`          |
+| Show config            | `dart_cloud_deploy show`                   |
+| Dry run                | `dart_cloud_deploy deploy-dev --dry-run`   |
+| Verbose mode           | `dart_cloud_deploy deploy-dev -v`          |
+| Force rebuild          | `dart_cloud_deploy deploy-local --force`   |
 
 ---
 
