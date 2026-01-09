@@ -76,19 +76,26 @@ class ShowConfigCommand extends Command<void> {
       print('\x1B[34mOpenBao:\x1B[0m');
       Console.divider();
       Console.keyValue('Address', config.openbao!.address);
-      Console.keyValue('Secret Path', config.openbao!.secretPath);
       if (config.openbao!.namespace != null) {
         Console.keyValue('Namespace', config.openbao!.namespace!);
       }
-      if (showFull) {
-        if (config.openbao!.token != null) {
-          Console.keyValue('Token', config.openbao!.token!);
+
+      // Show environment configurations
+      for (final env in Environment.values) {
+        final envConfig = config.openbao!.getEnvConfig(env);
+        if (envConfig != null) {
+          Console.info('  ${env.name}:');
+          Console.keyValue('    Secret Path', envConfig.secretPath);
+          Console.keyValue('    Policy', envConfig.policy);
+          if (showFull) {
+            Console.keyValue('    Token Manager', envConfig.tokenManager);
+          } else {
+            Console.keyValue(
+              '    Token Manager',
+              '****** (use --full to show)',
+            );
+          }
         }
-        if (config.openbao!.tokenPath != null) {
-          Console.keyValue('Token Path', config.openbao!.tokenPath!);
-        }
-      } else {
-        Console.keyValue('Token', '****** (use --full to show)');
       }
     } else {
       Console.divider();
