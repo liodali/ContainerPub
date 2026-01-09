@@ -4,7 +4,7 @@ import 'package:toml/toml.dart';
 import 'package:path/path.dart' as p;
 import '../utils/config_paths.dart';
 
-enum Environment { local, dev, production }
+enum Environment { local, staging, production }
 
 class HostConfig {
   final String host;
@@ -43,39 +43,98 @@ class HostConfig {
   };
 }
 
+/// Configuration for a specific environment's token manager
+class TokenManagerConfig {
+  final String tokenManager;
+  final String policy;
+  final String secretPath;
+
+  TokenManagerConfig({
+    required this.tokenManager,
+    required this.policy,
+    required this.secretPath,
+  });
+
+  factory TokenManagerConfig.fromMap(Map<String, dynamic> map) {
+    return TokenManagerConfig(
+      tokenManager: map['token_manager'] as String,
+      policy: map['policy'] as String,
+      secretPath: map['secret_path'] as String,
+    );
+  }
+
+  Map<String, dynamic> toMap() => {
+    'token_manager': tokenManager,
+    'policy': policy,
+    'secret_path': secretPath,
+  };
+}
+
 class OpenBaoConfig {
   final String address;
-  final String? token;
-  final String? tokenPath;
-  final String secretPath;
   final String? namespace;
+  final TokenManagerConfig? local;
+  final TokenManagerConfig? staging;
+  final TokenManagerConfig? production;
 
   OpenBaoConfig({
     required this.address,
-    this.token,
-    this.tokenPath,
-    required this.secretPath,
     this.namespace,
+    this.local,
+    this.staging,
+    this.production,
   });
 
   factory OpenBaoConfig.fromMap(Map<String, dynamic> map) {
-    final tokenPath = map['token_path'] as String?;
     return OpenBaoConfig(
       address: map['address'] as String,
-      token: map['token'] as String?,
-      tokenPath: tokenPath != null ? ConfigPaths.expandPath(tokenPath) : null,
-      secretPath: map['secret_path'] as String,
       namespace: map['namespace'] as String?,
+      local: map['local'] != null
+          ? TokenManagerConfig.fromMap(
+              Map<String, dynamic>.from(map['local'] as Map),
+            )
+          : null,
+      staging: map['staging'] != null
+          ? TokenManagerConfig.fromMap(
+              Map<String, dynamic>.from(map['staging'] as Map),
+            )
+          : null,
+      production: map['production'] != null
+          ? TokenManagerConfig.fromMap(
+              Map<String, dynamic>.from(map['production'] as Map),
+            )
+          : null,
     );
   }
 
   Map<String, dynamic> toMap() => {
     'address': address,
-    if (token != null) 'token': token,
-    if (tokenPath != null) 'token_path': tokenPath,
-    'secret_path': secretPath,
     if (namespace != null) 'namespace': namespace,
+    if (local != null) 'local': local!.toMap(),
+    if (staging != null) 'staging': staging!.toMap(),
+    if (production != null) 'production': production!.toMap(),
   };
+
+  /// Get token manager config for a specific environment
+  TokenManagerConfig? getEnvConfig(Environment env) {
+    switch (env) {
+      case Environment.local:
+        return local;
+      case Environment.staging:
+        return staging;
+      case Environment.production:
+        return production;
+    }
+  }
+
+  /// Get secret path for a specific environment
+  String? getSecretPath(Environment env) => getEnvConfig(env)?.secretPath;
+
+  /// Get policy for a specific environment
+  String? getPolicy(Environment env) => getEnvConfig(env)?.policy;
+
+  /// Get token manager path for a specific environment
+  String? getTokenManager(Environment env) => getEnvConfig(env)?.tokenManager;
 }
 
 class ContainerConfig {
@@ -253,7 +312,7 @@ class DeployConfig {
   }
 
   bool get isLocal => environment == Environment.local;
-  bool get isDev => environment == Environment.dev;
+  bool get isStaging => environment == Environment.staging;
   bool get isProduction => environment == Environment.production;
   bool get requiresAnsible => !isLocal && ansible != null;
 }
