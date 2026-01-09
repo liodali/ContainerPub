@@ -5,7 +5,7 @@ void main() {
   group('DeployConfig', () {
     test('Environment enum parsing', () {
       expect(Environment.local.name, equals('local'));
-      expect(Environment.dev.name, equals('dev'));
+      expect(Environment.staging.name, equals('staging'));
       expect(Environment.production.name, equals('production'));
     });
 
