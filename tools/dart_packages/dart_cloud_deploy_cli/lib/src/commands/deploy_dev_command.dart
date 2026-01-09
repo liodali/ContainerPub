@@ -221,11 +221,23 @@ class DeployDevCommand extends Command<void> {
   Future<void> _fetchSecrets(DeployConfig config) async {
     Console.header('Fetching Secrets from OpenBao');
 
+    final environment = config.environment;
+    final envConfig = config.openbao!.getEnvConfig(environment);
+    if (envConfig == null) {
+      Console.warning(
+        'No OpenBao configuration for ${environment.name} environment',
+      );
+      if (!Console.confirm('Continue without secrets?')) {
+        exit(1);
+      }
+      return;
+    }
+
     final openbao = OpenBaoService(
       address: config.openbao!.address,
       namespace: config.openbao!.namespace,
-      token: config.openbao!.token,
-      tokenPath: config.openbao!.tokenPath,
+      config: config.openbao,
+      environment: environment,
     );
 
     if (!await openbao.checkHealth()) {
@@ -236,9 +248,18 @@ class DeployDevCommand extends Command<void> {
       return;
     }
 
+    Console.info('Creating token for ${environment.name}...');
+    if (!await openbao.createToken()) {
+      Console.warning('Failed to create token for ${environment.name}');
+      if (!Console.confirm('Continue without secrets?')) {
+        exit(1);
+      }
+      return;
+    }
+
     try {
       final envPath = config.envFilePath ?? '.env';
-      await openbao.writeEnvFile(config.openbao!.secretPath, envPath);
+      await openbao.writeEnvFile(envConfig.secretPath, envPath);
     } catch (e) {
       Console.error('Failed to fetch secrets: $e');
       if (!Console.confirm('Continue without secrets?')) {
