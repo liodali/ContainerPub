@@ -2,113 +2,72 @@ import 'dart:io';
 import 'package:yaml/yaml.dart';
 import 'package:toml/toml.dart';
 import 'package:path/path.dart' as p;
-import '../utils/config_paths.dart';
 
-enum Environment { local, staging, production }
+import 'environment_config.dart';
+import 'openbao_config.dart';
+import 'registry_config.dart';
+import 'container_config.dart';
+import 'host_config.dart';
+import 'ansible_config.dart';
 
-class HostConfig {
-  final String host;
-  final int port;
-  final String user;
-  final String? sshKeyPath;
-  final String? password;
+export 'environment_config.dart';
+export 'openbao_config.dart';
+export 'host_config.dart';
+export 'container_config.dart';
+export 'ansible_config.dart';
+export 'registry_config.dart';
 
-  HostConfig({
-    required this.host,
-    this.port = 22,
-    required this.user,
-    this.sshKeyPath,
-    this.password,
-  });
+class DeployConfig {
+  final String name;
+  final String projectPath;
+  final OpenBaoConfig? openbao;
+  final RegistryConfig? registry;
+  final EnvironmentConfig? local;
+  final EnvironmentConfig? staging;
+  final EnvironmentConfig? production;
 
-  factory HostConfig.fromMap(Map<String, dynamic> map) {
-    final sshKeyPath = map['ssh_key_path'] as String?;
-    return HostConfig(
-      host: map['host'] as String,
-      port: map['port'] as int? ?? 22,
-      user: map['user'] as String,
-      sshKeyPath: sshKeyPath != null
-          ? ConfigPaths.expandPath(sshKeyPath)
-          : null,
-      password: map['password'] as String?,
-    );
-  }
+  Environment? _currentEnvironment;
 
-  Map<String, dynamic> toMap() => {
-    'host': host,
-    'port': port,
-    'user': user,
-    if (sshKeyPath != null) 'ssh_key_path': sshKeyPath,
-    if (password != null) 'password': password,
-  };
-}
-
-/// Configuration for a specific environment's token manager
-class TokenManagerConfig {
-  final String tokenManager;
-  final String policy;
-  final String secretPath;
-  final String roleId;
-  final String roleName;
-
-  TokenManagerConfig({
-    required this.tokenManager,
-    required this.policy,
-    required this.secretPath,
-    required this.roleId,
-    required this.roleName,
-  });
-
-  factory TokenManagerConfig.fromMap(Map<String, dynamic> map) {
-    return TokenManagerConfig(
-      tokenManager: map['token_manager'] as String,
-      policy: map['policy'] as String,
-      secretPath: map['secret_path'] as String,
-      roleId: map['role_id'] as String,
-      roleName: map['role_name'] as String,
-    );
-  }
-
-  Map<String, dynamic> toMap() => {
-    'token_manager': tokenManager,
-    'policy': policy,
-    'secret_path': secretPath,
-    'role_id': roleId,
-    'role_name': roleName,
-  };
-}
-
-class OpenBaoConfig {
-  final String address;
-  final String? namespace;
-  final TokenManagerConfig? local;
-  final TokenManagerConfig? staging;
-  final TokenManagerConfig? production;
-
-  OpenBaoConfig({
-    required this.address,
-    this.namespace,
+  DeployConfig({
+    required this.name,
+    required this.projectPath,
+    this.openbao,
+    this.registry,
     this.local,
     this.staging,
     this.production,
-  });
+    Environment? environment,
+  }) : _currentEnvironment = environment;
 
-  factory OpenBaoConfig.fromMap(Map<String, dynamic> map) {
-    return OpenBaoConfig(
-      address: map['address'] as String,
-      namespace: map['namespace'] as String?,
+  factory DeployConfig.fromMap(Map<String, dynamic> map) {
+    return DeployConfig(
+      name: map['name'] as String,
+      projectPath: map['project_path'] as String,
+      openbao: map['openbao'] != null
+          ? OpenBaoConfig.fromMap(
+              Map<String, dynamic>.from(map['openbao'] as Map),
+            )
+          : null,
+      registry: map['registry'] != null
+          ? RegistryConfig.fromMap(
+              Map<String, dynamic>.from(map['registry'] as Map),
+            )
+          : null,
       local: map['local'] != null
-          ? TokenManagerConfig.fromMap(
+          ? EnvironmentConfig.fromMap(
+              Environment.local,
               Map<String, dynamic>.from(map['local'] as Map),
             )
           : null,
       staging: map['staging'] != null
-          ? TokenManagerConfig.fromMap(
+          ? EnvironmentConfig.fromMap(
+              Environment.staging,
               Map<String, dynamic>.from(map['staging'] as Map),
             )
           : null,
       production: map['production'] != null
-          ? TokenManagerConfig.fromMap(
+          ? EnvironmentConfig.fromMap(
+              Environment.production,
               Map<String, dynamic>.from(map['production'] as Map),
             )
           : null,
@@ -116,15 +75,16 @@ class OpenBaoConfig {
   }
 
   Map<String, dynamic> toMap() => {
-    'address': address,
-    if (namespace != null) 'namespace': namespace,
+    'name': name,
+    'project_path': projectPath,
+    if (openbao != null) 'openbao': openbao!.toMap(),
+    if (registry != null) 'registry': registry!.toMap(),
     if (local != null) 'local': local!.toMap(),
     if (staging != null) 'staging': staging!.toMap(),
     if (production != null) 'production': production!.toMap(),
   };
 
-  /// Get token manager config for a specific environment
-  TokenManagerConfig? getEnvConfig(Environment env) {
+  EnvironmentConfig? getEnvironmentConfig(Environment env) {
     switch (env) {
       case Environment.local:
         return local;
@@ -135,153 +95,31 @@ class OpenBaoConfig {
     }
   }
 
-  /// Get secret path for a specific environment
-  String? getSecretPath(Environment env) => getEnvConfig(env)?.secretPath;
-
-  /// Get policy for a specific environment
-  String? getPolicy(Environment env) => getEnvConfig(env)?.policy;
-
-  /// Get token manager path for a specific environment
-  String? getTokenManager(Environment env) => getEnvConfig(env)?.tokenManager;
-}
-
-class ContainerConfig {
-  final String runtime;
-  final String composeFile;
-  final String projectName;
-  final String networkName;
-  final Map<String, String> services;
-
-  ContainerConfig({
-    this.runtime = 'podman',
-    required this.composeFile,
-    this.projectName = 'dart_cloud',
-    this.networkName = 'dart_cloud_network',
-    required this.services,
-  });
-
-  factory ContainerConfig.fromMap(Map<String, dynamic> map) {
-    return ContainerConfig(
-      runtime: map['runtime'] as String? ?? 'podman',
-      composeFile: map['compose_file'] as String,
-      projectName: map['project_name'] as String? ?? 'dart_cloud',
-      networkName: map['network_name'] as String? ?? 'dart_cloud_network',
-      services: Map<String, String>.from(map['services'] as Map? ?? {}),
-    );
+  void setCurrentEnvironment(Environment env) {
+    _currentEnvironment = env;
   }
 
-  Map<String, dynamic> toMap() => {
-    'runtime': runtime,
-    'compose_file': composeFile,
-    'project_name': projectName,
-    'network_name': networkName,
-    'services': services,
-  };
-
-  String get composeCommand =>
-      runtime == 'podman' ? 'podman-compose' : 'docker compose';
-  String get containerCommand => runtime == 'podman' ? 'podman' : 'sudo docker';
-}
-
-class AnsibleConfig {
-  final String? inventoryPath;
-  final String backendPlaybook;
-  final String databasePlaybook;
-  final String backupPlaybook;
-  final Map<String, dynamic> extraVars;
-
-  AnsibleConfig({
-    this.inventoryPath,
-    required this.backendPlaybook,
-    required this.databasePlaybook,
-    required this.backupPlaybook,
-    this.extraVars = const {},
-  });
-
-  factory AnsibleConfig.fromMap(Map<String, dynamic> map) {
-    return AnsibleConfig(
-      inventoryPath: map['inventory_path'] as String?,
-      backendPlaybook:
-          map['backend_playbook'] as String? ?? 'playbooks/backend.yml',
-      databasePlaybook:
-          map['database_playbook'] as String? ?? 'playbooks/database.yml',
-      backupPlaybook:
-          map['backup_playbook'] as String? ?? 'playbooks/backup.yml',
-      extraVars: Map<String, dynamic>.from(map['extra_vars'] as Map? ?? {}),
-    );
+  EnvironmentConfig? get _activeEnvironment {
+    if (_currentEnvironment != null) {
+      return getEnvironmentConfig(_currentEnvironment!);
+    }
+    return local ?? staging ?? production;
   }
 
-  Map<String, dynamic> toMap() => {
-    if (inventoryPath != null) 'inventory_path': inventoryPath,
-    'backend_playbook': backendPlaybook,
-    'database_playbook': databasePlaybook,
-    'backup_playbook': backupPlaybook,
-    'extra_vars': extraVars,
-  };
-}
+  Environment? get environment => _currentEnvironment;
 
-class DeployConfig {
-  final String name;
-  final Environment environment;
-  final String projectPath;
-  final String? envFilePath;
-  final HostConfig? host;
-  final OpenBaoConfig? openbao;
-  final ContainerConfig container;
-  final AnsibleConfig? ansible;
+  ContainerConfig? get container => _activeEnvironment?.container;
 
-  DeployConfig({
-    required this.name,
-    required this.environment,
-    required this.projectPath,
-    this.envFilePath,
-    this.host,
-    this.openbao,
-    required this.container,
-    this.ansible,
-  });
+  HostConfig? get host => _activeEnvironment?.host;
 
-  factory DeployConfig.fromMap(Map<String, dynamic> map) {
-    final envStr = map['environment'] as String? ?? 'local';
-    final environment = Environment.values.firstWhere(
-      (e) => e.name == envStr,
-      orElse: () => Environment.local,
-    );
+  String? get envFilePath => _activeEnvironment?.envFilePath;
 
-    return DeployConfig(
-      name: map['name'] as String,
-      environment: environment,
-      projectPath: map['project_path'] as String,
-      envFilePath: map['env_file_path'] as String?,
-      host: map['host'] != null
-          ? HostConfig.fromMap(Map<String, dynamic>.from(map['host'] as Map))
-          : null,
-      openbao: map['openbao'] != null
-          ? OpenBaoConfig.fromMap(
-              Map<String, dynamic>.from(map['openbao'] as Map),
-            )
-          : null,
-      container: ContainerConfig.fromMap(
-        Map<String, dynamic>.from(map['container'] as Map? ?? {}),
-      ),
-      ansible: map['ansible'] != null
-          ? AnsibleConfig.fromMap(
-              Map<String, dynamic>.from(map['ansible'] as Map),
-            )
-          : null,
-    );
-  }
+  AnsibleConfig? get ansible => _activeEnvironment?.ansible;
 
-  Map<String, dynamic> toMap() => {
-    'name': name,
-    'environment': environment.name,
-    'project_path': projectPath,
-    if (envFilePath != null) 'env_file_path': envFilePath,
-    if (host != null) 'host': host!.toMap(),
-    if (openbao != null) 'openbao': openbao!.toMap(),
-    'container': container.toMap(),
-    if (ansible != null) 'ansible': ansible!.toMap(),
-  };
+  bool get isLocal => _currentEnvironment == Environment.local;
+  bool get isStaging => _currentEnvironment == Environment.staging;
+  bool get isProduction => _currentEnvironment == Environment.production;
+  bool get requiresAnsible => !isLocal && ansible != null;
 
   static Future<DeployConfig> load(String configPath) async {
     final file = File(configPath);
@@ -319,8 +157,5 @@ class DeployConfig {
     return yaml is Map ? Map<String, dynamic>.from(yaml) : yaml;
   }
 
-  bool get isLocal => environment == Environment.local;
-  bool get isStaging => environment == Environment.staging;
-  bool get isProduction => environment == Environment.production;
-  bool get requiresAnsible => !isLocal && ansible != null;
+  bool hasEnvironment(Environment env) => getEnvironmentConfig(env) != null;
 }
