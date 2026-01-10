@@ -5,8 +5,7 @@ import '../utils/console.dart';
 class VenvService {
   final String venvPath;
 
-  VenvService({String? venvPath})
-    : venvPath = venvPath ?? p.join(Directory.current.path, '.venv');
+  VenvService({required this.venvPath});
 
   String get _pythonPath => Platform.isWindows
       ? p.join(venvPath, 'Scripts', 'python.exe')
@@ -27,6 +26,27 @@ class VenvService {
   String get activateCommand => Platform.isWindows
       ? p.join(venvPath, 'Scripts', 'activate.bat')
       : 'source ${p.join(venvPath, 'bin', 'activate')}';
+
+  String get _venvBinPath => Platform.isWindows
+      ? p.join(venvPath, 'Scripts')
+      : p.join(venvPath, 'bin');
+
+  /// Get environment variables with activated venv
+  Map<String, String> getActivatedEnvironment() {
+    final env = Map<String, String>.from(Platform.environment);
+
+    // Add venv bin to PATH (prepend to ensure venv Python is used first)
+    final currentPath = env['PATH'] ?? '';
+    env['PATH'] = '$_venvBinPath${Platform.isWindows ? ';' : ':'}$currentPath';
+
+    // Set VIRTUAL_ENV variable
+    env['VIRTUAL_ENV'] = venvPath;
+
+    // Unset PYTHONHOME if set (can interfere with venv)
+    env.remove('PYTHONHOME');
+
+    return env;
+  }
 
   Future<bool> pythonExists() async {
     try {
@@ -242,6 +262,7 @@ class VenvService {
       _ansiblePlaybookPath,
       [playbookPath, ...args],
       workingDirectory: workingDirectory,
+      environment: getActivatedEnvironment(),
       runInShell: true,
     );
   }
@@ -259,6 +280,7 @@ class VenvService {
       _ansiblePlaybookPath,
       [playbookPath, ...args],
       workingDirectory: workingDirectory,
+      environment: getActivatedEnvironment(),
       mode: ProcessStartMode.inheritStdio,
     );
   }
@@ -275,6 +297,7 @@ class VenvService {
       _ansiblePath,
       args,
       workingDirectory: workingDirectory,
+      environment: getActivatedEnvironment(),
       runInShell: true,
     );
   }
