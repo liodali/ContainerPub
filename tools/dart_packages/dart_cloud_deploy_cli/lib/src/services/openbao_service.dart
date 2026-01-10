@@ -1,38 +1,210 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart' as http;
+import '../models/deploy_config.dart';
 import '../utils/console.dart';
 import '../utils/config_paths.dart';
+import 'token_storage.dart';
 
 class OpenBaoService {
   final String address;
-  final String? namespace;
+  final OpenBaoConfig? config;
   String? _token;
+  Environment _currentEnv;
 
   OpenBaoService({
     required this.address,
-    this.namespace,
-    String? token,
-    String? tokenPath,
-  }) {
-    _token = token;
-    if (_token == null && tokenPath != null) {
-      _loadTokenFromFile(tokenPath);
+    this.config,
+    Environment environment = Environment.local,
+  }) : _currentEnv = environment;
+
+  /// Set the current environment
+  set currentEnvironment(Environment env) => _currentEnv = env;
+
+  /// Get token manager path for current environment
+  String? get tokenManager => config?.getTokenManager(_currentEnv);
+
+  /// Get policy for current environment
+  String? get policy => config?.getPolicy(_currentEnv);
+
+  /// Get role_id for current environment
+  String? get roleId => config?.getEnvConfig(_currentEnv)?.roleId;
+
+  /// Get role_name for current environment
+  String? get roleName => config?.getEnvConfig(_currentEnv)?.roleName;
+
+  /// Get secret path for current environment
+  String? get secretPath => config?.getSecretPath(_currentEnv);
+
+  /// Check if a string looks like a file path
+  bool _isFilePath(String value) {
+    return value.startsWith('/') ||
+        value.startsWith('~/') ||
+        value.startsWith('./') ||
+        value.startsWith('../') ||
+        value.contains('/') ||
+        value.contains('\\');
+  }
+
+  /// Centralized method to retrieve and decode manager token
+  Future<String?> _getManagerToken() async {
+    final managerToken = tokenManager;
+    if (managerToken == null) {
+      Console.error('No token_manager configured for ${_currentEnv.name}');
+      return null;
+    }
+
+    String base64Token;
+
+    // Check if token_manager is a file path or direct base64 token
+    if (_isFilePath(managerToken)) {
+      // It's a file path - read the base64 token from file
+      final expandedPath = ConfigPaths.expandPath(managerToken);
+      final file = File(expandedPath);
+      if (!file.existsSync()) {
+        Console.error('Token manager file not found: $expandedPath');
+        return null;
+      }
+
+      base64Token = file.readAsStringSync().trim();
+      if (base64Token.isEmpty) {
+        Console.error('Token manager file is empty: $expandedPath');
+        return null;
+      }
+    } else {
+      // It's a direct base64 token
+      base64Token = managerToken.trim();
+    }
+
+    // Decode base64 token
+    try {
+      return utf8.decode(base64.decode(base64Token));
+    } catch (e) {
+      Console.error('Failed to decode base64 token: $e');
+      return null;
     }
   }
 
-  void _loadTokenFromFile(String path) {
-    final expandedPath = ConfigPaths.expandPath(path);
-    final file = File(expandedPath);
-    if (file.existsSync()) {
-      _token = file.readAsStringSync().trim();
+  /// Generate a secret-id using AppRole authentication
+  /// Uses the token_manager to authenticate and generate a secret-id
+  Future<String?> _generateSecretId() async {
+    final envRoleName = roleName;
+    if (envRoleName == null) {
+      Console.error('No role_name configured for ${_currentEnv.name}');
+      return null;
+    }
+
+    final managerTokenValue = await _getManagerToken();
+    if (managerTokenValue == null) {
+      return null;
+    }
+
+    Console.info('Generating secret-id for role: $envRoleName');
+
+    try {
+      final url = Uri.parse(
+        '$address/v1/auth/approle/role/$envRoleName/secret-id',
+      );
+      final response = await http.post(
+        url,
+        headers: {
+          'X-Vault-Token': managerTokenValue,
+          'Content-Type': 'application/json',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body) as Map<String, dynamic>;
+        final secretIdData = data['data'] as Map<String, dynamic>?;
+        if (secretIdData != null) {
+          final secretId = secretIdData['secret_id'] as String?;
+          if (secretId != null) {
+            Console.success('Secret-id generated successfully');
+            return secretId;
+          }
+        }
+      }
+
+      Console.error(
+        'Failed to generate secret-id: ${response.statusCode} - ${response.body}',
+      );
+      return null;
+    } catch (e) {
+      Console.error('Failed to generate secret-id: $e');
+      return null;
     }
   }
+
+  /// Login using AppRole authentication and store token in Hive
+  Future<bool> createToken() async {
+    // Check if we have a cached token
+    final storage = TokenStorage.instance;
+    final cachedToken = await storage.getToken(_currentEnv.name);
+    if (cachedToken != null && cachedToken.isNotEmpty) {
+      _token = cachedToken;
+      Console.info('Using cached token for ${_currentEnv.name}');
+      return true;
+    }
+
+    final envRoleId = roleId;
+    if (envRoleId == null) {
+      Console.error('No role_id configured for ${_currentEnv.name}');
+      return false;
+    }
+
+    // Generate secret-id
+    final secretId = await _generateSecretId();
+    if (secretId == null) {
+      return false;
+    }
+
+    Console.info('Logging in with AppRole for ${_currentEnv.name}');
+    final managerTokenValue = await _getManagerToken();
+    if (managerTokenValue == null) {
+      throw Exception('Failed to get manager token');
+    }
+
+    try {
+      final url = Uri.parse('$address/v1/auth/approle/login');
+      final response = await http.post(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Vault-Token': managerTokenValue,
+        },
+        body: jsonEncode({'role_id': envRoleId, 'secret_id': secretId}),
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body) as Map<String, dynamic>;
+        final auth = data['auth'] as Map<String, dynamic>?;
+        if (auth != null) {
+          _token = auth['client_token'] as String?;
+          if (_token != null) {
+            // Store token in Hive
+            await storage.storeToken(_currentEnv.name, _token!);
+            Console.success('AppRole login successful for ${_currentEnv.name}');
+            return true;
+          }
+        }
+      }
+
+      Console.error(
+        'Failed to login with AppRole: ${response.statusCode} - ${response.body}',
+      );
+      return false;
+    } catch (e) {
+      Console.error('Failed to login with AppRole: $e');
+      return false;
+    }
+  }
+
+  /// Check if token is available (either created or loaded)
+  bool get hasToken => _token != null && _token!.isNotEmpty;
 
   Map<String, String> get _headers => {
     'X-Vault-Token': _token ?? '',
     'Content-Type': 'application/json',
-    if (namespace != null) 'X-Vault-Namespace': namespace!,
   };
 
   Future<Map<String, String>> fetchSecrets(String secretPath) async {
