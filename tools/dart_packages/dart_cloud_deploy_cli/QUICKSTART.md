@@ -124,21 +124,25 @@ Configure OpenBao with per-environment token managers in your `deploy.yaml`:
 openbao:
   address: http://localhost:8200
   # Per-environment configuration
-  # token_manager can be:
-  #   - A file path containing base64-encoded token
-  #   - A direct base64-encoded token string
+  # token_manager is used to generate secret-id for AppRole login
   local:
-    token_manager: ~/.openbao/local_token # file path
+    token_manager: ~/.openbao/local_token # base64-encoded token file
     policy: myapp-local
     secret_path: secret/data/myapp/local
+    role_id: local-role-uuid
+    role_name: stg-local
   staging:
-    token_manager: ~/.openbao/staging_token # file path
+    token_manager: ~/.openbao/staging_token # base64-encoded token file
     policy: myapp-staging
     secret_path: secret/data/myapp/staging
+    role_id: staging-role-uuid
+    role_name: stg-staging
   production:
     token_manager: aHZzLnByb2R1Y3Rpb24tdG9rZW4= # direct base64 token
     policy: myapp-production
     secret_path: secret/data/myapp/production
+    role_id: production-role-uuid
+    role_name: stg-production
 ```
 
 To create a base64-encoded token file:
@@ -386,14 +390,20 @@ openbao:
     token_manager: ~/.openbao/local_token # base64-encoded
     policy: my-app-local
     secret_path: secret/data/my_app/local
+    role_id: local-role-uuid
+    role_name: stg-local
   staging:
     token_manager: ~/.openbao/staging_token # base64-encoded
     policy: my-app-staging
     secret_path: secret/data/my_app/staging
+    role_id: staging-role-uuid
+    role_name: stg-staging
   production:
     token_manager: ~/.openbao/prod_token # base64-encoded
     policy: my-app-production
     secret_path: secret/data/my_app/production
+    role_id: production-role-uuid
+    role_name: stg-production
 
 container:
   runtime: podman

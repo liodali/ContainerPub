@@ -169,21 +169,28 @@ env_file_path: .env
 openbao:
   address: http://localhost:8200
   # Per-environment token managers and policies
-  # token_manager can be:
+  # token_manager is used to generate secret-id for AppRole login
+  # It can be:
   #   - A file path containing base64-encoded token (e.g., ~/.openbao/token)
   #   - A direct base64-encoded token string
   local:
     token_manager: ~/.openbao/local_token # file path with base64 token
     policy: dart-cloud-local
     secret_path: secret/data/dart_cloud/local
+    role_id: local-role-uuid
+    role_name: stg-local
   staging:
     token_manager: ~/.openbao/staging_token # file path with base64 token
     policy: dart-cloud-staging
     secret_path: secret/data/dart_cloud/staging
+    role_id: staging-role-uuid
+    role_name: stg-staging
   production:
     token_manager: aHZzLnByb2R1Y3Rpb24tdG9rZW4= # direct base64 token
     policy: dart-cloud-production
     secret_path: secret/data/dart_cloud/production
+    role_id: production-role-uuid
+    role_name: stg-production
 
 container:
   runtime: podman
@@ -337,6 +344,16 @@ The CLI stores configuration in `~/.dart-cloud-deploy/`:
 - `logs/` - Log files
 - `playbooks/` - Generated playbooks
 - `inventory/` - Ansible inventory files
+- `hive/` - Encrypted token storage
+
+### OpenBao Authentication
+
+The CLI uses **AppRole authentication** for secure secrets retrieval:
+
+1. **Manager Token**: Uses the provided `token_manager` (file or string) to authenticate and generate a `secret-id` via the configured `role_name`.
+2. **AppRole Login**: Logs in using the configured `role_id` and generated `secret-id`.
+3. **Token Caching**: The resulting client token is cached in a secure Hive database (LazyBox) with a 1-hour TTL.
+4. **Auto-Renewal**: Tokens are automatically checked for validity before use and refreshed transparently if expired.
 
 ## Requirements
 
