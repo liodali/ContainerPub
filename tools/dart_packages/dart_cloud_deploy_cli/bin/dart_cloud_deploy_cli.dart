@@ -7,6 +7,7 @@ import 'package:dart_cloud_deploy_cli/src/commands/secrets_command.dart';
 import 'package:dart_cloud_deploy_cli/src/commands/show_config_command.dart';
 import 'package:dart_cloud_deploy_cli/src/commands/init_command.dart';
 import 'package:dart_cloud_deploy_cli/src/commands/build_push_command.dart';
+import 'package:dart_cloud_deploy_cli/src/commands/prune_command.dart';
 import 'package:dart_cloud_deploy_cli/src/utils/console.dart';
 
 void main(List<String> arguments) async {
@@ -21,14 +22,15 @@ void main(List<String> arguments) async {
         ..addCommand(DeployDevCommand())
         ..addCommand(BuildPushCommand())
         ..addCommand(SecretsCommand())
-        ..addCommand(ShowConfigCommand());
+        ..addCommand(ShowConfigCommand())
+        ..addCommand(PruneCommand());
 
   try {
     await runner.run(arguments);
   } on UsageException catch (e) {
     Console.error(e.message);
     print(e.usage);
-    exit(64);
+    exit(1);
   } catch (e) {
     Console.error('Error: $e');
     exit(1);
