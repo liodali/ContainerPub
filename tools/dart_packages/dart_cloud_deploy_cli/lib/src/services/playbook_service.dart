@@ -22,14 +22,21 @@ class PlaybookService {
   Future<String> generateBackendPlaybook(DeployConfig config) async {
     await ensurePlaybooksDir();
 
+    final container = config.container;
+    final ansible = config.ansible;
+    final envFile = config.envFilePath;
+
+    if (container == null) {
+      throw Exception('Container configuration is required');
+    }
+
     final content = PlaybookTemplates.backend(
-      appDir:
-          config.ansible?.extraVars['app_dir'] as String? ?? '/opt/dart_cloud',
-      composeFile: config.container.composeFile,
-      containerRuntime: config.container.runtime,
-      projectName: config.container.projectName,
-      backendService: config.container.services['backend'] ?? 'backend-cloud',
-      envFile: config.envFilePath ?? '.env',
+      appDir: ansible?.extraVars['app_dir'] as String? ?? '/opt/dart_cloud',
+      composeFile: container.composeFile,
+      containerRuntime: container.runtime,
+      projectName: container.projectName,
+      backendService: container.services['backend'] ?? 'backend-cloud',
+      envFile: envFile ?? '.env',
     );
 
     final playbookPath = p.join(playbooksDir, 'backend.yml');
@@ -41,19 +48,24 @@ class PlaybookService {
   Future<String> generateDatabasePlaybook(DeployConfig config) async {
     await ensurePlaybooksDir();
 
+    final container = config.container;
+    final ansible = config.ansible;
+
+    if (container == null) {
+      throw Exception('Container configuration is required');
+    }
+
     final content = PlaybookTemplates.database(
-      appDir:
-          config.ansible?.extraVars['app_dir'] as String? ?? '/opt/dart_cloud',
-      composeFile: config.container.composeFile,
-      containerRuntime: config.container.runtime,
-      projectName: config.container.projectName,
-      databaseService: config.container.services['postgres'] ?? 'postgres',
+      appDir: ansible?.extraVars['app_dir'] as String? ?? '/opt/dart_cloud',
+      composeFile: container.composeFile,
+      containerRuntime: container.runtime,
+      projectName: container.projectName,
+      databaseService: container.services['postgres'] ?? 'postgres',
       postgresUser:
-          config.ansible?.extraVars['postgres_user'] as String? ?? 'dart_cloud',
-      postgresDb:
-          config.ansible?.extraVars['postgres_db'] as String? ?? 'dart_cloud',
+          ansible?.extraVars['postgres_user'] as String? ?? 'dart_cloud',
+      postgresDb: ansible?.extraVars['postgres_db'] as String? ?? 'dart_cloud',
       dataDir:
-          config.ansible?.extraVars['data_dir'] as String? ??
+          ansible?.extraVars['data_dir'] as String? ??
           '/var/lib/dart_cloud/postgres',
     );
 
@@ -69,22 +81,27 @@ class PlaybookService {
   }) async {
     await ensurePlaybooksDir();
 
+    final container = config.container;
+    final ansible = config.ansible;
+
+    if (container == null) {
+      throw Exception('Container configuration is required');
+    }
+
     final content = PlaybookTemplates.backup(
-      appDir:
-          config.ansible?.extraVars['app_dir'] as String? ?? '/opt/dart_cloud',
-      composeFile: config.container.composeFile,
-      containerRuntime: config.container.runtime,
-      projectName: config.container.projectName,
-      databaseService: config.container.services['postgres'] ?? 'postgres',
+      appDir: ansible?.extraVars['app_dir'] as String? ?? '/opt/dart_cloud',
+      composeFile: container.composeFile,
+      containerRuntime: container.runtime,
+      projectName: container.projectName,
+      databaseService: container.services['postgres'] ?? 'postgres',
       postgresUser:
-          config.ansible?.extraVars['postgres_user'] as String? ?? 'dart_cloud',
-      postgresDb:
-          config.ansible?.extraVars['postgres_db'] as String? ?? 'dart_cloud',
+          ansible?.extraVars['postgres_user'] as String? ?? 'dart_cloud',
+      postgresDb: ansible?.extraVars['postgres_db'] as String? ?? 'dart_cloud',
       backupDir:
-          config.ansible?.extraVars['backup_dir'] as String? ??
+          ansible?.extraVars['backup_dir'] as String? ??
           '/var/backups/dart_cloud',
       backupRetentionDays:
-          config.ansible?.extraVars['backup_retention_days'] as int? ?? 7,
+          ansible?.extraVars['backup_retention_days'] as int? ?? 7,
       backupType: backupType,
     );
 
@@ -100,6 +117,43 @@ class PlaybookService {
       await dir.delete(recursive: true);
       Console.info('Cleaned up generated playbooks');
     }
+  }
+
+  Future<String> generateContainerRegistryPlaybook(
+    DeployConfig config, {
+    required String imageName,
+    required String imageTag,
+  }) async {
+    await ensurePlaybooksDir();
+
+    if (config.registry == null) {
+      throw Exception('Registry configuration is required');
+    }
+
+    final container = config.container;
+    final ansible = config.ansible;
+
+    if (container == null) {
+      throw Exception('Container configuration is required');
+    }
+
+    final content = PlaybookTemplates.containerRegistry(
+      appDir: ansible?.extraVars['app_dir'] as String? ?? '/opt/dart_cloud',
+      registryUrl: config.registry!.url,
+      registryUsername: config.registry!.username,
+      registryTokenBase64: config.registry!.tokenBase64,
+      imageName: imageName,
+      imageTag: imageTag,
+      containerRuntime: container.runtime,
+      projectName: container.projectName,
+      serviceName: container.services['backend'] ?? 'backend-cloud',
+      composeFile: container.composeFile,
+    );
+
+    final playbookPath = p.join(playbooksDir, 'container_registry.yml');
+    await File(playbookPath).writeAsString(content);
+    Console.info('Generated container registry playbook: $playbookPath');
+    return playbookPath;
   }
 
   Future<void> cleanupPlaybook(String playbookPath) async {
