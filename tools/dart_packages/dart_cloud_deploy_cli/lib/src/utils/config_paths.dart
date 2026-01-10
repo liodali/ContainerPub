@@ -29,6 +29,10 @@ class ConfigPaths {
 
   static String get inventoryDir => p.join(configDir, 'inventory');
 
+  static String get venvDir => p.join(configDir, 'venv');
+
+  static String get deploymentConfigsDir => p.join(configDir, 'deployments');
+
   static Future<void> ensureConfigDirExists() async {
     final dir = Directory(configDir);
     if (!await dir.exists()) {
@@ -37,13 +41,28 @@ class ConfigPaths {
   }
 
   static Future<void> ensureAllDirsExist() async {
-    final dirs = [configDir, cacheDir, logsDir, playbooksDir, inventoryDir];
+    final dirs = [
+      configDir,
+      cacheDir,
+      logsDir,
+      playbooksDir,
+      inventoryDir,
+      venvDir,
+      deploymentConfigsDir,
+    ];
 
     for (final dirPath in dirs) {
       final dir = Directory(dirPath);
       if (!await dir.exists()) {
         await dir.create(recursive: true);
       }
+    }
+  }
+
+  static Future<void> cleanConfigDir() async {
+    final dir = Directory(configDir);
+    if (await dir.exists()) {
+      await dir.delete(recursive: true);
     }
   }
 

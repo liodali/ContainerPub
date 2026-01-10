@@ -48,26 +48,45 @@ class ShowConfigCommand extends Command<void> {
       exit(1);
     }
 
+    // Determine target environment
+    Environment targetEnv = Environment.local;
+    if (config.local != null) {
+      targetEnv = Environment.local;
+    } else if (config.staging != null) {
+      targetEnv = Environment.staging;
+    } else if (config.production != null) {
+      targetEnv = Environment.production;
+    }
+
+    // Set current environment for backward compatibility
+    config.setCurrentEnvironment(targetEnv);
+
     // General
     Console.divider();
     print('\x1B[34mGeneral:\x1B[0m');
     Console.divider();
     Console.keyValue('Name', config.name);
-    Console.keyValue('Environment', config.environment.name);
+    Console.keyValue('Environment', targetEnv.name);
     Console.keyValue('Project Path', config.projectPath);
     Console.keyValue('Env File', config.envFilePath ?? '.env');
 
     // Container
-    Console.divider();
-    print('\x1B[34mContainer:\x1B[0m');
-    Console.divider();
-    Console.keyValue('Runtime', config.container.runtime);
-    Console.keyValue('Compose File', config.container.composeFile);
-    Console.keyValue('Project Name', config.container.projectName);
-    Console.keyValue('Network', config.container.networkName);
-    Console.info('Services:');
-    for (final entry in config.container.services.entries) {
-      Console.step('  ${entry.key}: ${entry.value}');
+    final container = config.container;
+    if (container != null) {
+      Console.divider();
+      print('\x1B[34mContainer:\x1B[0m');
+      Console.divider();
+      Console.keyValue('Runtime', container.runtime);
+      Console.keyValue('Compose File', container.composeFile);
+      Console.keyValue('Project Name', container.projectName);
+      Console.keyValue('Network', container.networkName);
+      Console.info('Services:');
+      for (final entry in container.services.entries) {
+        Console.step('  ${entry.key}: ${entry.value}');
+      }
+    } else {
+      Console.divider();
+      print('\x1B[33mContainer: Not configured\x1B[0m');
     }
 
     // OpenBao
@@ -103,15 +122,16 @@ class ShowConfigCommand extends Command<void> {
     }
 
     // Host
-    if (config.host != null) {
+    final host = config.host;
+    if (host != null) {
       Console.divider();
       print('\x1B[34mHost:\x1B[0m');
       Console.divider();
-      Console.keyValue('Host', config.host!.host);
-      Console.keyValue('Port', config.host!.port.toString());
-      Console.keyValue('User', config.host!.user);
-      if (config.host!.sshKeyPath != null) {
-        Console.keyValue('SSH Key', config.host!.sshKeyPath!);
+      Console.keyValue('Host', host.host);
+      Console.keyValue('Port', host.port.toString());
+      Console.keyValue('User', host.user);
+      if (host.sshKeyPath != null) {
+        Console.keyValue('SSH Key', host.sshKeyPath!);
       }
     } else if (!config.isLocal) {
       Console.divider();
@@ -121,19 +141,20 @@ class ShowConfigCommand extends Command<void> {
     }
 
     // Ansible
-    if (config.ansible != null) {
+    final ansible = config.ansible;
+    if (ansible != null) {
       Console.divider();
       print('\x1B[34mAnsible:\x1B[0m');
       Console.divider();
-      if (config.ansible!.inventoryPath != null) {
-        Console.keyValue('Inventory', config.ansible!.inventoryPath!);
+      if (ansible.inventoryPath != null) {
+        Console.keyValue('Inventory', ansible.inventoryPath!);
       }
-      Console.keyValue('Backend Playbook', config.ansible!.backendPlaybook);
-      Console.keyValue('Database Playbook', config.ansible!.databasePlaybook);
-      Console.keyValue('Backup Playbook', config.ansible!.backupPlaybook);
-      if (config.ansible!.extraVars.isNotEmpty) {
+      Console.keyValue('Backend Playbook', ansible.backendPlaybook);
+      Console.keyValue('Database Playbook', ansible.databasePlaybook);
+      Console.keyValue('Backup Playbook', ansible.backupPlaybook);
+      if (ansible.extraVars.isNotEmpty) {
         Console.info('Extra Variables:');
-        for (final entry in config.ansible!.extraVars.entries) {
+        for (final entry in ansible.extraVars.entries) {
           Console.step('  ${entry.key}: ${entry.value}');
         }
       }
@@ -151,9 +172,9 @@ class ShowConfigCommand extends Command<void> {
     if (config.isLocal) {
       Console.success('Configuration ready for local deployment');
       Console.info('Run: dart_cloud_deploy deploy-local');
-    } else if (config.host != null && config.ansible != null) {
+    } else if (host != null && ansible != null) {
       Console.success(
-        'Configuration ready for ${config.environment.name} deployment',
+        'Configuration ready for ${targetEnv.name} deployment',
       );
       Console.info('Run: dart_cloud_deploy deploy-dev');
     } else {

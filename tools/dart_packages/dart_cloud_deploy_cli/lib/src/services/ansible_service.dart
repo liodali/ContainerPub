@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:path/path.dart' as p;
 import '../models/deploy_config.dart';
 import '../utils/console.dart';
+import '../utils/config_paths.dart';
 import 'venv_service.dart';
 import 'playbook_service.dart';
 
@@ -19,9 +20,7 @@ class AnsibleService {
     required this.workingDirectory,
     VenvService? venvService,
     PlaybookService? playbookService,
-  }) : venvService =
-           venvService ??
-           VenvService(venvPath: p.join(workingDirectory, '.venv')),
+  }) : venvService = venvService ?? VenvService(venvPath: ConfigPaths.venvDir),
        playbookService =
            playbookService ??
            PlaybookService(workingDirectory: workingDirectory);
