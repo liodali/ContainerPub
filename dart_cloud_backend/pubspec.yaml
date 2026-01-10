@@ -42,3 +42,5 @@ dependencies:
 dev_dependencies:
   lints: ^6.0.0
   test: ^1.28.0
+  dart_cloud_deploy_cli:
+    path: ../tools/dart_packages/dart_cloud_deploy_cli
