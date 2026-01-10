@@ -35,16 +35,28 @@ class _SecretsFetchCommand extends Command<void> {
         defaultsTo: 'deploy.yaml',
       )
       ..addOption('output', abbr: 'o', help: 'Output .env file path')
-      ..addOption('path', abbr: 'p', help: 'Override secret path in OpenBao');
+      ..addOption('path', abbr: 'p', help: 'Override secret path in OpenBao')
+      ..addOption(
+        'env',
+        abbr: 'e',
+        help: 'Environment to use',
+        allowed: ['local', 'staging', 'production'],
+        defaultsTo: 'local',
+      );
   }
 
   @override
   Future<void> run() async {
     final configPath = argResults!['config'] as String;
     final outputPath = argResults!['output'] as String?;
-    final secretPath = argResults!['path'] as String?;
+    final secretPathOverride = argResults!['path'] as String?;
+    final envStr = argResults!['env'] as String;
+    final environment = Environment.values.firstWhere(
+      (e) => e.name == envStr,
+      orElse: () => Environment.local,
+    );
 
-    Console.header('Fetching Secrets from OpenBao');
+    Console.header('Fetching Secrets from OpenBao (${environment.name})');
 
     DeployConfig config;
     try {
@@ -59,11 +71,18 @@ class _SecretsFetchCommand extends Command<void> {
       exit(1);
     }
 
+    final envConfig = config.openbao!.getEnvConfig(environment);
+    if (envConfig == null) {
+      Console.error(
+        'No OpenBao configuration for ${environment.name} environment',
+      );
+      exit(1);
+    }
+
     final openbao = OpenBaoService(
       address: config.openbao!.address,
-      namespace: config.openbao!.namespace,
-      token: config.openbao!.token,
-      tokenPath: config.openbao!.tokenPath,
+      config: config.openbao,
+      environment: environment,
     );
 
     Console.info('Checking OpenBao health...');
@@ -73,7 +92,18 @@ class _SecretsFetchCommand extends Command<void> {
     }
     Console.success('OpenBao is healthy');
 
-    final path = secretPath ?? config.openbao!.secretPath;
+    Console.info('Creating token for ${environment.name}...');
+    if (!await openbao.createToken()) {
+      Console.error('Failed to create token');
+      exit(1);
+    }
+
+    final path = secretPathOverride ?? openbao.secretPath;
+    if (path == null) {
+      Console.error('No secret path configured for ${environment.name}');
+      exit(1);
+    }
+
     final output = outputPath ?? config.envFilePath ?? '.env';
 
     try {
@@ -101,15 +131,27 @@ class _SecretsListCommand extends Command<void> {
         help: 'Configuration file path',
         defaultsTo: 'deploy.yaml',
       )
-      ..addOption('path', abbr: 'p', help: 'Path to list secrets from');
+      ..addOption('path', abbr: 'p', help: 'Path to list secrets from')
+      ..addOption(
+        'env',
+        abbr: 'e',
+        help: 'Environment to use',
+        allowed: ['local', 'staging', 'production'],
+        defaultsTo: 'local',
+      );
   }
 
   @override
   Future<void> run() async {
     final configPath = argResults!['config'] as String;
     final listPath = argResults!['path'] as String?;
+    final envStr = argResults!['env'] as String;
+    final environment = Environment.values.firstWhere(
+      (e) => e.name == envStr,
+      orElse: () => Environment.local,
+    );
 
-    Console.header('Listing Secrets');
+    Console.header('Listing Secrets (${environment.name})');
 
     DeployConfig config;
     try {
@@ -126,10 +168,15 @@ class _SecretsListCommand extends Command<void> {
 
     final openbao = OpenBaoService(
       address: config.openbao!.address,
-      namespace: config.openbao!.namespace,
-      token: config.openbao!.token,
-      tokenPath: config.openbao!.tokenPath,
+      config: config.openbao,
+      environment: environment,
     );
+
+    Console.info('Creating token for ${environment.name}...');
+    if (!await openbao.createToken()) {
+      Console.error('Failed to create token');
+      exit(1);
+    }
 
     final path = listPath ?? 'secret/metadata/dart_cloud';
 
@@ -160,19 +207,32 @@ class _SecretsCheckCommand extends Command<void> {
   final String description = 'Check OpenBao connection and authentication';
 
   _SecretsCheckCommand() {
-    argParser.addOption(
-      'config',
-      abbr: 'c',
-      help: 'Configuration file path',
-      defaultsTo: 'deploy.yaml',
-    );
+    argParser
+      ..addOption(
+        'config',
+        abbr: 'c',
+        help: 'Configuration file path',
+        defaultsTo: 'deploy.yaml',
+      )
+      ..addOption(
+        'env',
+        abbr: 'e',
+        help: 'Environment to use',
+        allowed: ['local', 'staging', 'production'],
+        defaultsTo: 'local',
+      );
   }
 
   @override
   Future<void> run() async {
     final configPath = argResults!['config'] as String;
+    final envStr = argResults!['env'] as String;
+    final environment = Environment.values.firstWhere(
+      (e) => e.name == envStr,
+      orElse: () => Environment.local,
+    );
 
-    Console.header('Checking OpenBao Connection');
+    Console.header('Checking OpenBao Connection (${environment.name})');
 
     DeployConfig config;
     try {
@@ -187,17 +247,27 @@ class _SecretsCheckCommand extends Command<void> {
       exit(1);
     }
 
+    final envConfig = config.openbao!.getEnvConfig(environment);
+    if (envConfig == null) {
+      Console.error(
+        'No OpenBao configuration for ${environment.name} environment',
+      );
+      exit(1);
+    }
+
     Console.keyValue('Address', config.openbao!.address);
-    Console.keyValue('Secret Path', config.openbao!.secretPath);
+    Console.keyValue('Environment', environment.name);
+    Console.keyValue('Token Manager', envConfig.tokenManager);
+    Console.keyValue('Policy', envConfig.policy);
+    Console.keyValue('Secret Path', envConfig.secretPath);
     if (config.openbao!.namespace != null) {
       Console.keyValue('Namespace', config.openbao!.namespace!);
     }
 
     final openbao = OpenBaoService(
       address: config.openbao!.address,
-      namespace: config.openbao!.namespace,
-      token: config.openbao!.token,
-      tokenPath: config.openbao!.tokenPath,
+      config: config.openbao,
+      environment: environment,
     );
 
     Console.info('Checking health...');
@@ -208,9 +278,16 @@ class _SecretsCheckCommand extends Command<void> {
       exit(1);
     }
 
+    Console.info('Creating token for ${environment.name}...');
+    if (!await openbao.createToken()) {
+      Console.error('Failed to create token');
+      exit(1);
+    }
+    Console.success('Token created successfully');
+
     Console.info('Testing secret access...');
     try {
-      final secrets = await openbao.fetchSecrets(config.openbao!.secretPath);
+      final secrets = await openbao.fetchSecrets(envConfig.secretPath);
       Console.success('Successfully accessed secrets (${secrets.length} keys)');
 
       Console.info('Available keys:');
