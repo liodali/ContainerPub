@@ -6,6 +6,7 @@ import 'package:dart_cloud_deploy_cli/src/commands/deploy_dev_command.dart';
 import 'package:dart_cloud_deploy_cli/src/commands/secrets_command.dart';
 import 'package:dart_cloud_deploy_cli/src/commands/show_config_command.dart';
 import 'package:dart_cloud_deploy_cli/src/commands/init_command.dart';
+import 'package:dart_cloud_deploy_cli/src/commands/build_push_command.dart';
 import 'package:dart_cloud_deploy_cli/src/utils/console.dart';
 
 void main(List<String> arguments) async {
@@ -18,6 +19,7 @@ void main(List<String> arguments) async {
         ..addCommand(ConfigCommand())
         ..addCommand(DeployLocalCommand())
         ..addCommand(DeployDevCommand())
+        ..addCommand(BuildPushCommand())
         ..addCommand(SecretsCommand())
         ..addCommand(ShowConfigCommand());
 
