@@ -28,16 +28,22 @@ void main() async {
       tokenManager: '../.openbao/local_token',
       policy: 'dart-cloud-local',
       secretPath: 'secret/data/dart_cloud/local',
+      roleId: 'dart-cloud-local',
+      roleName: 'stg-local',
     ),
     staging: TokenManagerConfig(
       tokenManager: '../.openbao/staging_token',
       policy: 'dart-cloud-staging',
       secretPath: 'secret/data/dart_cloud/staging',
+      roleId: 'dart-cloud-staging',
+      roleName: 'stg-staging',
     ),
     production: TokenManagerConfig(
       tokenManager: '../.openbao/prod_token',
       policy: 'dart-cloud-production',
       secretPath: 'secret/data/dart_cloud/production',
+      roleId: 'dart-cloud-production',
+      roleName: 'stg-production',
     ),
   );
 
