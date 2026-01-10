@@ -9,7 +9,6 @@ import 'token_storage.dart';
 class OpenBaoService {
   final String address;
   final OpenBaoConfig? config;
-  String? _token;
   Environment _currentEnv;
 
   OpenBaoService({
@@ -135,33 +134,40 @@ class OpenBaoService {
     }
   }
 
-  /// Login using AppRole authentication and store token in Hive
-  Future<bool> createToken() async {
-    // Check if we have a cached token
+  /// Get or create a valid token
+  /// Checks cache first, if expired or missing, creates a new one
+  Future<String?> _getOrCreateToken() async {
     final storage = TokenStorage.instance;
+
+    // Check if we have a valid cached token
     final cachedToken = await storage.getToken(_currentEnv.name);
-    if (cachedToken != null && cachedToken.isNotEmpty) {
-      _token = cachedToken;
+    if (cachedToken != null) {
       Console.info('Using cached token for ${_currentEnv.name}');
-      return true;
+      return cachedToken;
     }
+
+    // No valid token, create a new one
+    Console.info(
+      'No valid cached token, creating new token for ${_currentEnv.name}',
+    );
 
     final envRoleId = roleId;
     if (envRoleId == null) {
       Console.error('No role_id configured for ${_currentEnv.name}');
-      return false;
+      return null;
     }
 
     // Generate secret-id
     final secretId = await _generateSecretId();
     if (secretId == null) {
-      return false;
+      return null;
     }
 
     Console.info('Logging in with AppRole for ${_currentEnv.name}');
     final managerTokenValue = await _getManagerToken();
     if (managerTokenValue == null) {
-      throw Exception('Failed to get manager token');
+      Console.error('Failed to get manager token');
+      return null;
     }
 
     try {
@@ -179,12 +185,12 @@ class OpenBaoService {
         final data = jsonDecode(response.body) as Map<String, dynamic>;
         final auth = data['auth'] as Map<String, dynamic>?;
         if (auth != null) {
-          _token = auth['client_token'] as String?;
-          if (_token != null) {
-            // Store token in Hive
-            await storage.storeToken(_currentEnv.name, _token!);
+          final token = auth['client_token'] as String?;
+          if (token != null) {
+            // Store token in Hive with 1 hour TTL
+            await storage.storeToken(_currentEnv.name, token);
             Console.success('AppRole login successful for ${_currentEnv.name}');
-            return true;
+            return token;
           }
         }
       }
@@ -192,20 +198,27 @@ class OpenBaoService {
       Console.error(
         'Failed to login with AppRole: ${response.statusCode} - ${response.body}',
       );
-      return false;
+      return null;
     } catch (e) {
       Console.error('Failed to login with AppRole: $e');
-      return false;
+      return null;
     }
   }
 
-  /// Check if token is available (either created or loaded)
-  bool get hasToken => _token != null && _token!.isNotEmpty;
+  /// Ensure we have a valid token (for backward compatibility)
+  Future<bool> createToken() async {
+    final token = await _getOrCreateToken();
+    return token != null;
+  }
 
-  Map<String, String> get _headers => {
-    'X-Vault-Token': _token ?? '',
-    'Content-Type': 'application/json',
-  };
+  /// Get headers with valid token
+  Future<Map<String, String>> _getHeaders() async {
+    final token = await _getOrCreateToken();
+    if (token == null) {
+      throw Exception('Failed to get valid token for ${_currentEnv.name}');
+    }
+    return {'X-Vault-Token': token, 'Content-Type': 'application/json'};
+  }
 
   Future<Map<String, String>> fetchSecrets(String secretPath) async {
     final url = Uri.parse('$address/v1/$secretPath');
@@ -213,7 +226,8 @@ class OpenBaoService {
     Console.info('Fetching secrets from OpenBao: $secretPath');
 
     try {
-      final response = await http.get(url, headers: _headers);
+      final headers = await _getHeaders();
+      final response = await http.get(url, headers: headers);
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body) as Map<String, dynamic>;
@@ -281,7 +295,8 @@ class OpenBaoService {
     final url = Uri.parse('$address/v1/$path?list=true');
 
     try {
-      final response = await http.get(url, headers: _headers);
+      final headers = await _getHeaders();
+      final response = await http.get(url, headers: headers);
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body) as Map<String, dynamic>;
