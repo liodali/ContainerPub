@@ -3,9 +3,12 @@
 A robust deployment CLI for managing Dart Cloud Backend deployments with OpenBao secrets management and Ansible integration.
 
 > **New to the CLI?** Check out the [QUICKSTART.md](QUICKSTART.md) guide for simple examples.
+> **Configuration Details?** See [ENVIRONMENT_BASED_CONFIG.md](ENVIRONMENT_BASED_CONFIG.md) for the new environment-based architecture.
 
 ## Features
 
+- **Environment-Based Configuration**: Separate configs for local, staging, and production environments
+- **Modular Architecture**: Small, focused configuration files for container, host, ansible, and registry settings
 - **Local Deployment**: Deploy locally using Podman/Docker without Ansible
 - **Dev Deployment**: Deploy to remote VPS using Ansible playbooks
 - **Secrets Management**: Fetch secrets from OpenBao and generate `.env` files
@@ -160,12 +163,13 @@ dart_cloud_deploy deploy-dev --skip-tags cleanup
 
 ## Configuration File (deploy.yaml)
 
+The new environment-based configuration allows you to define separate settings for each environment (local, staging, production) in a single file.
+
 ```yaml
 name: dart_cloud_backend
-environment: dev
 project_path: .
-env_file_path: .env
 
+# Shared configurations across all environments
 openbao:
   address: http://localhost:8200
   # Per-environment token managers and policies
@@ -174,44 +178,106 @@ openbao:
   #   - A file path containing base64-encoded token (e.g., ~/.openbao/token)
   #   - A direct base64-encoded token string
   local:
-    token_manager: ~/.openbao/local_token # file path with base64 token
+    token_manager: ~/.openbao/local_token
     policy: dart-cloud-local
     secret_path: secret/data/dart_cloud/local
     role_id: local-role-uuid
     role_name: stg-local
   staging:
-    token_manager: ~/.openbao/staging_token # file path with base64 token
+    token_manager: ~/.openbao/staging_token
     policy: dart-cloud-staging
     secret_path: secret/data/dart_cloud/staging
     role_id: staging-role-uuid
     role_name: stg-staging
   production:
-    token_manager: aHZzLnByb2R1Y3Rpb24tdG9rZW4= # direct base64 token
+    token_manager: aHZzLnByb2R1Y3Rpb24tdG9rZW4=
     policy: dart-cloud-production
     secret_path: secret/data/dart_cloud/production
     role_id: production-role-uuid
     role_name: stg-production
 
-container:
-  runtime: podman
-  compose_file: docker-compose.yml
-  project_name: dart_cloud
-  services:
-    backend: dart_cloud_backend
-    postgres: dart_cloud_postgres
+registry:
+  url: ghcr.io
+  username: myuser
+  token_base64: base64_encoded_token
 
-host:
-  host: your-server.example.com
-  port: 22
-  user: deploy
-  ssh_key_path: ~/.ssh/id_rsa
+# Local environment configuration
+local:
+  container:
+    runtime: podman
+    compose_file: docker-compose.local.yml
+    project_name: dart_cloud_local
+    network_name: dart_cloud_local_network
+    services:
+      backend: dart_cloud_backend
+      postgres: dart_cloud_postgres
+    rebuild_strategy: all
+  env_file_path: .env.local
 
-ansible:
-  extra_vars:
-    app_dir: /opt/dart_cloud
-    postgres_user: dart_cloud
-    postgres_db: dart_cloud
+# Staging environment configuration
+staging:
+  container:
+    runtime: podman
+    compose_file: docker-compose.staging.yml
+    project_name: dart_cloud_staging
+    network_name: dart_cloud_staging_network
+    services:
+      backend: dart_cloud_backend
+      postgres: dart_cloud_postgres
+    rebuild_strategy: changed
+  host:
+    host: staging.example.com
+    port: 22
+    user: deploy
+    ssh_key_path: ~/.ssh/staging_key
+  env_file_path: .env.staging
+  ansible:
+    inventory_path: ansible/inventory/staging.yml
+    backend_playbook: ansible/playbooks/backend.yml
+    database_playbook: ansible/playbooks/database.yml
+    backup_playbook: ansible/playbooks/backup.yml
+    extra_vars:
+      app_dir: /opt/dart_cloud
+      postgres_user: dart_cloud
+      postgres_db: dart_cloud
+
+# Production environment configuration
+production:
+  container:
+    runtime: docker
+    compose_file: docker-compose.prod.yml
+    project_name: dart_cloud_prod
+    network_name: dart_cloud_prod_network
+    services:
+      backend: dart_cloud_backend
+      postgres: dart_cloud_postgres
+      redis: dart_cloud_redis
+    rebuild_strategy: changed
+  host:
+    host: prod.example.com
+    port: 22
+    user: deploy
+    ssh_key_path: ~/.ssh/prod_key
+  env_file_path: .env.production
+  ansible:
+    inventory_path: ansible/inventory/production.yml
+    backend_playbook: ansible/playbooks/backend.yml
+    database_playbook: ansible/playbooks/database.yml
+    backup_playbook: ansible/playbooks/backup.yml
+    extra_vars:
+      app_dir: /opt/dart_cloud
+      postgres_user: dart_cloud
+      postgres_db: dart_cloud
+      enable_monitoring: true
+      enable_alerting: true
 ```
+
+### Configuration Structure
+
+- **Global Settings**: `name`, `project_path`, `openbao`, `registry` (shared across all environments)
+- **Environment-Specific**: `local`, `staging`, `production` (each with their own container, host, env_file_path, ansible)
+
+See [ENVIRONMENT_BASED_CONFIG.md](ENVIRONMENT_BASED_CONFIG.md) for detailed documentation on the configuration system.
 
 ## Commands Reference
 
@@ -308,6 +374,30 @@ Display current configuration settings.
 
 ## Architecture
 
+### Configuration System
+
+The configuration system uses a **modular, environment-based design**:
+
+**Model Files:**
+
+- `host_config.dart` - SSH host configuration (host, port, user, ssh_key_path, password)
+- `container_config.dart` - Container runtime settings (runtime, compose_file, services, rebuild_strategy)
+- `ansible_config.dart` - Ansible playbook configuration (inventory_path, playbooks, extra_vars)
+- `registry_config.dart` - Container registry settings (url, username, token)
+- `openbao_config.dart` - OpenBao secret management (address, namespace, per-environment token managers)
+- `environment_config.dart` - Environment-specific wrapper (local, staging, production)
+- `deploy_config.dart` - Main configuration class
+
+**Benefits:**
+
+- **Small, focused files** - Each file has a single responsibility
+- **Environment isolation** - Each environment (local, staging, production) has its own configuration
+- **Type safety** - Strong typing prevents configuration errors
+- **Backward compatibility** - Helper methods allow existing code to work seamlessly
+- **Easy maintenance** - Clear separation of concerns
+
+See [ENVIRONMENT_BASED_CONFIG.md](ENVIRONMENT_BASED_CONFIG.md) for detailed architecture documentation.
+
 ### Playbook Generation
 
 Playbooks are **generated on-demand** from Dart templates and **deleted after deployment**:
@@ -375,15 +465,37 @@ The CLI is designed to work with any containerized Dart backend:
 
 ### Multi-Environment Setup
 
+With the new environment-based configuration, you can manage all environments in a single file:
+
+```bash
+# Create a single config file with all environments
+dart_cloud_deploy config init -e local
+
+# Edit deploy.yaml to add staging and production sections
+# (See Configuration File section above for example)
+
+# Deploy to local environment
+dart_cloud_deploy deploy-local -c deploy.yaml
+
+# Deploy to staging environment
+dart_cloud_deploy deploy-dev -c deploy.yaml
+
+# Deploy to production environment
+dart_cloud_deploy deploy-dev -c deploy.yaml
+```
+
+Or use separate config files for each environment:
+
 ```bash
 # Create configs for each environment
 dart_cloud_deploy config init -e local -o deploy-local.yaml
-dart_cloud_deploy config init -e dev -o deploy-dev.yaml
+dart_cloud_deploy config init -e staging -o deploy-staging.yaml
 dart_cloud_deploy config init -e production -o deploy-prod.yaml
 
 # Deploy to specific environment
 dart_cloud_deploy deploy-local -c deploy-local.yaml
-dart_cloud_deploy deploy-dev -c deploy-dev.yaml
+dart_cloud_deploy deploy-dev -c deploy-staging.yaml
+dart_cloud_deploy deploy-dev -c deploy-prod.yaml
 ```
 
 ### CI/CD Integration
