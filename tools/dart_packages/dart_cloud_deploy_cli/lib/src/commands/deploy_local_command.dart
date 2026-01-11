@@ -22,13 +22,25 @@ import '../utils/workspace_detector.dart';
 /// Enum defining rebuild strategies for deployment
 enum RebuildStrategy {
   /// Rebuild all services defined in compose file
-  all,
+  all('all'),
 
   /// Rebuild only the backend service
-  backendOnly,
+  backendOnly('backend-only'),
 
   /// No rebuild, just start existing containers
-  none,
+  none('none')
+  ;
+
+  const RebuildStrategy(this.label);
+  final String label;
+}
+
+/// Extension on RebuildStrategy to provide utility methods
+extension RebuildStrategyExtension on RebuildStrategy {
+  /// Get list of all valid rebuild strategy names
+  static List<String> get names {
+    return RebuildStrategy.values.map((e) => e.label).toList();
+  }
 }
 
 /// Configuration for local deployment options
@@ -80,8 +92,10 @@ class DeployLocalCommand extends Command<void> {
       ..addOption(
         'config',
         abbr: 'c',
-        help: 'Path to deployment configuration file (yaml/toml)',
-        defaultsTo: 'deploy.yaml',
+        help:
+            'Path to deployment configuration file (yaml/toml). '
+            'Defaults to ~/.dart-cloud-deploy/deploy_config.yml or '
+            '.dart_tool/deploy_config.yml',
       )
       // Environment file path (overrides config)
       ..addOption(
@@ -94,8 +108,9 @@ class DeployLocalCommand extends Command<void> {
         'rebuild',
         abbr: 'r',
         help: 'Rebuild strategy: all, backend-only, none',
-        allowed: ['all', 'backend-only', 'none'],
-        defaultsTo: 'all',
+        allowed: RebuildStrategyExtension.names,
+        defaultsTo: RebuildStrategy.none.label,
+        mandatory: false,
       )
       // Force recreate
       ..addFlag(
@@ -151,7 +166,7 @@ class DeployLocalCommand extends Command<void> {
   /// Note: Rebuild strategy from CLI will override config file value
   Future<LocalDeployOptions> _parseOptions() async {
     final rebuildStr = argResults!['rebuild'] as String?;
-    final configPathArg = argResults!['config'] as String;
+    final configPathArg = argResults!['config'] as String?;
 
     // CLI rebuild flag takes precedence over config
     // If not provided via CLI, will be resolved from config later
@@ -164,13 +179,28 @@ class DeployLocalCommand extends Command<void> {
           }
         : null;
 
-    // Resolve config path - check workspace first if default
-    String configPath = configPathArg;
-    if (configPathArg == 'deploy.yaml') {
-      final workspace = await WorkspaceDetector.detectWorkspace();
-      if (workspace.isDartProject && workspace.configExists) {
-        configPath = workspace.configPath;
-        Console.info('Using workspace config: $configPath');
+    // Resolve config path: CLI arg > workspace config > global config
+    String configPath;
+
+    if (configPathArg != null) {
+      // User explicitly provided config path
+      configPath = configPathArg;
+    } else {
+      // Use centralized config resolution
+      final resolvedPath = await WorkspaceDetector.resolveDeployConfigPath();
+
+      if (resolvedPath != null) {
+        configPath = resolvedPath;
+        Console.info('Using config: $configPath');
+      } else {
+        Console.error(
+          'No configuration file found!\n'
+          'Please provide one of:\n'
+          '  1. --config <path> argument\n'
+          '  2. .dart_tool/deploy_config.yml in current directory\n'
+          '  3. ~/.dart-cloud-deploy/deploy_config.yml',
+        );
+        exit(1);
       }
     }
 
@@ -194,28 +224,18 @@ class DeployLocalCommand extends Command<void> {
     try {
       final config = await DeployConfig.load(configPath);
 
-      // Determine target environment (prefer local, fallback to staging)
-      Environment targetEnv = Environment.local;
-      if (config.local != null) {
-        targetEnv = Environment.local;
-      } else if (config.staging != null) {
-        targetEnv = Environment.staging;
-      } else if (config.production != null) {
-        targetEnv = Environment.production;
-      }
-
-      // Set current environment for backward compatibility
-      config.setCurrentEnvironment(targetEnv);
-
-      // Warn if not local environment
-      if (!config.isLocal && targetEnv != Environment.staging) {
-        Console.warning(
-          'Configuration is for ${targetEnv.name} environment',
+      // Verify 'local' environment exists in config
+      if (config.local == null) {
+        Console.error(
+          'Configuration file does not contain "local" environment!\n'
+          'The deploy-local command requires a "local" section in the config.\n'
+          'Please add a "local" environment configuration.',
         );
-        if (!Console.confirm('Continue with local deployment?')) {
-          exit(0);
-        }
+        exit(1);
       }
+
+      // Set current environment to local
+      config.setCurrentEnvironment(Environment.local);
 
       Console.success('Configuration loaded successfully');
       return config;

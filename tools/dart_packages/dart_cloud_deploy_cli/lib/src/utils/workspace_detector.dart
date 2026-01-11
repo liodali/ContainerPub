@@ -52,6 +52,33 @@ class WorkspaceDetector {
   static String getConfigPath(String projectPath) {
     return p.join(projectPath, _dartToolDir, _configFileName);
   }
+
+  /// Resolve deployment config path with fallback logic
+  /// Priority: workspace config > global config > null
+  /// Returns null if no config found
+  static Future<String?> resolveDeployConfigPath() async {
+    // Check workspace config (.dart_tool/deploy_config.yaml)
+    final workspace = await detectWorkspace();
+    if (workspace.isDartProject && workspace.configExists) {
+      return workspace.configPath;
+    }
+
+    // Check global config (~/.dart-cloud-deploy/deploy_config.yml)
+    final homeDir = Platform.environment['HOME'];
+    if (homeDir != null) {
+      final globalConfigPath = p.join(
+        homeDir,
+        '.dart-cloud-deploy',
+        'deploy_config.yml',
+      );
+      final globalConfigFile = File(globalConfigPath);
+      if (await globalConfigFile.exists()) {
+        return globalConfigPath;
+      }
+    }
+
+    return null;
+  }
 }
 
 class WorkspaceInfo {
