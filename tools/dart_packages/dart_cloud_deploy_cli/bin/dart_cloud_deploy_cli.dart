@@ -8,6 +8,7 @@ import 'package:dart_cloud_deploy_cli/src/commands/show_config_command.dart';
 import 'package:dart_cloud_deploy_cli/src/commands/init_command.dart';
 import 'package:dart_cloud_deploy_cli/src/commands/build_push_command.dart';
 import 'package:dart_cloud_deploy_cli/src/commands/prune_command.dart';
+import 'package:dart_cloud_deploy_cli/src/commands/env_to_json_command.dart';
 import 'package:dart_cloud_deploy_cli/src/utils/console.dart';
 
 void main(List<String> arguments) async {
@@ -23,7 +24,8 @@ void main(List<String> arguments) async {
         ..addCommand(BuildPushCommand())
         ..addCommand(SecretsCommand())
         ..addCommand(ShowConfigCommand())
-        ..addCommand(PruneCommand());
+        ..addCommand(PruneCommand())
+        ..addCommand(EnvToJsonCommand());
 
   try {
     await runner.run(arguments);
