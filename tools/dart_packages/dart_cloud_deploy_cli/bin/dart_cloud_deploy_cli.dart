@@ -31,8 +31,9 @@ void main(List<String> arguments) async {
     Console.error(e.message);
     print(e.usage);
     exit(1);
-  } catch (e) {
+  } catch (e, trace) {
     Console.error('Error: $e');
+    Console.error(trace.toString());
     exit(1);
   }
 }
