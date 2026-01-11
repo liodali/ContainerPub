@@ -6,6 +6,8 @@ import '../services/openbao_service.dart';
 import '../services/playbook_service.dart';
 import '../services/venv_service.dart';
 import '../utils/console.dart';
+import '../utils/venv_detector.dart';
+import '../utils/workspace_detector.dart';
 
 class DeployDevCommand extends Command<void> {
   @override
@@ -56,7 +58,7 @@ class DeployDevCommand extends Command<void> {
 
   @override
   Future<void> run() async {
-    final configPath = argResults!['config'] as String;
+    final configPathArg = argResults!['config'] as String;
     final target = argResults!['target'] as String;
     final skipSecrets = argResults!['skip-secrets'] as bool;
     final verbose = argResults!['verbose'] as bool;
@@ -66,6 +68,16 @@ class DeployDevCommand extends Command<void> {
     final extraVarsRaw = argResults!['extra-vars'] as List<String>;
 
     Console.header('Dart Cloud Dev Deployment');
+
+    // Resolve config path - check workspace first if default
+    String configPath = configPathArg;
+    if (configPathArg == 'deploy.yaml') {
+      final workspace = await WorkspaceDetector.detectWorkspace();
+      if (workspace.isDartProject && workspace.configExists) {
+        configPath = workspace.configPath;
+        Console.info('Using workspace config: $configPath');
+      }
+    }
 
     // Parse extra vars
     final extraVars = <String, String>{};
@@ -85,21 +97,47 @@ class DeployDevCommand extends Command<void> {
       exit(1);
     }
 
+    // Determine target environment (default to staging if not set)
+    Environment targetEnv = Environment.staging;
+    if (config.local != null) targetEnv = Environment.local;
+    if (config.staging != null) targetEnv = Environment.staging;
+    if (config.production != null) targetEnv = Environment.production;
+
+    // Set current environment for backward compatibility
+    config.setCurrentEnvironment(targetEnv);
+
     // Validate configuration for dev deployment
     if (config.host == null) {
       Console.error('Host configuration required for dev deployment');
-      Console.info('Add host section to your configuration file');
+      Console.info(
+        'Add host section to your configuration file for ${targetEnv.name} environment',
+      );
       exit(1);
     }
 
     if (config.ansible == null) {
       Console.error('Ansible configuration required for dev deployment');
-      Console.info('Add ansible section to your configuration file');
+      Console.info(
+        'Add ansible section to your configuration file for ${targetEnv.name} environment',
+      );
+      exit(1);
+    }
+
+    if (config.container == null) {
+      Console.error('Container configuration required for dev deployment');
+      Console.info(
+        'Add container section to your configuration file for ${targetEnv.name} environment',
+      );
       exit(1);
     }
 
     // Initialize services
-    final venvService = VenvService(venvPath: '.venv');
+    final venvLocation = await VenvDetector.detectVenvLocation();
+    final venvService = VenvService(venvPath: venvLocation.path);
+
+    Console.info('Using virtual environment: ${venvLocation.path}');
+    Console.info('Activating venv for deployment...');
+
     final playbookService = PlaybookService(
       workingDirectory: config.projectPath,
     );
@@ -117,7 +155,7 @@ class DeployDevCommand extends Command<void> {
       Console.error('Environment not ready. Run: dart_cloud_deploy init');
       exit(1);
     }
-    Console.success('Environment ready');
+    Console.success('Environment ready (venv activated)');
 
     // Fetch secrets if configured
     if (!skipSecrets && config.openbao != null) {
@@ -222,6 +260,10 @@ class DeployDevCommand extends Command<void> {
     Console.header('Fetching Secrets from OpenBao');
 
     final environment = config.environment;
+    if (environment == null) {
+      Console.error('Environment not found');
+      exit(1);
+    }
     final envConfig = config.openbao!.getEnvConfig(environment);
     if (envConfig == null) {
       Console.warning(
@@ -235,7 +277,6 @@ class DeployDevCommand extends Command<void> {
 
     final openbao = OpenBaoService(
       address: config.openbao!.address,
-      namespace: config.openbao!.namespace,
       config: config.openbao,
       environment: environment,
     );

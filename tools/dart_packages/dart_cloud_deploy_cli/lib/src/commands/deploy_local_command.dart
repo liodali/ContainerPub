@@ -1,109 +1,460 @@
 import 'dart:io';
+
 import 'package:args/command_runner.dart';
+import 'package:yaml/yaml.dart';
+
 import '../models/deploy_config.dart';
 import '../services/container_service.dart';
 import '../services/openbao_service.dart';
 import '../utils/console.dart';
+import '../utils/workspace_detector.dart';
 
+// =============================================================================
+// DEPLOY LOCAL COMMAND
+// =============================================================================
+// A robust local deployment command that:
+// 1. Uses env file path from config as primary source
+// 2. Falls back to OpenBao if no env file is provided
+// 3. Throws exception if neither env file nor OpenBao secrets are available
+// 4. Supports selective rebuild based on services in compose file
+// =============================================================================
+
+/// Enum defining rebuild strategies for deployment
+enum RebuildStrategy {
+  /// Rebuild all services defined in compose file
+  all,
+
+  /// Rebuild only the backend service
+  backendOnly,
+
+  /// No rebuild, just start existing containers
+  none,
+}
+
+/// Configuration for local deployment options
+class LocalDeployOptions {
+  /// Path to the deployment config file
+  final String configPath;
+
+  /// Path to environment file (overrides config)
+  final String? envFilePath;
+
+  /// Rebuild strategy to use (null = use config value)
+  final RebuildStrategy? rebuildStrategy;
+
+  /// Force recreate containers even if running
+  final bool forceRecreate;
+
+  /// Specific service to deploy (null = all services)
+  final String? targetService;
+
+  const LocalDeployOptions({
+    required this.configPath,
+    this.envFilePath,
+    this.rebuildStrategy,
+    this.forceRecreate = false,
+    this.targetService,
+  });
+}
+
+/// Main command for local deployment using Podman/Docker
 class DeployLocalCommand extends Command<void> {
   @override
   final String name = 'deploy-local';
 
   @override
-  final String description = 'Deploy locally using Podman/Docker (no Ansible)';
+  final String description =
+      'Deploy locally using Podman/Docker with flexible env and rebuild options';
 
   DeployLocalCommand() {
+    _setupArgParser();
+  }
+
+  // ---------------------------------------------------------------------------
+  // ARGUMENT PARSER SETUP
+  // ---------------------------------------------------------------------------
+
+  void _setupArgParser() {
     argParser
+      // Config file path
       ..addOption(
         'config',
         abbr: 'c',
-        help: 'Configuration file path',
+        help: 'Path to deployment configuration file (yaml/toml)',
         defaultsTo: 'deploy.yaml',
       )
-      ..addFlag(
-        'build',
-        abbr: 'b',
-        help: 'Force rebuild containers',
-        defaultsTo: true,
+      // Environment file path (overrides config)
+      ..addOption(
+        'env-file',
+        abbr: 'e',
+        help: 'Path to .env file (overrides config env_file_path)',
       )
+      // Rebuild strategy
+      ..addOption(
+        'rebuild',
+        abbr: 'r',
+        help: 'Rebuild strategy: all, backend-only, none',
+        allowed: ['all', 'backend-only', 'none'],
+        defaultsTo: 'all',
+      )
+      // Force recreate
       ..addFlag(
         'force',
         abbr: 'f',
-        help: 'Force recreate containers',
+        help: 'Force recreate containers even if running',
         defaultsTo: false,
       )
-      ..addFlag(
-        'skip-secrets',
-        help: 'Skip fetching secrets from OpenBao',
-        defaultsTo: false,
-      )
+      // Target specific service
       ..addOption(
         'service',
         abbr: 's',
-        help: 'Deploy specific service only (backend, postgres)',
+        help: 'Deploy specific service only (from compose file)',
       );
   }
 
+  // ---------------------------------------------------------------------------
+  // MAIN ENTRY POINT
+  // ---------------------------------------------------------------------------
+
   @override
   Future<void> run() async {
-    final configPath = argResults!['config'] as String;
-    final build = argResults!['build'] as bool;
-    final force = argResults!['force'] as bool;
-    final skipSecrets = argResults!['skip-secrets'] as bool;
-    final service = argResults!['service'] as String?;
+    // Parse command line options
+    final options = await _parseOptions();
 
     Console.header('Dart Cloud Local Deployment');
 
-    // Load configuration
-    DeployConfig config;
+    // Step 1: Load and validate configuration
+    final config = await _loadConfig(options.configPath);
+
+    // Step 2: Initialize container service
+    final containerService = await _initContainerService(config);
+
+    // Step 3: Detect available services from compose file
+    final availableServices = await _detectServicesFromCompose(config);
+
+    // Step 4: Resolve environment variables (env file or OpenBao)
+    await _resolveEnvironment(config, options.envFilePath);
+
+    // Step 5: Check current service status
+    final statuses = await _checkServiceStatus(containerService);
+
+    // Step 6: Execute deployment based on strategy
+    await _executeDeployment(
+      containerService: containerService,
+      availableServices: availableServices,
+      statuses: statuses,
+      options: options,
+    );
+  }
+
+  /// Parse command line arguments into LocalDeployOptions
+  /// Note: Rebuild strategy from CLI will override config file value
+  Future<LocalDeployOptions> _parseOptions() async {
+    final rebuildStr = argResults!['rebuild'] as String?;
+    final configPathArg = argResults!['config'] as String;
+
+    // CLI rebuild flag takes precedence over config
+    // If not provided via CLI, will be resolved from config later
+    final rebuildStrategy = rebuildStr != null
+        ? switch (rebuildStr) {
+            'all' => RebuildStrategy.all,
+            'backend-only' => RebuildStrategy.backendOnly,
+            'none' => RebuildStrategy.none,
+            _ => RebuildStrategy.all,
+          }
+        : null;
+
+    // Resolve config path - check workspace first if default
+    String configPath = configPathArg;
+    if (configPathArg == 'deploy.yaml') {
+      final workspace = await WorkspaceDetector.detectWorkspace();
+      if (workspace.isDartProject && workspace.configExists) {
+        configPath = workspace.configPath;
+        Console.info('Using workspace config: $configPath');
+      }
+    }
+
+    return LocalDeployOptions(
+      configPath: configPath,
+      envFilePath: argResults!['env-file'] as String?,
+      rebuildStrategy: rebuildStrategy,
+      forceRecreate: argResults!['force'] as bool,
+      targetService: argResults!['service'] as String?,
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // STEP 1: CONFIGURATION LOADING
+  // ---------------------------------------------------------------------------
+
+  /// Load and validate deployment configuration
+  Future<DeployConfig> _loadConfig(String configPath) async {
+    Console.info('Loading configuration from: $configPath');
+
     try {
-      config = await DeployConfig.load(configPath);
+      final config = await DeployConfig.load(configPath);
+
+      // Determine target environment (prefer local, fallback to staging)
+      Environment targetEnv = Environment.local;
+      if (config.local != null) {
+        targetEnv = Environment.local;
+      } else if (config.staging != null) {
+        targetEnv = Environment.staging;
+      } else if (config.production != null) {
+        targetEnv = Environment.production;
+      }
+
+      // Set current environment for backward compatibility
+      config.setCurrentEnvironment(targetEnv);
+
+      // Warn if not local environment
+      if (!config.isLocal && targetEnv != Environment.staging) {
+        Console.warning(
+          'Configuration is for ${targetEnv.name} environment',
+        );
+        if (!Console.confirm('Continue with local deployment?')) {
+          exit(0);
+        }
+      }
+
+      Console.success('Configuration loaded successfully');
+      return config;
     } catch (e) {
       Console.error('Failed to load configuration: $e');
       exit(1);
     }
+  }
 
-    if (!config.isLocal && config.environment != Environment.staging) {
-      Console.warning(
-        'Configuration is for ${config.environment.name} environment',
-      );
-      if (!Console.confirm('Continue with local deployment?')) {
-        return;
-      }
+  // ---------------------------------------------------------------------------
+  // STEP 2: CONTAINER SERVICE INITIALIZATION
+  // ---------------------------------------------------------------------------
+
+  /// Initialize and validate container runtime
+  Future<ContainerService> _initContainerService(DeployConfig config) async {
+    Console.info('Checking container runtime...');
+
+    final container = config.container;
+    if (container == null) {
+      Console.error('Container configuration is required');
+      exit(1);
     }
 
-    // Initialize container service
     final containerService = ContainerService(
-      config: config.container,
+      config: container,
       workingDirectory: config.projectPath,
     );
 
-    // Check runtime
-    Console.info('Checking container runtime...');
+    // Validate container runtime (podman/docker)
     if (!await containerService.checkRuntime()) {
       Console.error(
-        'Container runtime (${config.container.runtime}) not found',
+        'Container runtime (${container.runtime}) not found. '
+        'Please install ${container.runtime} first.',
       );
       exit(1);
     }
-    Console.success('${config.container.runtime} is available');
+    Console.success('${container.runtime} is available');
 
+    // Validate compose runtime
     if (!await containerService.checkComposeRuntime()) {
-      Console.error('Compose runtime not found');
+      Console.error(
+        'Compose runtime not found. '
+        'Please install ${container.composeCommand} first.',
+      );
       exit(1);
     }
     Console.success('Compose is available');
 
-    // Fetch secrets if configured
-    if (!skipSecrets && config.openbao != null) {
-      await _fetchSecrets(config);
-    } else if (!skipSecrets) {
-      Console.warning('OpenBao not configured, skipping secrets fetch');
-      await _checkEnvFile(config);
+    return containerService;
+  }
+
+  // ---------------------------------------------------------------------------
+  // STEP 3: SERVICE DETECTION FROM COMPOSE FILE
+  // ---------------------------------------------------------------------------
+
+  /// Detect available services from the compose file
+  Future<List<String>> _detectServicesFromCompose(DeployConfig config) async {
+    Console.info('Detecting services from compose file...');
+
+    final container = config.container;
+    if (container == null) {
+      Console.error('Container configuration is required');
+      exit(1);
     }
 
-    // Check current status
+    final composeFile = File(
+      '${config.projectPath}/${container.composeFile}',
+    );
+
+    if (!await composeFile.exists()) {
+      Console.error('Compose file not found: ${container.composeFile}');
+      exit(1);
+    }
+
+    try {
+      final content = await composeFile.readAsString();
+      final yaml = loadYaml(content) as YamlMap;
+      final services = yaml['services'] as YamlMap?;
+
+      if (services == null || services.isEmpty) {
+        Console.error('No services defined in compose file');
+        exit(1);
+      }
+
+      final serviceNames = services.keys.cast<String>().toList();
+      Console.success(
+        'Found ${serviceNames.length} services: '
+        '${serviceNames.join(', ')}',
+      );
+
+      return serviceNames;
+    } catch (e) {
+      Console.error('Failed to parse compose file: $e');
+      exit(1);
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // STEP 4: ENVIRONMENT RESOLUTION
+  // ---------------------------------------------------------------------------
+
+  /// Resolve environment variables from env file or OpenBao
+  /// Priority: CLI --env-file > config env_file_path > OpenBao > Exception
+  Future<void> _resolveEnvironment(
+    DeployConfig config,
+    String? cliEnvFilePath,
+  ) async {
+    Console.header('Resolving Environment Variables');
+
+    // Priority 1: CLI provided env file path
+    if (cliEnvFilePath != null) {
+      await _validateEnvFile(cliEnvFilePath, config.projectPath);
+      return;
+    }
+
+    // Priority 2: Config provided env file path
+    if (config.envFilePath != null) {
+      await _validateEnvFile(config.envFilePath!, config.projectPath);
+      return;
+    }
+
+    // Priority 3: Fallback to OpenBao
+    if (config.openbao != null) {
+      Console.info('No env file specified, attempting OpenBao...');
+      await _fetchSecretsFromOpenBao(config);
+      return;
+    }
+
+    // No environment source available - throw exception
+    Console.error(
+      'No environment configuration found!\n'
+      'Please provide one of:\n'
+      '  1. --env-file <path> argument\n'
+      '  2. env_file_path in config file\n'
+      '  3. openbao configuration in config file',
+    );
+    exit(1);
+  }
+
+  /// Validate that env file exists and is readable
+  Future<void> _validateEnvFile(String envPath, String projectPath) async {
+    // Handle relative paths
+    final fullPath = envPath.startsWith('/')
+        ? envPath
+        : '$projectPath/$envPath';
+
+    final envFile = File(fullPath);
+
+    if (!await envFile.exists()) {
+      Console.error('Environment file not found: $fullPath');
+
+      // Check for .env.example as helper
+      final exampleFile = File('$projectPath/.env.example');
+      if (await exampleFile.exists()) {
+        Console.info(
+          'Found .env.example - you can copy it to create your env file',
+        );
+      }
+
+      exit(1);
+    }
+
+    // Validate file is not empty
+    final content = await envFile.readAsString();
+    if (content.trim().isEmpty) {
+      Console.error('Environment file is empty: $fullPath');
+      exit(1);
+    }
+
+    Console.success('Environment file validated: $envPath');
+  }
+
+  /// Fetch secrets from OpenBao and write to .env file
+  Future<void> _fetchSecretsFromOpenBao(DeployConfig config) async {
+    final environment = config.environment;
+    if (environment == null) {
+      Console.error('Environment not found');
+      exit(1);
+    }
+    final envConfig = config.openbao!.getEnvConfig(environment);
+
+    // Check if OpenBao has config for this environment
+    if (envConfig == null) {
+      Console.error(
+        'No OpenBao configuration for ${environment.name} environment.\n'
+        'Please provide an env file or configure OpenBao for this environment.',
+      );
+      exit(1);
+    }
+
+    final openbao = OpenBaoService(
+      address: config.openbao!.address,
+      config: config.openbao,
+      environment: environment,
+    );
+
+    // Check OpenBao health
+    if (!await openbao.checkHealth()) {
+      Console.error(
+        'OpenBao is not reachable at ${config.openbao!.address}.\n'
+        'Please provide an env file or ensure OpenBao is running.',
+      );
+      exit(1);
+    }
+
+    // Create token
+    Console.info('Authenticating with OpenBao for ${environment.name}...');
+    if (!await openbao.createToken()) {
+      Console.error(
+        'Failed to authenticate with OpenBao.\n'
+        'Please check your credentials or provide an env file.',
+      );
+      exit(1);
+    }
+
+    // Fetch and write secrets
+    try {
+      final envPath = '${config.projectPath}/.env';
+      await openbao.writeEnvFile(envConfig.secretPath, envPath);
+      Console.success('Secrets fetched from OpenBao and written to .env');
+    } catch (e) {
+      Console.error(
+        'Failed to fetch secrets from OpenBao: $e\n'
+        'Please provide an env file manually.',
+      );
+      exit(1);
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // STEP 5: SERVICE STATUS CHECK
+  // ---------------------------------------------------------------------------
+
+  /// Check current status of all services
+  Future<Map<String, ContainerInfo>> _checkServiceStatus(
+    ContainerService containerService,
+  ) async {
     Console.header('Checking Service Status');
+
     final statuses = await containerService.getAllServicesStatus();
 
     for (final entry in statuses.entries) {
@@ -116,195 +467,199 @@ class DeployLocalCommand extends Command<void> {
       Console.keyValue(entry.key, statusStr);
     }
 
-    // Handle existing services
-    final hasRunning = statuses.values.any(
-      (s) => s.status == ContainerStatus.running,
-    );
-    final hasStopped = statuses.values.any(
-      (s) => s.status == ContainerStatus.stopped,
-    );
-    final hasAny = statuses.values.any(
+    return statuses;
+  }
+
+  // ---------------------------------------------------------------------------
+  // STEP 6: DEPLOYMENT EXECUTION
+  // ---------------------------------------------------------------------------
+
+  /// Execute deployment based on strategy and current state
+  Future<void> _executeDeployment({
+    required ContainerService containerService,
+    required List<String> availableServices,
+    required Map<String, ContainerInfo> statuses,
+    required LocalDeployOptions options,
+  }) async {
+    final hasExisting = statuses.values.any(
       (s) => s.status != ContainerStatus.notFound,
     );
 
-    if (hasAny && !force) {
+    // If services exist and not forcing, show interactive menu
+    if (hasExisting && !options.forceRecreate) {
       await _handleExistingServices(
-        containerService,
-        statuses,
-        hasRunning,
-        hasStopped,
-        build,
+        containerService: containerService,
+        availableServices: availableServices,
+        statuses: statuses,
+        options: options,
       );
       return;
     }
 
-    // Deploy
-    await _deploy(containerService, service, build, force);
-  }
-
-  Future<void> _fetchSecrets(DeployConfig config) async {
-    Console.header('Fetching Secrets from OpenBao');
-
-    final environment = config.environment;
-    final envConfig = config.openbao!.getEnvConfig(environment);
-    if (envConfig == null) {
-      Console.warning(
-        'No OpenBao configuration for ${environment.name} environment',
-      );
-      if (!Console.confirm('Continue without secrets?')) {
-        exit(1);
-      }
-      return;
-    }
-
-    final openbao = OpenBaoService(
-      address: config.openbao!.address,
-      namespace: config.openbao!.namespace,
-      config: config.openbao,
-      environment: environment,
+    // Fresh deployment or force recreate
+    await _deployServices(
+      containerService: containerService,
+      availableServices: availableServices,
+      options: options,
     );
-
-    if (!await openbao.checkHealth()) {
-      Console.warning('OpenBao is not reachable at ${config.openbao!.address}');
-      if (!Console.confirm('Continue without secrets?')) {
-        exit(1);
-      }
-      return;
-    }
-
-    Console.info('Creating token for ${environment.name}...');
-    if (!await openbao.createToken()) {
-      Console.warning('Failed to create token for ${environment.name}');
-      if (!Console.confirm('Continue without secrets?')) {
-        exit(1);
-      }
-      return;
-    }
-
-    try {
-      final envPath = config.envFilePath ?? '.env';
-      await openbao.writeEnvFile(envConfig.secretPath, envPath);
-    } catch (e) {
-      Console.error('Failed to fetch secrets: $e');
-      if (!Console.confirm('Continue without secrets?')) {
-        exit(1);
-      }
-    }
   }
 
-  Future<void> _checkEnvFile(DeployConfig config) async {
-    final envPath = config.envFilePath ?? '.env';
-    final envFile = File(envPath);
-
-    if (!await envFile.exists()) {
-      Console.warning('.env file not found');
-
-      final exampleFile = File('.env.example');
-      if (await exampleFile.exists()) {
-        if (Console.confirm('Create .env from .env.example?')) {
-          await exampleFile.copy(envPath);
-          Console.success('.env created from .env.example');
-          Console.warning('Please update the values in .env before deploying');
-        }
-      }
-    } else {
-      Console.success('.env file found');
-    }
-  }
-
-  Future<void> _handleExistingServices(
-    ContainerService containerService,
-    Map<String, ContainerInfo> statuses,
-    bool hasRunning,
-    bool hasStopped,
-    bool build,
-  ) async {
+  /// Handle case when services already exist
+  Future<void> _handleExistingServices({
+    required ContainerService containerService,
+    required List<String> availableServices,
+    required Map<String, ContainerInfo> statuses,
+    required LocalDeployOptions options,
+  }) async {
     Console.header('Services Already Exist');
 
-    final options = <String>[
-      'Start stopped services (without rebuilding)',
-      'Rebuild backend only (keep PostgreSQL and data)',
-      'Rebuild backend and remove its volume',
-      'Remove everything (all containers + volumes)',
-      'Cancel and exit',
+    // Build dynamic menu based on available services
+    final menuOptions = <String>[
+      'Start stopped services (no rebuild)',
+      'Rebuild all services',
+      if (availableServices.contains('backend-cloud') ||
+          containerService.config.services.containsKey('backend'))
+        'Rebuild backend only (keep database)',
+      'Remove all containers and volumes (clean start)',
+      'Cancel',
     ];
 
-    final choice = Console.menu('What would you like to do?', options);
+    final choice = Console.menu('Select action:', menuOptions);
 
-    switch (choice) {
-      case 0:
-        Console.info('Starting stopped services...');
-        await containerService.startServices();
-        await _waitForServices(containerService);
-        break;
+    // Handle null or invalid choice
+    if (choice == null || choice < 0 || choice >= menuOptions.length) {
+      Console.info('Cancelled');
+      return;
+    }
 
-      case 1:
-        Console.info('Rebuilding backend only...');
-        final backendName = containerService.config.services['backend'];
-        if (backendName != null) {
-          await containerService.removeContainer(backendName);
-          await containerService.removeImage(backendName);
-        }
-        await containerService.startService('backend-cloud', build: true);
-        await containerService.pruneImages();
-        await _waitForServices(containerService);
-        break;
+    final selectedOption = menuOptions[choice];
 
-      case 2:
-        Console.info('Rebuilding backend and removing volume...');
-        final backendName = containerService.config.services['backend'];
-        if (backendName != null) {
-          await containerService.removeContainer(backendName);
-          await containerService.removeImage(backendName);
-        }
-        // Remove volume
-        await Process.run(
-          containerService.config.containerCommand.split(' ').last,
-          [
-            'volume',
-            'rm',
-            '${containerService.config.projectName}_backend_functions_data',
-          ],
-          runInShell: true,
-        );
-        await containerService.startService('backend-cloud', build: true);
-        await _waitForServices(containerService);
-        break;
-
-      case 3:
-        Console.warning('This will remove all data!');
-        if (Console.confirm('Are you sure?')) {
-          await containerService.removeVolumes();
-          await containerService.pruneImages();
-          Console.success('All services and volumes removed');
-        }
-        break;
-
-      case 4:
-      default:
-        Console.info('Cancelled');
-        return;
+    if (selectedOption.contains('Start stopped')) {
+      await _startStoppedServices(containerService);
+    } else if (selectedOption.contains('Rebuild all')) {
+      await _deployServices(
+        containerService: containerService,
+        availableServices: availableServices,
+        options: LocalDeployOptions(
+          configPath: options.configPath,
+          rebuildStrategy: RebuildStrategy.all, // Force rebuild all
+          forceRecreate: true,
+        ),
+      );
+    } else if (selectedOption.contains('Rebuild backend')) {
+      await _rebuildBackendOnly(containerService);
+    } else if (selectedOption.contains('Remove all')) {
+      await _cleanAll(containerService);
+    } else {
+      Console.info('Cancelled');
+      return;
     }
   }
 
-  Future<void> _deploy(
-    ContainerService containerService,
-    String? service,
-    bool build,
-    bool force,
-  ) async {
-    Console.header('Starting Services');
+  /// Start stopped services without rebuilding
+  Future<void> _startStoppedServices(ContainerService containerService) async {
+    Console.info('Starting stopped services...');
+    await containerService.startServices();
+    await _waitForServices(containerService);
+  }
+
+  /// Rebuild only the backend service
+  Future<void> _rebuildBackendOnly(ContainerService containerService) async {
+    Console.info('Rebuilding backend only...');
+
+    final backendName =
+        containerService.config.services['backend'] ?? 'backend-cloud';
+
+    // Stop and remove backend container
+    await containerService.removeContainer(backendName);
+    await containerService.removeImage(backendName);
+
+    // Rebuild and start backend
+    await containerService.startService(backendName, build: true);
+    await containerService.pruneImages();
+    await _waitForServices(containerService);
+  }
+
+  /// Remove all containers and volumes
+  Future<void> _cleanAll(ContainerService containerService) async {
+    Console.warning('This will remove ALL data including database!');
+
+    if (!Console.confirm('Are you absolutely sure?')) {
+      Console.info('Cancelled');
+      return;
+    }
+
+    Console.info('Removing all containers and volumes...');
+    await containerService.removeVolumes();
+    await containerService.pruneImages();
+    Console.success('All services and volumes removed');
+  }
+
+  /// Deploy services based on rebuild strategy
+  Future<void> _deployServices({
+    required ContainerService containerService,
+    required List<String> availableServices,
+    required LocalDeployOptions options,
+  }) async {
+    Console.header('Starting Deployment');
+
+    // Resolve rebuild strategy: CLI > Config > Default
+    final rebuildStrategy =
+        options.rebuildStrategy ??
+        _parseRebuildStrategyFromConfig(
+          containerService.config.rebuildStrategy,
+        );
 
     bool success;
-    if (service != null) {
-      Console.info('Deploying service: $service');
-      success = await containerService.startService(service, build: build);
-    } else {
-      Console.info('Deploying all services...');
-      success = await containerService.startServices(
-        build: build,
-        forceRecreate: force,
+
+    // Handle specific service target
+    if (options.targetService != null) {
+      if (!availableServices.contains(options.targetService)) {
+        Console.error(
+          'Service "${options.targetService}" not found in compose file.\n'
+          'Available services: ${availableServices.join(', ')}',
+        );
+        exit(1);
+      }
+
+      Console.info('Deploying service: ${options.targetService}');
+      success = await containerService.startService(
+        options.targetService!,
+        build: rebuildStrategy != RebuildStrategy.none,
       );
+    } else {
+      // Deploy based on rebuild strategy
+      switch (rebuildStrategy) {
+        case RebuildStrategy.all:
+          Console.info('Deploying all services with rebuild...');
+          success = await containerService.startServices(
+            build: true,
+            forceRecreate: options.forceRecreate,
+          );
+
+        case RebuildStrategy.backendOnly:
+          Console.info('Deploying with backend rebuild only...');
+          // Start database first without rebuild
+          final dbService =
+              containerService.config.services['postgres'] ?? 'postgres';
+          if (availableServices.contains(dbService)) {
+            await containerService.startService(dbService, build: false);
+          }
+          // Then rebuild backend
+          final backendService =
+              containerService.config.services['backend'] ?? 'backend-cloud';
+          success = await containerService.startService(
+            backendService,
+            build: true,
+          );
+
+        case RebuildStrategy.none:
+          Console.info('Starting services without rebuild...');
+          success = await containerService.startServices(
+            build: false,
+            forceRecreate: options.forceRecreate,
+          );
+      }
     }
 
     if (!success) {
@@ -316,33 +671,63 @@ class DeployLocalCommand extends Command<void> {
     await _waitForServices(containerService);
   }
 
+  /// Parse rebuild strategy from config string value
+  RebuildStrategy _parseRebuildStrategyFromConfig(String configValue) {
+    return switch (configValue) {
+      'all' => RebuildStrategy.all,
+      'backend-only' => RebuildStrategy.backendOnly,
+      'none' => RebuildStrategy.none,
+      _ => RebuildStrategy.all, // Default fallback
+    };
+  }
+
+  // ---------------------------------------------------------------------------
+  // SERVICE HEALTH CHECKS
+  // ---------------------------------------------------------------------------
+
+  /// Wait for all services to be healthy
   Future<void> _waitForServices(ContainerService containerService) async {
     Console.info('Waiting for services to be ready...');
     await Future.delayed(const Duration(seconds: 5));
 
-    // Wait for PostgreSQL
-    final postgresReady = await containerService.waitForPostgres('postgres');
-    if (!postgresReady) {
-      Console.error('PostgreSQL failed to start');
-      final logs = await containerService.getLogs('postgres', lines: 50);
-      Console.info('PostgreSQL logs:\n$logs');
-      exit(1);
+    // Wait for PostgreSQL if it exists in config
+    if (containerService.config.services.containsKey('postgres')) {
+      final postgresService = containerService.config.services['postgres']!;
+      final postgresReady = await containerService.waitForPostgres(
+        postgresService,
+      );
+
+      if (!postgresReady) {
+        Console.error('PostgreSQL failed to start');
+        final logs = await containerService.getLogs(postgresService, lines: 50);
+        Console.info('PostgreSQL logs:\n$logs');
+        exit(1);
+      }
     }
 
-    // Wait for backend
-    final backendReady = await containerService.waitForBackend(
-      'http://localhost:8080/health',
-    );
-    if (!backendReady) {
-      Console.error('Backend failed to start');
-      final logs = await containerService.getLogs('backend-cloud', lines: 50);
-      Console.info('Backend logs:\n$logs');
-      exit(1);
+    // Wait for backend if it exists in config
+    if (containerService.config.services.containsKey('backend')) {
+      final backendReady = await containerService.waitForBackend(
+        'http://localhost:8080/health',
+      );
+
+      if (!backendReady) {
+        Console.error('Backend failed to start');
+        final backendService = containerService.config.services['backend']!;
+        final logs = await containerService.getLogs(backendService, lines: 50);
+        Console.info('Backend logs:\n$logs');
+        exit(1);
+      }
     }
 
     _printSuccess(containerService);
   }
 
+  // ---------------------------------------------------------------------------
+  // SUCCESS OUTPUT
+  // ---------------------------------------------------------------------------
+
+  /// Print deployment success message with useful commands
   void _printSuccess(ContainerService containerService) {
     Console.header('Deployment Complete!');
 
