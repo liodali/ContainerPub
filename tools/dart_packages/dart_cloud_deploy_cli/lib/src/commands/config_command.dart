@@ -4,6 +4,8 @@ import 'package:path/path.dart' as p;
 import 'package:yaml/yaml.dart';
 import 'package:toml/toml.dart';
 import '../utils/console.dart';
+import '../utils/workspace_detector.dart';
+import '../utils/config_manager.dart';
 
 class ConfigCommand extends Command<void> {
   @override
@@ -31,161 +33,192 @@ class _ConfigInitCommand extends Command<void> {
       ..addOption(
         'format',
         abbr: 'f',
-        help: 'Configuration file format',
+        help: 'Configuration file format (only used when creating new config)',
         allowed: ['yaml', 'toml'],
         defaultsTo: 'yaml',
+      )
+      ..addFlag(
+        'workspace',
+        abbr: 'w',
+        help: 'Store config in .dart_tool/ of Dart project',
+        defaultsTo: true,
       )
       ..addOption(
         'output',
         abbr: 'o',
-        help: 'Output file path',
-        defaultsTo: 'deploy.yaml',
+        help: 'Output file path (overrides workspace detection)',
       )
       ..addOption(
         'environment',
         abbr: 'e',
         help: 'Target environment',
-        allowed: ['local', 'dev', 'production'],
+        allowed: ['local', 'staging', 'production'],
         defaultsTo: 'local',
+      )
+      ..addOption(
+        'name',
+        abbr: 'n',
+        help: 'Project name',
+      )
+      ..addOption(
+        'openbao-address',
+        help: 'OpenBao server address',
+      )
+      ..addOption(
+        'openbao-secret-path',
+        help: 'OpenBao secret path',
+      )
+      ..addOption(
+        'openbao-role-id',
+        help: 'OpenBao AppRole role ID',
+      )
+      ..addOption(
+        'openbao-role-name',
+        help: 'OpenBao AppRole role name',
       );
   }
 
   @override
   Future<void> run() async {
     final format = argResults!['format'] as String;
-    var output = argResults!['output'] as String;
+    final useWorkspace = argResults!['workspace'] as bool;
+    final outputOverride = argResults!['output'] as String?;
     final environment = argResults!['environment'] as String;
-
-    if (format == 'toml' && output == 'deploy.yaml') {
-      output = 'deploy.toml';
-    }
+    final projectName = argResults!['name'] as String?;
+    final openbaoAddress = argResults!['openbao-address'] as String?;
+    final openbaoSecretPath = argResults!['openbao-secret-path'] as String?;
+    final openbaoRoleId = argResults!['openbao-role-id'] as String?;
+    final openbaoRoleName = argResults!['openbao-role-name'] as String?;
 
     Console.header('Initializing Deployment Configuration');
 
-    final file = File(output);
-    if (await file.exists()) {
-      if (!Console.confirm('File $output already exists. Overwrite?')) {
-        Console.info('Cancelled');
+    // Detect workspace
+    final workspace = await WorkspaceDetector.detectWorkspace();
+
+    // Determine config path based on format
+    final extension = format == 'toml' ? '.toml' : '.yaml';
+
+    // Determine config path
+    String configPath;
+    if (outputOverride != null) {
+      configPath = outputOverride;
+    } else if (useWorkspace && workspace.isDartProject) {
+      // Use workspace path but with correct extension
+      configPath = workspace.configPath.replaceAll('.yaml', extension);
+      Console.info('Detected ${workspace.description}: ${workspace.path}');
+      Console.info('Config will be stored in: $configPath');
+    } else {
+      configPath = 'deploy$extension';
+    }
+
+    final configManager = ConfigManager(
+      WorkspaceInfo(
+        path: workspace.path,
+        isDartProject: workspace.isDartProject,
+        configPath: configPath,
+      ),
+    );
+
+    // Check if config exists
+    if (configManager.configExists) {
+      // Config exists - check if we should add environment section
+      final hasEnv = await configManager.hasEnvironmentSection(environment);
+      if (hasEnv) {
+        Console.success('Config already exists with $environment environment');
+        Console.info('Skipping - no changes needed');
         return;
       }
+
+      // Add environment section only
+      Console.info('Config exists, adding $environment environment section...');
+      final envConfig = _buildEnvironmentConfig(environment);
+      final added = await configManager.addEnvironmentSection(
+        environment: environment,
+        envConfig: envConfig,
+      );
+
+      if (added) {
+        Console.success('Added $environment environment to: $configPath');
+      } else {
+        Console.info('Environment section already exists, skipped');
+      }
+      return;
     }
 
-    String content;
-    if (format == 'yaml') {
-      content = _generateYamlConfig(environment);
-    } else {
-      content = _generateTomlConfig(environment);
+    // Create new config
+    Console.info('Creating new configuration...');
+
+    // Ensure .dart_tool exists for Dart projects
+    if (workspace.isDartProject) {
+      await WorkspaceDetector.ensureDartToolExists(workspace.path);
     }
 
-    await file.writeAsString(content);
-    Console.success('Configuration file created: $output');
-    Console.info('Edit the file to configure your deployment settings');
+    // Determine project name
+    final name = projectName ?? p.basename(workspace.path);
+
+    // Generate OpenBao config with defaults for missing values
+    final openbaoConfig = ConfigManager.generateOpenBaoDefaults(
+      address: openbaoAddress,
+      secretPath: openbaoSecretPath,
+      roleId: openbaoRoleId,
+      roleName: openbaoRoleName,
+    );
+
+    // Generate container config
+    final containerConfig = ConfigManager.generateContainerDefaults(
+      projectName: name,
+    );
+
+    // Create config
+    await configManager.createConfig(
+      name: name,
+      environment: environment,
+      format: format,
+      openbao: openbaoConfig,
+      container: containerConfig,
+      host: environment != 'local' ? _buildHostDefaults() : null,
+      ansible: environment != 'local' ? _buildAnsibleDefaults() : null,
+    );
+
+    Console.success('Configuration file created: $configPath');
+    Console.info('');
+    Console.info('Next steps:');
+    Console.step('  1. Edit $configPath to configure OpenBao credentials');
+    Console.step('  2. Run: dart_cloud_deploy deploy-local');
   }
 
-  String _generateYamlConfig(String environment) {
-    return '''
-# Dart Cloud Deployment Configuration
-# Environment: $environment
+  Map<String, dynamic> _buildEnvironmentConfig(String environment) {
+    final config = <String, dynamic>{
+      'env_file_path': '.env',
+      'container': ConfigManager.generateContainerDefaults(),
+    };
 
-name: dart_cloud_backend
-environment: $environment
-project_path: .
+    if (environment != 'local') {
+      config['host'] = _buildHostDefaults();
+      config['ansible'] = _buildAnsibleDefaults();
+    }
 
-# Environment file path (will be generated from OpenBao secrets)
-env_file_path: .env
-
-# OpenBao Configuration (for secrets management)
-openbao:
-  address: http://localhost:8200
-  # token: hvs.xxxxx  # Or use token_path
-  token_path: ~/.openbao/token
-  secret_path: secret/data/dart_cloud/$environment
-  # namespace: admin  # Optional namespace
-
-# Container Configuration
-container:
-  runtime: podman  # or docker
-  compose_file: docker-compose.yml
-  project_name: dart_cloud
-  network_name: dart_cloud_network
-  services:
-    backend: dart_cloud_backend
-    postgres: dart_cloud_postgres
-
-${environment != 'local' ? '''
-# Host Configuration (for remote deployments)
-host:
-  host: your-server.example.com
-  port: 22
-  user: deploy
-  ssh_key_path: ~/.ssh/id_rsa
-  # password: xxx  # Not recommended, use SSH keys
-
-# Ansible Configuration
-ansible:
-  # inventory_path: inventory.ini  # Optional, will generate temp inventory
-  backend_playbook: playbooks/backend.yml
-  database_playbook: playbooks/database.yml
-  backup_playbook: playbooks/backup.yml
-  extra_vars:
-    deploy_user: deploy
-    app_dir: /opt/dart_cloud
-''' : '''
-# Host configuration not needed for local deployment
-# host: {}
-
-# Ansible not needed for local deployment
-# ansible: {}
-'''}
-''';
+    return config;
   }
 
-  String _generateTomlConfig(String environment) {
-    return '''
-# Dart Cloud Deployment Configuration
-# Environment: $environment
+  Map<String, dynamic> _buildHostDefaults() {
+    return {
+      'host': 'your-server.example.com',
+      'port': 22,
+      'user': 'deploy',
+      'ssh_key_path': '~/.ssh/id_rsa',
+    };
+  }
 
-name = "dart_cloud_backend"
-environment = "$environment"
-project_path = "."
-env_file_path = ".env"
-
-[openbao]
-address = "http://localhost:8200"
-# token = "hvs.xxxxx"
-token_path = "~/.openbao/token"
-secret_path = "secret/data/dart_cloud/$environment"
-# namespace = "admin"
-
-[container]
-runtime = "podman"
-compose_file = "docker-compose.yml"
-project_name = "dart_cloud"
-network_name = "dart_cloud_network"
-
-[container.services]
-backend = "dart_cloud_backend"
-postgres = "dart_cloud_postgres"
-
-${environment != 'local' ? '''
-[host]
-host = "your-server.example.com"
-port = 22
-user = "deploy"
-ssh_key_path = "~/.ssh/id_rsa"
-
-[ansible]
-backend_playbook = "playbooks/backend.yml"
-database_playbook = "playbooks/database.yml"
-backup_playbook = "playbooks/backup.yml"
-
-[ansible.extra_vars]
-deploy_user = "deploy"
-app_dir = "/opt/dart_cloud"
-''' : '''
-# Host and Ansible not needed for local deployment
-'''}
-''';
+  Map<String, dynamic> _buildAnsibleDefaults() {
+    return {
+      'backend_playbook': 'playbooks/backend.yml',
+      'database_playbook': 'playbooks/database.yml',
+      'extra_vars': {
+        'deploy_user': 'deploy',
+        'app_dir': '/opt/dart_cloud',
+      },
+    };
   }
 }
 
