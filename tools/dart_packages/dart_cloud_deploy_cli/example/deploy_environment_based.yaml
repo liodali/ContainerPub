@@ -1,0 +1,99 @@
+name: dart_cloud_deploy
+project_path: /path/to/dart_cloud_backend
+
+# OpenBao configuration (shared across environments)
+openbao:
+  address: http://localhost:8200
+  namespace: admin
+  local:
+    token_manager: auth/approle/login
+    policy: dart-cloud-local
+    secret_path: secret/data/dart-cloud/local
+    role_id: local-role-id
+    role_name: dart-cloud-local
+  staging:
+    token_manager: auth/approle/login
+    policy: dart-cloud-staging
+    secret_path: secret/data/dart-cloud/staging
+    role_id: staging-role-id
+    role_name: dart-cloud-staging
+  production:
+    token_manager: auth/approle/login
+    policy: dart-cloud-production
+    secret_path: secret/data/dart-cloud/production
+    role_id: production-role-id
+    role_name: dart-cloud-production
+
+# Registry configuration (shared across environments)
+registry:
+  url: ghcr.io
+  username: myuser
+  token_base64: base64_encoded_token_here
+
+# Local environment configuration
+local:
+  container:
+    runtime: podman
+    compose_file: deployment/infrastructure/local/docker-compose.yml
+    project_name: dart_cloud_local
+    network_name: dart_cloud_local_network
+    services:
+      backend: dart_cloud_backend
+      postgres: postgres
+    rebuild_strategy: all
+  env_file_path: .env.local
+
+# Staging environment configuration
+staging:
+  container:
+    runtime: podman
+    compose_file: deployment/infrastructure/staging/docker-compose.yml
+    project_name: dart_cloud_staging
+    network_name: dart_cloud_staging_network
+    services:
+      backend: dart_cloud_backend
+      postgres: postgres
+    rebuild_strategy: changed
+  host:
+    host: staging.example.com
+    port: 22
+    user: deploy
+    ssh_key_path: ~/.ssh/staging_deploy_key
+  env_file_path: .env.staging
+  ansible:
+    inventory_path: deployment/ansible/inventory/staging.yml
+    backend_playbook: deployment/ansible/playbooks/backend.yml
+    database_playbook: deployment/ansible/playbooks/database.yml
+    backup_playbook: deployment/ansible/playbooks/backup.yml
+    extra_vars:
+      environment: staging
+      enable_monitoring: true
+
+# Production environment configuration
+production:
+  container:
+    runtime: docker
+    compose_file: deployment/infrastructure/production/docker-compose.yml
+    project_name: dart_cloud_prod
+    network_name: dart_cloud_prod_network
+    services:
+      backend: dart_cloud_backend
+      postgres: postgres
+      redis: redis
+    rebuild_strategy: changed
+  host:
+    host: prod.example.com
+    port: 22
+    user: deploy
+    ssh_key_path: ~/.ssh/prod_deploy_key
+  env_file_path: .env.production
+  ansible:
+    inventory_path: deployment/ansible/inventory/production.yml
+    backend_playbook: deployment/ansible/playbooks/backend.yml
+    database_playbook: deployment/ansible/playbooks/database.yml
+    backup_playbook: deployment/ansible/playbooks/backup.yml
+    extra_vars:
+      environment: production
+      enable_monitoring: true
+      enable_alerting: true
+      backup_retention_days: 30

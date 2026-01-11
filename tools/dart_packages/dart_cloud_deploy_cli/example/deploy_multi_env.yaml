@@ -1,0 +1,146 @@
+# =============================================================================
+# DART CLOUD MULTI-ENVIRONMENT CONFIGURATION
+# =============================================================================
+# This example demonstrates environment-specific container configurations.
+# Each environment (local, staging, production) can have its own settings.
+#
+# ENVIRONMENT RESOLUTION:
+#   1. Environment-specific config (local_container, staging_container, etc.)
+#   2. Base container config (fallback)
+#   3. Error if neither exists
+#
+# USAGE:
+#   # Local deployment
+#   dart_cloud_deploy deploy-local -c deploy_multi_env.yaml
+#
+#   # Change environment in config and redeploy
+#   # environment: staging  # Uses staging_container
+#   # environment: production  # Uses production_container
+# =============================================================================
+
+name: dart_cloud_multi_env
+environment: local # Change this to: local, staging, or production
+project_path: .
+
+# -----------------------------------------------------------------------------
+# BASE CONTAINER CONFIGURATION (FALLBACK)
+# -----------------------------------------------------------------------------
+# This is used when no environment-specific config is found.
+# Optional if all environments have specific configs.
+container:
+  runtime: podman
+  compose_file: docker-compose.yml
+  project_name: dart_cloud
+  network_name: dart_cloud_network
+  rebuild_strategy: all
+  services:
+    backend: backend-cloud
+    postgres: postgres
+
+# -----------------------------------------------------------------------------
+# LOCAL ENVIRONMENT CONTAINER CONFIGURATION
+# -----------------------------------------------------------------------------
+# Used when environment: local
+local_container:
+  runtime: podman # Use podman for local dev
+  compose_file: docker-compose.yml
+  project_name: dart_cloud_local # Separate namespace for local
+  network_name: dart_cloud_local_net
+  rebuild_strategy: backend-only # Faster local rebuilds
+  services:
+    backend: backend-cloud
+    postgres: postgres
+
+# -----------------------------------------------------------------------------
+# STAGING ENVIRONMENT CONTAINER CONFIGURATION
+# -----------------------------------------------------------------------------
+# Used when environment: staging
+staging_container:
+  runtime: docker # Use docker in staging
+  compose_file: docker-compose.staging.yml
+  project_name: dart_cloud_staging
+  network_name: dart_cloud_staging_net
+  rebuild_strategy: all # Full rebuild in staging
+  services:
+    backend: backend-cloud
+    postgres: postgres
+    redis: redis # Additional services in staging
+
+# -----------------------------------------------------------------------------
+# PRODUCTION ENVIRONMENT CONTAINER CONFIGURATION
+# -----------------------------------------------------------------------------
+# Used when environment: production
+production_container:
+  runtime: docker # Use docker in production
+  compose_file: docker-compose.prod.yml
+  project_name: dart_cloud_prod
+  network_name: dart_cloud_prod_net
+  rebuild_strategy: none # No rebuild in prod (use registry)
+  services:
+    backend: backend-cloud
+    postgres: postgres
+    redis: redis
+    nginx: nginx # Load balancer in production
+
+# -----------------------------------------------------------------------------
+# ENVIRONMENT FILES (OPTIONAL)
+# -----------------------------------------------------------------------------
+# You can also specify different env files per environment
+env_file_path: .env.local # Override with .env.staging, .env.prod
+
+# -----------------------------------------------------------------------------
+# HOST CONFIGURATION (for remote deployment)
+# -----------------------------------------------------------------------------
+host:
+  host: your-server.example.com
+  port: 22
+  user: deploy
+  ssh_key_path: ~/.ssh/id_rsa
+
+# -----------------------------------------------------------------------------
+# CONTAINER REGISTRY (optional)
+# -----------------------------------------------------------------------------
+registry:
+  url: registry.example.com
+  username: deploy-user
+  token_base64: eW91ci10b2tlbi1oZXJl
+
+# -----------------------------------------------------------------------------
+# ANSIBLE CONFIGURATION (for remote deployment)
+# -----------------------------------------------------------------------------
+ansible:
+  backend_playbook: playbooks/backend.yml
+  database_playbook: playbooks/database.yml
+  backup_playbook: playbooks/backup.yml
+  extra_vars:
+    app_dir: /opt/dart_cloud
+    data_dir: /var/lib/dart_cloud/postgres
+    backup_dir: /var/backups/dart_cloud
+    postgres_user: dart_cloud
+    postgres_db: dart_cloud
+    backup_retention_days: 7
+
+# -----------------------------------------------------------------------------
+# OPENBAO CONFIGURATION (FALLBACK for secrets)
+# -----------------------------------------------------------------------------
+openbao:
+  address: https://openbao.example.com:8200
+  namespace: dart_cloud
+  local:
+    token_manager: auth/approle
+    policy: dart_cloud_local
+    secret_path: secret/data/dart_cloud/local
+    role_id: local-role-id
+    role_name: dart_cloud_local
+  staging:
+    token_manager: auth/approle
+    policy: dart_cloud_staging
+    secret_path: secret/data/dart_cloud/staging
+    role_id: staging-role-id
+    role_name: dart_cloud_staging
+  production:
+    token_manager: auth/approle
+    policy: dart_cloud_production
+    secret_path: secret/data/dart_cloud/production
+    role_id: production-role-id
+    role_name: dart_cloud_production

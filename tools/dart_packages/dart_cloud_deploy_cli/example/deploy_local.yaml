@@ -1,0 +1,39 @@
+# =============================================================================
+# DART CLOUD LOCAL DEPLOYMENT - SIMPLE CONFIGURATION
+# =============================================================================
+# Minimal configuration for local development using env file.
+# No OpenBao required - just provide your .env file.
+#
+# USAGE:
+#   dart_cloud_deploy deploy-local -c deploy_local.yaml
+#   dart_cloud_deploy deploy-local -c deploy_local.yaml --rebuild backend-only
+#   dart_cloud_deploy deploy-local -c deploy_local.yaml --rebuild none
+# =============================================================================
+
+name: dart_cloud_local
+environment: local
+project_path: .
+
+# Environment file - REQUIRED for local deployment without OpenBao
+# Create this file with your environment variables
+env_file_path: .env
+
+# -----------------------------------------------------------------------------
+# CONTAINER CONFIGURATION (LOCAL ENVIRONMENT)
+# -----------------------------------------------------------------------------
+# This configuration is specific to the local environment.
+# You can define environment-specific configs using:
+#   - local_container: for local environment
+#   - staging_container: for staging environment
+#   - production_container: for production environment
+#   - container: as fallback for all environments
+# -----------------------------------------------------------------------------
+local_container:
+  runtime: podman # podman or docker
+  compose_file: docker-compose.yml
+  project_name: dart_cloud_local # Local-specific project name
+  network_name: dart_cloud_network
+  rebuild_strategy: all # all, backend-only, none (default: all)
+  services:
+    backend: backend-cloud
+    postgres: postgres
