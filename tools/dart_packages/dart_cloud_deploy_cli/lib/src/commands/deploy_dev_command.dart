@@ -21,8 +21,10 @@ class DeployDevCommand extends Command<void> {
       ..addOption(
         'config',
         abbr: 'c',
-        help: 'Configuration file path',
-        defaultsTo: 'deploy.yaml',
+        help:
+            'Path to deployment configuration file (yaml/toml). '
+            'Defaults to ~/.dart-cloud-deploy/deploy_config.yml or '
+            '.dart_tool/deploy_config.yml',
       )
       ..addOption(
         'target',
@@ -58,7 +60,7 @@ class DeployDevCommand extends Command<void> {
 
   @override
   Future<void> run() async {
-    final configPathArg = argResults!['config'] as String;
+    final configPathArg = argResults!['config'] as String?;
     final target = argResults!['target'] as String;
     final skipSecrets = argResults!['skip-secrets'] as bool;
     final verbose = argResults!['verbose'] as bool;
@@ -69,13 +71,24 @@ class DeployDevCommand extends Command<void> {
 
     Console.header('Dart Cloud Dev Deployment');
 
-    // Resolve config path - check workspace first if default
-    String configPath = configPathArg;
-    if (configPathArg == 'deploy.yaml') {
-      final workspace = await WorkspaceDetector.detectWorkspace();
-      if (workspace.isDartProject && workspace.configExists) {
-        configPath = workspace.configPath;
-        Console.info('Using workspace config: $configPath');
+    // Resolve config path: CLI arg > workspace config > global config
+    String configPath;
+    if (configPathArg != null) {
+      configPath = configPathArg;
+    } else {
+      final resolvedPath = await WorkspaceDetector.resolveDeployConfigPath();
+      if (resolvedPath != null) {
+        configPath = resolvedPath;
+        Console.info('Using config: $configPath');
+      } else {
+        Console.error(
+          'No configuration file found!\n'
+          'Please provide one of:\n'
+          '  1. --config <path> argument\n'
+          '  2. .dart_tool/deploy_config.yml in current directory\n'
+          '  3. ~/.dart-cloud-deploy/deploy_config.yml',
+        );
+        exit(1);
       }
     }
 

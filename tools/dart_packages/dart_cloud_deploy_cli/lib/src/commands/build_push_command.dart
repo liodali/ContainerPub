@@ -3,6 +3,7 @@ import 'package:args/command_runner.dart';
 import '../models/deploy_config.dart';
 import '../services/registry_service.dart';
 import '../utils/console.dart';
+import '../utils/workspace_detector.dart';
 
 class BuildPushCommand extends Command<void> {
   @override
@@ -16,8 +17,10 @@ class BuildPushCommand extends Command<void> {
       ..addOption(
         'config',
         abbr: 'c',
-        help: 'Configuration file path',
-        defaultsTo: 'deploy.yaml',
+        help:
+            'Path to deployment configuration file (yaml/toml). '
+            'Defaults to ~/.dart-cloud-deploy/deploy_config.yml or '
+            '.dart_tool/deploy_config.yml',
       )
       ..addOption(
         'image-name',
@@ -49,7 +52,7 @@ class BuildPushCommand extends Command<void> {
 
   @override
   Future<void> run() async {
-    final configPath = argResults!['config'] as String;
+    final configPathArg = argResults!['config'] as String?;
     final imageName = argResults!['image-name'] as String;
     final tag = argResults!['tag'] as String;
     final dockerfilePath = argResults!['dockerfile'] as String;
@@ -58,6 +61,27 @@ class BuildPushCommand extends Command<void> {
     final noPush = argResults!['no-push'] as bool;
 
     Console.header('Container Build & Push');
+
+    // Resolve config path: CLI arg > workspace config > global config
+    String configPath;
+    if (configPathArg != null) {
+      configPath = configPathArg;
+    } else {
+      final resolvedPath = await WorkspaceDetector.resolveDeployConfigPath();
+      if (resolvedPath != null) {
+        configPath = resolvedPath;
+        Console.info('Using config: $configPath');
+      } else {
+        Console.error(
+          'No configuration file found!\n'
+          'Please provide one of:\n'
+          '  1. --config <path> argument\n'
+          '  2. .dart_tool/deploy_config.yml in current directory\n'
+          '  3. ~/.dart-cloud-deploy/deploy_config.yml',
+        );
+        exit(1);
+      }
+    }
 
     // Load configuration
     DeployConfig config;

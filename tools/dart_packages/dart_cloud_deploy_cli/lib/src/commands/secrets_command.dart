@@ -3,6 +3,7 @@ import 'package:args/command_runner.dart';
 import '../models/deploy_config.dart';
 import '../services/openbao_service.dart';
 import '../utils/console.dart';
+import '../utils/workspace_detector.dart';
 
 class SecretsCommand extends Command<void> {
   @override
@@ -31,8 +32,10 @@ class _SecretsFetchCommand extends Command<void> {
       ..addOption(
         'config',
         abbr: 'c',
-        help: 'Configuration file path',
-        defaultsTo: 'deploy.yaml',
+        help:
+            'Path to deployment configuration file (yaml/toml). '
+            'Defaults to ~/.dart-cloud-deploy/deploy_config.yml or '
+            '.dart_tool/deploy_config.yml',
       )
       ..addOption('output', abbr: 'o', help: 'Output .env file path')
       ..addOption('path', abbr: 'p', help: 'Override secret path in OpenBao')
@@ -47,7 +50,7 @@ class _SecretsFetchCommand extends Command<void> {
 
   @override
   Future<void> run() async {
-    final configPath = argResults!['config'] as String;
+    final configPathArg = argResults!['config'] as String?;
     final outputPath = argResults!['output'] as String?;
     final secretPathOverride = argResults!['path'] as String?;
     final envStr = argResults!['env'] as String;
@@ -57,6 +60,27 @@ class _SecretsFetchCommand extends Command<void> {
     );
 
     Console.header('Fetching Secrets from OpenBao (${environment.name})');
+
+    // Resolve config path: CLI arg > workspace config > global config
+    String configPath;
+    if (configPathArg != null) {
+      configPath = configPathArg;
+    } else {
+      final resolvedPath = await WorkspaceDetector.resolveDeployConfigPath();
+      if (resolvedPath != null) {
+        configPath = resolvedPath;
+        Console.info('Using config: $configPath');
+      } else {
+        Console.error(
+          'No configuration file found!\n'
+          'Please provide one of:\n'
+          '  1. --config <path> argument\n'
+          '  2. .dart_tool/deploy_config.yml in current directory\n'
+          '  3. ~/.dart-cloud-deploy/deploy_config.yml',
+        );
+        exit(1);
+      }
+    }
 
     DeployConfig config;
     try {
@@ -120,8 +144,10 @@ class _SecretsListCommand extends Command<void> {
       ..addOption(
         'config',
         abbr: 'c',
-        help: 'Configuration file path',
-        defaultsTo: 'deploy.yaml',
+        help:
+            'Path to deployment configuration file (yaml/toml). '
+            'Defaults to ~/.dart-cloud-deploy/deploy_config.yml or '
+            '.dart_tool/deploy_config.yml',
       )
       ..addOption('path', abbr: 'p', help: 'Path to list secrets from')
       ..addOption(
@@ -135,7 +161,7 @@ class _SecretsListCommand extends Command<void> {
 
   @override
   Future<void> run() async {
-    final configPath = argResults!['config'] as String;
+    final configPathArg = argResults!['config'] as String?;
     final listPath = argResults!['path'] as String?;
     final envStr = argResults!['env'] as String;
     final environment = Environment.values.firstWhere(
@@ -144,6 +170,27 @@ class _SecretsListCommand extends Command<void> {
     );
 
     Console.header('Listing Secrets (${environment.name})');
+
+    // Resolve config path: CLI arg > workspace config > global config
+    String configPath;
+    if (configPathArg != null) {
+      configPath = configPathArg;
+    } else {
+      final resolvedPath = await WorkspaceDetector.resolveDeployConfigPath();
+      if (resolvedPath != null) {
+        configPath = resolvedPath;
+        Console.info('Using config: $configPath');
+      } else {
+        Console.error(
+          'No configuration file found!\n'
+          'Please provide one of:\n'
+          '  1. --config <path> argument\n'
+          '  2. .dart_tool/deploy_config.yml in current directory\n'
+          '  3. ~/.dart-cloud-deploy/deploy_config.yml',
+        );
+        exit(1);
+      }
+    }
 
     DeployConfig config;
     try {
@@ -207,8 +254,10 @@ class _SecretsCheckCommand extends Command<void> {
       ..addOption(
         'config',
         abbr: 'c',
-        help: 'Configuration file path',
-        defaultsTo: 'deploy.yaml',
+        help:
+            'Path to deployment configuration file (yaml/toml). '
+            'Defaults to ~/.dart-cloud-deploy/deploy_config.yml or '
+            '.dart_tool/deploy_config.yml',
       )
       ..addOption(
         'env',
@@ -221,7 +270,7 @@ class _SecretsCheckCommand extends Command<void> {
 
   @override
   Future<void> run() async {
-    final configPath = argResults!['config'] as String;
+    final configPathArg = argResults!['config'] as String?;
     final envStr = argResults!['env'] as String;
     final environment = Environment.values.firstWhere(
       (e) => e.name == envStr,
@@ -229,6 +278,27 @@ class _SecretsCheckCommand extends Command<void> {
     );
 
     Console.header('Checking OpenBao Connection (${environment.name})');
+
+    // Resolve config path: CLI arg > workspace config > global config
+    String configPath;
+    if (configPathArg != null) {
+      configPath = configPathArg;
+    } else {
+      final resolvedPath = await WorkspaceDetector.resolveDeployConfigPath();
+      if (resolvedPath != null) {
+        configPath = resolvedPath;
+        Console.info('Using config: $configPath');
+      } else {
+        Console.error(
+          'No configuration file found!\n'
+          'Please provide one of:\n'
+          '  1. --config <path> argument\n'
+          '  2. .dart_tool/deploy_config.yml in current directory\n'
+          '  3. ~/.dart-cloud-deploy/deploy_config.yml',
+        );
+        exit(1);
+      }
+    }
 
     DeployConfig config;
     try {
