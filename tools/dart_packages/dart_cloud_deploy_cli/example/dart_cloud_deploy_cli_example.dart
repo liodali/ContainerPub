@@ -21,33 +21,26 @@ void main() async {
   print('Compose command: ${containerConfig.composeCommand}');
   print('Services: ${containerConfig.services}');
 
-  // Example: OpenBao configuration with per-environment token managers
-  final openbaoConfig = OpenBaoConfig(
+  // Example: OpenBao configuration (per-environment)
+  final localOpenbaoConfig = OpenBaoConfig(
     address: 'http://localhost:8200',
-    local: TokenManagerConfig(
-      tokenManager: '../.openbao/local_token',
-      policy: 'dart-cloud-local',
-      secretPath: 'secret/data/dart_cloud/local',
-      roleId: 'dart-cloud-local',
-      roleName: 'stg-local',
-    ),
-    staging: TokenManagerConfig(
-      tokenManager: '../.openbao/staging_token',
-      policy: 'dart-cloud-staging',
-      secretPath: 'secret/data/dart_cloud/staging',
-      roleId: 'dart-cloud-staging',
-      roleName: 'stg-staging',
-    ),
-    production: TokenManagerConfig(
-      tokenManager: '../.openbao/prod_token',
-      policy: 'dart-cloud-production',
-      secretPath: 'secret/data/dart_cloud/production',
-      roleId: 'dart-cloud-production',
-      roleName: 'stg-production',
-    ),
+    tokenManager: '../.openbao/local_token',
+    policy: 'dart-cloud-local',
+    secretPath: 'secret/data/dart_cloud/local',
+    roleId: 'dart-cloud-local',
+    roleName: 'stg-local',
   );
 
-  print('OpenBao address: ${openbaoConfig.address}');
-  print('Local secret path: ${openbaoConfig.local?.secretPath}');
-  print('Staging policy: ${openbaoConfig.staging?.policy}');
+  final stagingOpenbaoConfig = OpenBaoConfig(
+    address: 'http://localhost:8200',
+    tokenManager: '../.openbao/staging_token',
+    policy: 'dart-cloud-staging',
+    secretPath: 'secret/data/dart_cloud/staging',
+    roleId: 'dart-cloud-staging',
+    roleName: 'stg-staging',
+  );
+
+  print('Local OpenBao address: ${localOpenbaoConfig.address}');
+  print('Local secret path: ${localOpenbaoConfig.secretPath}');
+  print('Staging policy: ${stagingOpenbaoConfig.policy}');
 }

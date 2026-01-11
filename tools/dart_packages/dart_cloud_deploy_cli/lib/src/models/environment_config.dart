@@ -9,6 +9,7 @@ class EnvironmentConfig {
   final HostConfig? host;
   final String? envFilePath;
   final AnsibleConfig? ansible;
+  final OpenBaoConfig? openbao;
 
   EnvironmentConfig({
     required this.environment,
@@ -16,6 +17,7 @@ class EnvironmentConfig {
     this.host,
     this.envFilePath,
     this.ansible,
+    this.openbao,
   });
 
   factory EnvironmentConfig.fromMap(
@@ -36,6 +38,11 @@ class EnvironmentConfig {
               Map<String, dynamic>.from(map['ansible'] as Map),
             )
           : null,
+      openbao: map['openbao'] != null
+          ? OpenBaoConfig.fromMap(
+              Map<String, dynamic>.from(map['openbao'] as Map),
+            )
+          : null,
     );
   }
 
@@ -44,6 +51,7 @@ class EnvironmentConfig {
     if (host != null) 'host': host!.toMap(),
     if (envFilePath != null) 'env_file_path': envFilePath,
     if (ansible != null) 'ansible': ansible!.toMap(),
+    if (openbao != null) 'openbao': openbao!.toMap(),
   };
 
   bool get isLocal => environment == Environment.local;

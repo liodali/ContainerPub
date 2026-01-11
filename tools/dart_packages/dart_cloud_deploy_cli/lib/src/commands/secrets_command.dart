@@ -66,28 +66,24 @@ class _SecretsFetchCommand extends Command<void> {
       exit(1);
     }
 
-    if (config.openbao == null) {
-      Console.error('OpenBao not configured in $configPath');
-      exit(1);
-    }
+    final envConfig = config.getEnvironmentConfig(environment);
+    final openbaoConfig = envConfig?.openbao;
 
-    final envConfig = config.openbao!.getEnvConfig(environment);
-    if (envConfig == null) {
+    if (openbaoConfig == null) {
       Console.error(
-        'No OpenBao configuration for ${environment.name} environment',
+        'No OpenBao configuration for ${environment.name} environment in $configPath',
       );
       exit(1);
     }
 
     final openbao = OpenBaoService(
-      address: config.openbao!.address,
-      config: config.openbao,
+      config: openbaoConfig,
       environment: environment,
     );
 
     Console.info('Checking OpenBao health...');
     if (!await openbao.checkHealth()) {
-      Console.error('OpenBao is not reachable at ${config.openbao!.address}');
+      Console.error('OpenBao is not reachable at ${openbaoConfig.address}');
       exit(1);
     }
     Console.success('OpenBao is healthy');
@@ -99,10 +95,6 @@ class _SecretsFetchCommand extends Command<void> {
     }
 
     final path = secretPathOverride ?? openbao.secretPath;
-    if (path == null) {
-      Console.error('No secret path configured for ${environment.name}');
-      exit(1);
-    }
 
     final output = outputPath ?? config.envFilePath ?? '.env';
 
@@ -161,14 +153,18 @@ class _SecretsListCommand extends Command<void> {
       exit(1);
     }
 
-    if (config.openbao == null) {
-      Console.error('OpenBao not configured in $configPath');
+    final envConfig = config.getEnvironmentConfig(environment);
+    final openbaoConfig = envConfig?.openbao;
+
+    if (openbaoConfig == null) {
+      Console.error(
+        'No OpenBao configuration for ${environment.name} environment in $configPath',
+      );
       exit(1);
     }
 
     final openbao = OpenBaoService(
-      address: config.openbao!.address,
-      config: config.openbao,
+      config: openbaoConfig,
       environment: environment,
     );
 
@@ -242,31 +238,27 @@ class _SecretsCheckCommand extends Command<void> {
       exit(1);
     }
 
-    if (config.openbao == null) {
-      Console.error('OpenBao not configured in $configPath');
-      exit(1);
-    }
+    final envConfig = config.getEnvironmentConfig(environment);
+    final openbaoConfig = envConfig?.openbao;
 
-    final envConfig = config.openbao!.getEnvConfig(environment);
-    if (envConfig == null) {
+    if (openbaoConfig == null) {
       Console.error(
-        'No OpenBao configuration for ${environment.name} environment',
+        'No OpenBao configuration for ${environment.name} environment in $configPath',
       );
       exit(1);
     }
 
-    Console.keyValue('Address', config.openbao!.address);
+    Console.keyValue('Address', openbaoConfig.address);
     Console.keyValue('Environment', environment.name);
-    Console.keyValue('Token Manager', envConfig.tokenManager);
-    Console.keyValue('Policy', envConfig.policy);
-    Console.keyValue('Secret Path', envConfig.secretPath);
-    if (config.openbao!.namespace != null) {
-      Console.keyValue('Namespace', config.openbao!.namespace!);
+    Console.keyValue('Token Manager', openbaoConfig.tokenManager);
+    Console.keyValue('Policy', openbaoConfig.policy);
+    Console.keyValue('Secret Path', openbaoConfig.secretPath);
+    if (openbaoConfig.namespace != null) {
+      Console.keyValue('Namespace', openbaoConfig.namespace!);
     }
 
     final openbao = OpenBaoService(
-      address: config.openbao!.address,
-      config: config.openbao,
+      config: openbaoConfig,
       environment: environment,
     );
 
@@ -287,7 +279,7 @@ class _SecretsCheckCommand extends Command<void> {
 
     Console.info('Testing secret access...');
     try {
-      final secrets = await openbao.fetchSecrets(envConfig.secretPath);
+      final secrets = await openbao.fetchSecrets(openbaoConfig.secretPath);
       Console.success('Successfully accessed secrets (${secrets.length} keys)');
 
       Console.info('Available keys:');

@@ -158,7 +158,8 @@ class DeployDevCommand extends Command<void> {
     Console.success('Environment ready (venv activated)');
 
     // Fetch secrets if configured
-    if (!skipSecrets && config.openbao != null) {
+    final envConfig = config.getEnvironmentConfig(config.environment!);
+    if (!skipSecrets && envConfig?.openbao != null) {
       await _fetchSecrets(config);
     }
 
@@ -264,8 +265,11 @@ class DeployDevCommand extends Command<void> {
       Console.error('Environment not found');
       exit(1);
     }
-    final envConfig = config.openbao!.getEnvConfig(environment);
-    if (envConfig == null) {
+
+    final envConfig = config.getEnvironmentConfig(environment);
+    final openbaoConfig = envConfig?.openbao;
+
+    if (openbaoConfig == null) {
       Console.warning(
         'No OpenBao configuration for ${environment.name} environment',
       );
@@ -276,13 +280,12 @@ class DeployDevCommand extends Command<void> {
     }
 
     final openbao = OpenBaoService(
-      address: config.openbao!.address,
-      config: config.openbao,
+      config: openbaoConfig,
       environment: environment,
     );
 
     if (!await openbao.checkHealth()) {
-      Console.warning('OpenBao is not reachable at ${config.openbao!.address}');
+      Console.warning('OpenBao is not reachable at ${openbaoConfig.address}');
       if (!Console.confirm('Continue without secrets?')) {
         exit(1);
       }
@@ -300,7 +303,7 @@ class DeployDevCommand extends Command<void> {
 
     try {
       final envPath = config.envFilePath ?? '.env';
-      await openbao.writeEnvFile(envConfig.secretPath, envPath);
+      await openbao.writeEnvFile(openbaoConfig.secretPath, envPath);
     } catch (e) {
       Console.error('Failed to fetch secrets: $e');
       if (!Console.confirm('Continue without secrets?')) {

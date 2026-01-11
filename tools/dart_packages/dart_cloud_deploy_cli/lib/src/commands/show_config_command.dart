@@ -89,36 +89,40 @@ class ShowConfigCommand extends Command<void> {
       print('\x1B[33mContainer: Not configured\x1B[0m');
     }
 
-    // OpenBao
-    if (config.openbao != null) {
-      Console.divider();
-      print('\x1B[34mOpenBao:\x1B[0m');
-      Console.divider();
-      Console.keyValue('Address', config.openbao!.address);
-      if (config.openbao!.namespace != null) {
-        Console.keyValue('Namespace', config.openbao!.namespace!);
-      }
+    // OpenBao (per-environment)
+    Console.divider();
+    print('\x1B[34mOpenBao:\x1B[0m');
+    Console.divider();
 
-      // Show environment configurations
-      for (final env in Environment.values) {
-        final envConfig = config.openbao!.getEnvConfig(env);
-        if (envConfig != null) {
-          Console.info('  ${env.name}:');
-          Console.keyValue('    Secret Path', envConfig.secretPath);
-          Console.keyValue('    Policy', envConfig.policy);
-          if (showFull) {
-            Console.keyValue('    Token Manager', envConfig.tokenManager);
-          } else {
-            Console.keyValue(
-              '    Token Manager',
-              '****** (use --full to show)',
-            );
-          }
+    bool hasAnyOpenbao = false;
+    for (final env in Environment.values) {
+      final envConfig = config.getEnvironmentConfig(env);
+      final openbaoConfig = envConfig?.openbao;
+
+      if (openbaoConfig != null) {
+        hasAnyOpenbao = true;
+        Console.info('  ${env.name}:');
+        Console.keyValue('    Address', openbaoConfig.address);
+        if (openbaoConfig.namespace != null) {
+          Console.keyValue('    Namespace', openbaoConfig.namespace!);
+        }
+        Console.keyValue('    Secret Path', openbaoConfig.secretPath);
+        Console.keyValue('    Policy', openbaoConfig.policy);
+        if (showFull) {
+          Console.keyValue('    Token Manager', openbaoConfig.tokenManager);
+          Console.keyValue('    Role ID', openbaoConfig.roleId);
+          Console.keyValue('    Role Name', openbaoConfig.roleName);
+        } else {
+          Console.keyValue(
+            '    Token Manager',
+            '****** (use --full to show)',
+          );
         }
       }
-    } else {
-      Console.divider();
-      print('\x1B[33mOpenBao: Not configured\x1B[0m');
+    }
+
+    if (!hasAnyOpenbao) {
+      print('\x1B[33mNot configured for any environment\x1B[0m');
     }
 
     // Host

@@ -20,7 +20,6 @@ export 'registry_config.dart';
 class DeployConfig {
   final String name;
   final String projectPath;
-  final OpenBaoConfig? openbao;
   final RegistryConfig? registry;
   final EnvironmentConfig? local;
   final EnvironmentConfig? staging;
@@ -31,7 +30,6 @@ class DeployConfig {
   DeployConfig({
     required this.name,
     required this.projectPath,
-    this.openbao,
     this.registry,
     this.local,
     this.staging,
@@ -43,11 +41,6 @@ class DeployConfig {
     return DeployConfig(
       name: map['name'] as String,
       projectPath: map['project_path'] as String,
-      openbao: map['openbao'] != null
-          ? OpenBaoConfig.fromMap(
-              Map<String, dynamic>.from(map['openbao'] as Map),
-            )
-          : null,
       registry: map['registry'] != null
           ? RegistryConfig.fromMap(
               Map<String, dynamic>.from(map['registry'] as Map),
@@ -77,7 +70,6 @@ class DeployConfig {
   Map<String, dynamic> toMap() => {
     'name': name,
     'project_path': projectPath,
-    if (openbao != null) 'openbao': openbao!.toMap(),
     if (registry != null) 'registry': registry!.toMap(),
     if (local != null) 'local': local!.toMap(),
     if (staging != null) 'staging': staging!.toMap(),

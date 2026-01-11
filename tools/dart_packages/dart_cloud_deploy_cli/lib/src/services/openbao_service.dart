@@ -6,33 +6,31 @@ import '../utils/config_paths.dart';
 import 'token_storage.dart';
 
 class OpenBaoService {
-  final String address;
-  final OpenBaoConfig? config;
-  Environment _currentEnv;
+  final OpenBaoConfig config;
+  final Environment environment;
 
   OpenBaoService({
-    required this.address,
-    this.config,
-    Environment environment = Environment.local,
-  }) : _currentEnv = environment;
+    required this.config,
+    required this.environment,
+  });
 
-  /// Set the current environment
-  set currentEnvironment(Environment env) => _currentEnv = env;
+  /// Get address
+  String get address => config.address;
 
-  /// Get token manager path for current environment
-  String? get tokenManager => config?.getTokenManager(_currentEnv);
+  /// Get token manager path
+  String get tokenManager => config.tokenManager;
 
-  /// Get policy for current environment
-  String? get policy => config?.getPolicy(_currentEnv);
+  /// Get policy
+  String get policy => config.policy;
 
-  /// Get role_id for current environment
-  String? get roleId => config?.getEnvConfig(_currentEnv)?.roleId;
+  /// Get role_id
+  String get roleId => config.roleId;
 
-  /// Get role_name for current environment
-  String? get roleName => config?.getEnvConfig(_currentEnv)?.roleName;
+  /// Get role_name
+  String get roleName => config.roleName;
 
-  /// Get secret path for current environment
-  String? get secretPath => config?.getSecretPath(_currentEnv);
+  /// Get secret path
+  String get secretPath => config.secretPath;
 
   /// Check if a string looks like a file path
   bool _isFilePath(String value) {
@@ -45,8 +43,8 @@ class OpenBaoService {
   }
 
   api.OpenBaoClient _getClient() {
-    String? mgrToken = tokenManager;
-    if (mgrToken != null && _isFilePath(mgrToken)) {
+    String mgrToken = tokenManager;
+    if (_isFilePath(mgrToken)) {
       mgrToken = ConfigPaths.expandPath(mgrToken);
     }
 
@@ -62,9 +60,9 @@ class OpenBaoService {
   /// Ensure we have a valid token
   Future<bool> createToken() async {
     try {
-      Console.info('Checking authentication for ${_currentEnv.name}...');
-      await _getClient().getOrCreateToken(_currentEnv.name);
-      Console.success('Authentication successful for ${_currentEnv.name}');
+      Console.info('Checking authentication for ${environment.name}...');
+      await _getClient().getOrCreateToken(environment.name);
+      Console.success('Authentication successful for ${environment.name}');
       return true;
     } catch (e) {
       Console.error('Failed to authenticate: $e');
@@ -76,7 +74,8 @@ class OpenBaoService {
     Console.info('Fetching secrets from OpenBao: $secretPath');
 
     try {
-      return await _getClient().fetchSecrets(secretPath, _currentEnv.name);
+      final client = _getClient();
+      return client.fetchSecrets(secretPath, environment.name);
     } catch (e) {
       if (e is api.OpenBaoException) {
         throw Exception(e.message);
@@ -119,7 +118,7 @@ class OpenBaoService {
 
   Future<List<String>> listSecrets(String path) async {
     try {
-      return await _getClient().listSecrets(path, _currentEnv.name);
+      return await _getClient().listSecrets(path, environment.name);
     } catch (e) {
       Console.warning('Failed to list secrets at $path: $e');
       return [];

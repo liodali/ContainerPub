@@ -338,7 +338,8 @@ class DeployLocalCommand extends Command<void> {
     }
 
     // Priority 3: Fallback to OpenBao
-    if (config.openbao != null) {
+    final envConfig = config.getEnvironmentConfig(config.environment!);
+    if (envConfig?.openbao != null && config.envFilePath == null) {
       Console.info('No env file specified, attempting OpenBao...');
       await _fetchSecretsFromOpenBao(config);
       return;
@@ -395,10 +396,12 @@ class DeployLocalCommand extends Command<void> {
       Console.error('Environment not found');
       exit(1);
     }
-    final envConfig = config.openbao!.getEnvConfig(environment);
+
+    final envConfig = config.getEnvironmentConfig(environment);
+    final openbaoConfig = envConfig?.openbao;
 
     // Check if OpenBao has config for this environment
-    if (envConfig == null) {
+    if (openbaoConfig == null) {
       Console.error(
         'No OpenBao configuration for ${environment.name} environment.\n'
         'Please provide an env file or configure OpenBao for this environment.',
@@ -407,15 +410,14 @@ class DeployLocalCommand extends Command<void> {
     }
 
     final openbao = OpenBaoService(
-      address: config.openbao!.address,
-      config: config.openbao,
+      config: openbaoConfig,
       environment: environment,
     );
 
     // Check OpenBao health
     if (!await openbao.checkHealth()) {
       Console.error(
-        'OpenBao is not reachable at ${config.openbao!.address}.\n'
+        'OpenBao is not reachable at ${openbaoConfig.address}.\n'
         'Please provide an env file or ensure OpenBao is running.',
       );
       exit(1);
@@ -434,7 +436,7 @@ class DeployLocalCommand extends Command<void> {
     // Fetch and write secrets
     try {
       final envPath = '${config.projectPath}/.env';
-      await openbao.writeEnvFile(envConfig.secretPath, envPath);
+      await openbao.writeEnvFile(openbaoConfig.secretPath, envPath);
       Console.success('Secrets fetched from OpenBao and written to .env');
     } catch (e) {
       Console.error(
