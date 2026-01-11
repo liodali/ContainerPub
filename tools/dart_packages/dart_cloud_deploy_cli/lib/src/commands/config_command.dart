@@ -123,7 +123,51 @@ class _ConfigInitCommand extends Command<void> {
     if (configManager.configExists) {
       // Config exists - check if we should add environment section
       final hasEnv = await configManager.hasEnvironmentSection(environment);
+
       if (hasEnv) {
+        // Environment exists - check if we should add OpenBao
+        final hasOpenBaoFlags =
+            openbaoAddress != null ||
+            openbaoSecretPath != null ||
+            openbaoRoleId != null ||
+            openbaoRoleName != null;
+
+        if (hasOpenBaoFlags) {
+          Console.info(
+            'Environment $environment exists, checking OpenBao configuration...',
+          );
+          final existingConfig = await configManager.loadConfig();
+          final envConfig = existingConfig?[environment];
+
+          if (envConfig != null && envConfig['openbao'] == null) {
+            Console.info(
+              'Adding OpenBao configuration to $environment environment...',
+            );
+            final openbaoConfig = ConfigManager.generateOpenBaoDefaults(
+              address: openbaoAddress,
+              secretPath: openbaoSecretPath,
+              roleId: openbaoRoleId,
+              roleName: openbaoRoleName,
+              environment: environment,
+            );
+
+            // Add OpenBao to existing environment
+            await configManager.addOpenBaoToEnvironment(
+              environment: environment,
+              openbaoConfig: openbaoConfig,
+            );
+            Console.success(
+              'Added OpenBao configuration to $environment environment',
+            );
+            return;
+          } else if (envConfig?['openbao'] != null) {
+            Console.info(
+              'OpenBao already configured for $environment environment',
+            );
+            return;
+          }
+        }
+
         Console.success('Config already exists with $environment environment');
         Console.info('Skipping - no changes needed');
         return;
@@ -131,7 +175,18 @@ class _ConfigInitCommand extends Command<void> {
 
       // Add environment section only
       Console.info('Config exists, adding $environment environment section...');
-      final envConfig = _buildEnvironmentConfig(environment);
+      final envConfig = _buildEnvironmentConfig(
+        environment,
+        includeOpenbao:
+            openbaoAddress != null ||
+            openbaoSecretPath != null ||
+            openbaoRoleId != null ||
+            openbaoRoleName != null,
+        openbaoAddress: openbaoAddress,
+        openbaoSecretPath: openbaoSecretPath,
+        openbaoRoleId: openbaoRoleId,
+        openbaoRoleName: openbaoRoleName,
+      );
       final added = await configManager.addEnvironmentSection(
         environment: environment,
         envConfig: envConfig,
@@ -162,6 +217,7 @@ class _ConfigInitCommand extends Command<void> {
       secretPath: openbaoSecretPath,
       roleId: openbaoRoleId,
       roleName: openbaoRoleName,
+      environment: environment,
     );
 
     // Generate container config
@@ -187,11 +243,28 @@ class _ConfigInitCommand extends Command<void> {
     Console.step('  2. Run: dart_cloud_deploy deploy-local');
   }
 
-  Map<String, dynamic> _buildEnvironmentConfig(String environment) {
+  Map<String, dynamic> _buildEnvironmentConfig(
+    String environment, {
+    bool includeOpenbao = false,
+    String? openbaoAddress,
+    String? openbaoSecretPath,
+    String? openbaoRoleId,
+    String? openbaoRoleName,
+  }) {
     final config = <String, dynamic>{
       'env_file_path': '.env',
       'container': ConfigManager.generateContainerDefaults(),
     };
+
+    if (includeOpenbao) {
+      config['openbao'] = ConfigManager.generateOpenBaoDefaults(
+        address: openbaoAddress,
+        secretPath: openbaoSecretPath,
+        roleId: openbaoRoleId,
+        roleName: openbaoRoleName,
+        environment: environment,
+      );
+    }
 
     if (environment != 'local') {
       config['host'] = _buildHostDefaults();
@@ -234,8 +307,8 @@ class _ConfigSetCommand extends Command<void> {
       ..addOption(
         'config',
         abbr: 'c',
-        help: 'Configuration file path',
-        defaultsTo: 'deploy.yaml',
+        help:
+            'Configuration file path (auto-detects .dart_tool/deploy_config.yaml or deploy.yaml)',
       )
       ..addOption('key', abbr: 'k', help: 'Configuration key (dot notation)')
       ..addOption('value', abbr: 'v', help: 'Configuration value');
@@ -243,7 +316,9 @@ class _ConfigSetCommand extends Command<void> {
 
   @override
   Future<void> run() async {
-    final configPath = argResults!['config'] as String;
+    // Detect workspace and determine config path
+    final workspace = await WorkspaceDetector.detectWorkspace();
+    final configPath = argResults!['config'] as String? ?? workspace.configPath;
     final key = argResults!['key'] as String?;
     final value = argResults!['value'] as String?;
 
@@ -277,14 +352,16 @@ class _ConfigValidateCommand extends Command<void> {
     argParser.addOption(
       'config',
       abbr: 'c',
-      help: 'Configuration file path',
-      defaultsTo: 'deploy.yaml',
+      help:
+          'Configuration file path (auto-detects .dart_tool/deploy_config.yaml or deploy.yaml)',
     );
   }
 
   @override
   Future<void> run() async {
-    final configPath = argResults!['config'] as String;
+    // Detect workspace and determine config path
+    final workspace = await WorkspaceDetector.detectWorkspace();
+    final configPath = argResults!['config'] as String? ?? workspace.configPath;
 
     Console.header('Validating Configuration');
 
@@ -331,21 +408,45 @@ class _ConfigValidateCommand extends Command<void> {
       errors.add('Missing required field: name');
     }
 
-    if (config['environment'] == null) {
-      errors.add('Missing required field: environment');
+    if (config['project_path'] == null) {
+      errors.add('Missing required field: project_path');
     }
 
-    if (config['container'] == null) {
-      errors.add('Missing required field: container');
-    } else {
-      if (config['container']['compose_file'] == null) {
-        errors.add('Missing required field: container.compose_file');
+    // Check for at least one environment
+    final hasLocal = config['local'] != null;
+    final hasStaging = config['staging'] != null;
+    final hasProduction = config['production'] != null;
+
+    if (!hasLocal && !hasStaging && !hasProduction) {
+      errors.add(
+        'At least one environment (local, staging, or production) must be configured',
+      );
+    }
+
+    // Validate each environment that exists
+    for (final envName in ['local', 'staging', 'production']) {
+      final env = config[envName];
+      if (env != null) {
+        if (env['container'] == null) {
+          errors.add('Missing required field: $envName.container');
+        } else {
+          if (env['container']['compose_file'] == null) {
+            errors.add(
+              'Missing required field: $envName.container.compose_file',
+            );
+          }
+          if (env['container']['runtime'] == null) {
+            errors.add('Missing required field: $envName.container.runtime');
+          }
+        }
+
+        // Non-local environments should have host config
+        if (envName != 'local' && env['host'] == null) {
+          Console.warning(
+            'Host configuration recommended for $envName environment',
+          );
+        }
       }
-    }
-
-    final env = config['environment'];
-    if (env != 'local' && config['host'] == null) {
-      errors.add('Host configuration required for non-local environments');
     }
 
     if (errors.isNotEmpty) {
@@ -358,8 +459,19 @@ class _ConfigValidateCommand extends Command<void> {
     Console.success('All required fields present');
 
     // Check optional but recommended fields
-    if (config['openbao'] == null) {
-      Console.warning('OpenBao not configured - secrets will not be fetched');
+    var hasAnyOpenbao = false;
+    for (final envName in ['local', 'staging', 'production']) {
+      final env = config[envName];
+      if (env != null && env['openbao'] != null) {
+        hasAnyOpenbao = true;
+        break;
+      }
+    }
+
+    if (!hasAnyOpenbao) {
+      Console.warning(
+        'OpenBao not configured in any environment - secrets will not be fetched',
+      );
     }
   }
 }

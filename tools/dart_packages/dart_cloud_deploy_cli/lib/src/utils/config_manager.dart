@@ -16,7 +16,6 @@ class ConfigManager {
 
     final content = await File(workspace.configPath).readAsString();
     final yaml = loadYaml(content);
-    print(yaml);
     return _convertYamlToMap(yaml);
   }
 
@@ -47,6 +46,76 @@ class ConfigManager {
     final envYaml = _generateEnvironmentYaml(environment, envConfig);
 
     await File(workspace.configPath).writeAsString('$content\n$envYaml');
+    return true;
+  }
+
+  /// Add OpenBao configuration to an existing environment
+  Future<bool> addOpenBaoToEnvironment({
+    required String environment,
+    required Map<String, dynamic> openbaoConfig,
+  }) async {
+    if (!configExists) return false;
+
+    final config = await loadConfig();
+    if (config == null) return false;
+
+    // Check if environment exists
+    if (!config.containsKey(environment)) {
+      return false; // Environment doesn't exist
+    }
+
+    // Check if OpenBao already exists
+    final envConfig = config[environment];
+    if (envConfig != null && envConfig['openbao'] != null) {
+      return false; // OpenBao already configured
+    }
+
+    // Read raw content and add OpenBao section
+    final content = await File(workspace.configPath).readAsString();
+    final lines = content.split('\n');
+    final buffer = StringBuffer();
+
+    bool inTargetEnv = false;
+    bool openbaoAdded = false;
+
+    for (int i = 0; i < lines.length; i++) {
+      final line = lines[i];
+
+      // Check if we're entering the target environment
+      if (line.trim().startsWith('$environment:')) {
+        inTargetEnv = true;
+        buffer.writeln(line);
+        continue;
+      }
+
+      // If we're in the target environment and haven't added OpenBao yet
+      if (inTargetEnv && !openbaoAdded) {
+        // Check if we've reached another top-level key (next environment or section)
+        final trimmed = line.trim();
+        if (trimmed.isNotEmpty &&
+            !line.startsWith(' ') &&
+            !line.startsWith('\t') &&
+            trimmed.contains(':') &&
+            !trimmed.startsWith('#')) {
+          // We've reached the next section, add OpenBao before it
+          buffer.writeln('  # OpenBao Configuration (for secrets management)');
+          buffer.writeln('  openbao:');
+          _writeMapAsYaml(buffer, openbaoConfig, indent: 4);
+          openbaoAdded = true;
+        }
+      }
+
+      buffer.writeln(line);
+    }
+
+    // If we reached the end and haven't added OpenBao, add it now
+    if (inTargetEnv && !openbaoAdded) {
+      buffer.writeln('  # OpenBao Configuration (for secrets management)');
+      buffer.writeln('  openbao:');
+      _writeMapAsYaml(buffer, openbaoConfig, indent: 4);
+    }
+
+    await File(workspace.configPath).writeAsString(buffer.toString());
     return true;
   }
 
@@ -86,24 +155,23 @@ class ConfigManager {
     await File(workspace.configPath).writeAsString(content);
   }
 
-  /// Generate missing OpenBao config with defaults
+  /// Generate missing OpenBao config with defaults for a specific environment
   static Map<String, dynamic> generateOpenBaoDefaults({
     String? address,
     String? secretPath,
     String? roleId,
     String? roleName,
     String? namespace,
+    String environment = 'local',
   }) {
     return {
       'address': address ?? 'http://localhost:8200',
       if (namespace != null) 'namespace': namespace,
-      'local': {
-        'token_manager': 'approle',
-        'policy': 'local-policy',
-        'secret_path': secretPath ?? 'secret/data/app/local',
-        'role_id': roleId ?? '<ROLE_ID>',
-        'role_name': roleName ?? 'local-role',
-      },
+      'token_manager': 'approle',
+      'policy': '$environment-policy',
+      'secret_path': secretPath ?? 'secret/data/app/$environment',
+      'role_id': roleId ?? '<ROLE_ID>',
+      'role_name': roleName ?? '$environment-role',
     };
   }
 
@@ -146,14 +214,6 @@ class ConfigManager {
     buffer.writeln('project_path: .');
     buffer.writeln('');
 
-    // OpenBao section
-    if (openbao != null) {
-      buffer.writeln('# OpenBao Configuration (for secrets management)');
-      buffer.writeln('openbao:');
-      _writeMapAsYaml(buffer, openbao, indent: 2);
-      buffer.writeln('');
-    }
-
     // Environment section
     buffer.writeln('# Environment: $environment');
     buffer.writeln('$environment:');
@@ -162,6 +222,13 @@ class ConfigManager {
     if (container != null) {
       buffer.writeln('  container:');
       _writeMapAsYaml(buffer, container, indent: 4);
+    }
+
+    // OpenBao section (per-environment)
+    if (openbao != null) {
+      buffer.writeln('  # OpenBao Configuration (for secrets management)');
+      buffer.writeln('  openbao:');
+      _writeMapAsYaml(buffer, openbao, indent: 4);
     }
 
     if (host != null && environment != 'local') {
@@ -243,14 +310,6 @@ class ConfigManager {
     buffer.writeln('project_path = "."');
     buffer.writeln('');
 
-    // OpenBao section
-    if (openbao != null) {
-      buffer.writeln('# OpenBao Configuration (for secrets management)');
-      buffer.writeln('[openbao]');
-      _writeMapAsToml(buffer, openbao, prefix: '');
-      buffer.writeln('');
-    }
-
     // Environment section
     buffer.writeln('# Environment: $environment');
     buffer.writeln('[$environment]');
@@ -260,6 +319,14 @@ class ConfigManager {
     if (container != null) {
       buffer.writeln('[$environment.container]');
       _writeMapAsToml(buffer, container, prefix: '');
+      buffer.writeln('');
+    }
+
+    // OpenBao section (per-environment)
+    if (openbao != null) {
+      buffer.writeln('# OpenBao Configuration (for secrets management)');
+      buffer.writeln('[$environment.openbao]');
+      _writeMapAsToml(buffer, openbao, prefix: '');
       buffer.writeln('');
     }
 
