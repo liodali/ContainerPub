@@ -1,29 +1,6 @@
 name: dart_cloud_deploy
 project_path: /path/to/dart_cloud_backend
 
-# OpenBao configuration (shared across environments)
-openbao:
-  address: http://localhost:8200
-  namespace: admin
-  local:
-    token_manager: auth/approle/login
-    policy: dart-cloud-local
-    secret_path: secret/data/dart-cloud/local
-    role_id: local-role-id
-    role_name: dart-cloud-local
-  staging:
-    token_manager: auth/approle/login
-    policy: dart-cloud-staging
-    secret_path: secret/data/dart-cloud/staging
-    role_id: staging-role-id
-    role_name: dart-cloud-staging
-  production:
-    token_manager: auth/approle/login
-    policy: dart-cloud-production
-    secret_path: secret/data/dart-cloud/production
-    role_id: production-role-id
-    role_name: dart-cloud-production
-
 # Registry configuration (shared across environments)
 registry:
   url: ghcr.io
@@ -42,6 +19,15 @@ local:
       postgres: postgres
     rebuild_strategy: all
   env_file_path: .env.local
+  # OpenBao configuration for local environment
+  openbao:
+    address: http://localhost:8200
+    namespace: admin
+    token_manager: auth/approle/login
+    policy: dart-cloud-local
+    secret_path: secret/data/dart-cloud/local
+    role_id: local-role-id
+    role_name: dart-cloud-local
 
 # Staging environment configuration
 staging:
@@ -60,6 +46,15 @@ staging:
     user: deploy
     ssh_key_path: ~/.ssh/staging_deploy_key
   env_file_path: .env.staging
+  # OpenBao configuration for staging environment
+  openbao:
+    address: http://localhost:8200
+    namespace: admin
+    token_manager: auth/approle/login
+    policy: dart-cloud-staging
+    secret_path: secret/data/dart-cloud/staging
+    role_id: staging-role-id
+    role_name: dart-cloud-staging
   ansible:
     inventory_path: deployment/ansible/inventory/staging.yml
     backend_playbook: deployment/ansible/playbooks/backend.yml
@@ -87,6 +82,15 @@ production:
     user: deploy
     ssh_key_path: ~/.ssh/prod_deploy_key
   env_file_path: .env.production
+  # OpenBao configuration for production environment
+  openbao:
+    address: http://localhost:8200
+    namespace: admin
+    token_manager: auth/approle/login
+    policy: dart-cloud-production
+    secret_path: secret/data/dart-cloud/production
+    role_id: production-role-id
+    role_name: dart-cloud-production
   ansible:
     inventory_path: deployment/ansible/inventory/production.yml
     backend_playbook: deployment/ansible/playbooks/backend.yml

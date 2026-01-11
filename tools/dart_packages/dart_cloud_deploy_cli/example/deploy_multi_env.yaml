@@ -119,28 +119,9 @@ ansible:
     postgres_user: dart_cloud
     postgres_db: dart_cloud
     backup_retention_days: 7
-
 # -----------------------------------------------------------------------------
-# OPENBAO CONFIGURATION (FALLBACK for secrets)
+# OPENBAO CONFIGURATION
 # -----------------------------------------------------------------------------
-openbao:
-  address: https://openbao.example.com:8200
-  namespace: dart_cloud
-  local:
-    token_manager: auth/approle
-    policy: dart_cloud_local
-    secret_path: secret/data/dart_cloud/local
-    role_id: local-role-id
-    role_name: dart_cloud_local
-  staging:
-    token_manager: auth/approle
-    policy: dart_cloud_staging
-    secret_path: secret/data/dart_cloud/staging
-    role_id: staging-role-id
-    role_name: dart_cloud_staging
-  production:
-    token_manager: auth/approle
-    policy: dart_cloud_production
-    secret_path: secret/data/dart_cloud/production
-    role_id: production-role-id
-    role_name: dart_cloud_production
+# OpenBao is now configured per-environment within each environment section.
+# See the 'local', 'staging', and 'production' sections below for examples.
+# This allows each environment to have its own OpenBao server and credentials.
