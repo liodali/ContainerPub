@@ -35,6 +35,41 @@ enum RebuildStrategy {
   final String label;
 }
 
+/// Enum defining deployment actions
+enum DeployAction {
+  /// Deploy services (default behavior)
+  deploy('deploy'),
+
+  /// Start stopped services
+  start('start'),
+
+  /// Stop running services
+  stop('stop'),
+
+  /// Restart services
+  restart('restart')
+  ;
+
+  const DeployAction(this.label);
+  final String label;
+}
+
+/// Extension on DeployAction to provide utility methods
+extension DeployActionExtension on DeployAction {
+  /// Get list of all valid action names
+  static List<String> get names {
+    return DeployAction.values.map((e) => e.label).toList();
+  }
+
+  /// Parse action from string
+  static DeployAction fromString(String value) {
+    return DeployAction.values.firstWhere(
+      (e) => e.label == value,
+      orElse: () => DeployAction.deploy,
+    );
+  }
+}
+
 /// Extension on RebuildStrategy to provide utility methods
 extension RebuildStrategyExtension on RebuildStrategy {
   /// Get list of all valid rebuild strategy names
@@ -60,12 +95,16 @@ class LocalDeployOptions {
   /// Specific service to deploy (null = all services)
   final String? targetService;
 
+  /// Action to perform (deploy, start, stop, restart)
+  final DeployAction action;
+
   const LocalDeployOptions({
     required this.configPath,
     this.envFilePath,
     this.rebuildStrategy,
     this.forceRecreate = false,
     this.targetService,
+    this.action = DeployAction.deploy,
   });
 }
 
@@ -102,6 +141,14 @@ class DeployLocalCommand extends Command<void> {
         'env-file',
         abbr: 'e',
         help: 'Path to .env file (overrides config env_file_path)',
+      )
+      // Action to perform
+      ..addOption(
+        'action',
+        abbr: 'a',
+        help: 'Action to perform: deploy, start, stop, restart',
+        allowed: DeployActionExtension.names,
+        defaultsTo: DeployAction.deploy.label,
       )
       // Rebuild strategy
       ..addOption(
@@ -147,13 +194,29 @@ class DeployLocalCommand extends Command<void> {
     // Step 3: Detect available services from compose file
     final availableServices = await _detectServicesFromCompose(config);
 
-    // Step 4: Resolve environment variables (env file or OpenBao)
+    // Step 4: Handle action-based execution
+    switch (options.action) {
+      case DeployAction.start:
+        await _handleStartAction(containerService);
+        return;
+      case DeployAction.stop:
+        await _handleStopAction(containerService);
+        return;
+      case DeployAction.restart:
+        await _handleRestartAction(containerService);
+        return;
+      case DeployAction.deploy:
+        // Continue with normal deployment flow
+        break;
+    }
+
+    // Step 5: Resolve environment variables (env file or OpenBao)
     await _resolveEnvironment(config, options.envFilePath);
 
-    // Step 5: Check current service status
+    // Step 6: Check current service status
     final statuses = await _checkServiceStatus(containerService);
 
-    // Step 6: Execute deployment based on strategy
+    // Step 7: Execute deployment based on strategy
     await _executeDeployment(
       containerService: containerService,
       availableServices: availableServices,
@@ -166,7 +229,13 @@ class DeployLocalCommand extends Command<void> {
   /// Note: Rebuild strategy from CLI will override config file value
   Future<LocalDeployOptions> _parseOptions() async {
     final rebuildStr = argResults!['rebuild'] as String?;
+    final actionStr = argResults!['action'] as String?;
     final configPathArg = argResults!['config'] as String?;
+
+    // Parse action
+    final action = actionStr != null
+        ? DeployActionExtension.fromString(actionStr)
+        : DeployAction.deploy;
 
     // CLI rebuild flag takes precedence over config
     // If not provided via CLI, will be resolved from config later
@@ -210,6 +279,7 @@ class DeployLocalCommand extends Command<void> {
       rebuildStrategy: rebuildStrategy,
       forceRecreate: argResults!['force'] as bool,
       targetService: argResults!['service'] as String?,
+      action: action,
     );
   }
 
@@ -538,11 +608,12 @@ class DeployLocalCommand extends Command<void> {
     // Build dynamic menu based on available services
     final menuOptions = <String>[
       'Start stopped services (no rebuild)',
-      'Rebuild all services',
-      if (availableServices.contains('backend-cloud') ||
-          containerService.config.services.containsKey('backend'))
-        'Rebuild backend only (keep database)',
-      'Remove all containers and volumes (clean start)',
+      'Stop running services',
+      'Restart all services',
+      'Rebuild backend only (preserve database & volumes)',
+      'Rebuild all services (preserve volumes)',
+      'Wipe backend container & volumes, then rebuild',
+      'Wipe all containers & volumes, then rebuild everything',
       'Cancel',
     ];
 
@@ -558,20 +629,22 @@ class DeployLocalCommand extends Command<void> {
 
     if (selectedOption.contains('Start stopped')) {
       await _startStoppedServices(containerService);
-    } else if (selectedOption.contains('Rebuild all')) {
-      await _deployServices(
+    } else if (selectedOption.contains('Stop running')) {
+      await _stopServices(containerService);
+    } else if (selectedOption.contains('Restart all')) {
+      await _restartServices(containerService);
+    } else if (selectedOption.contains('Rebuild backend only')) {
+      await _rebuildBackendOnly(containerService);
+    } else if (selectedOption.contains('Rebuild all services (preserve')) {
+      await _rebuildAllPreserveVolumes(
         containerService: containerService,
         availableServices: availableServices,
-        options: LocalDeployOptions(
-          configPath: options.configPath,
-          rebuildStrategy: RebuildStrategy.all, // Force rebuild all
-          forceRecreate: true,
-        ),
+        options: options,
       );
-    } else if (selectedOption.contains('Rebuild backend')) {
-      await _rebuildBackendOnly(containerService);
-    } else if (selectedOption.contains('Remove all')) {
-      await _cleanAll(containerService);
+    } else if (selectedOption.contains('Wipe backend container')) {
+      await _wipeBackendWithVolumes(containerService);
+    } else if (selectedOption.contains('Wipe all containers')) {
+      await _wipeAllWithVolumes(containerService, availableServices, options);
     } else {
       Console.info('Cancelled');
       return;
@@ -602,9 +675,74 @@ class DeployLocalCommand extends Command<void> {
     await _waitForServices(containerService);
   }
 
-  /// Remove all containers and volumes
-  Future<void> _cleanAll(ContainerService containerService) async {
-    Console.warning('This will remove ALL data including database!');
+  /// Stop all running services
+  Future<void> _stopServices(ContainerService containerService) async {
+    Console.info('Stopping all services...');
+    await containerService.stopServices();
+    Console.success('All services stopped');
+  }
+
+  /// Restart all services
+  Future<void> _restartServices(ContainerService containerService) async {
+    Console.info('Restarting all services...');
+    await containerService.restartServices();
+    await _waitForServices(containerService);
+  }
+
+  /// Rebuild all services while preserving volumes
+  Future<void> _rebuildAllPreserveVolumes({
+    required ContainerService containerService,
+    required List<String> availableServices,
+    required LocalDeployOptions options,
+  }) async {
+    Console.info('Rebuilding all services (preserving volumes)...');
+    await _deployServices(
+      containerService: containerService,
+      availableServices: availableServices,
+      options: LocalDeployOptions(
+        configPath: options.configPath,
+        rebuildStrategy: RebuildStrategy.all,
+        forceRecreate: true,
+      ),
+    );
+  }
+
+  /// Wipe backend container and its volumes, then rebuild
+  Future<void> _wipeBackendWithVolumes(
+    ContainerService containerService,
+  ) async {
+    Console.warning(
+      'This will remove the backend container and its volumes!',
+    );
+
+    if (!Console.confirm('Continue?')) {
+      Console.info('Cancelled');
+      return;
+    }
+
+    final backendName =
+        containerService.config.services['backend'] ?? 'backend-cloud';
+
+    Console.info('Removing backend container and volumes...');
+    await containerService.removeContainer(backendName);
+    await containerService.removeImage(backendName);
+
+    // Remove backend-specific volumes if they exist
+    Console.info('Rebuilding backend...');
+    await containerService.startService(backendName, build: true);
+    await containerService.pruneImages();
+    await _waitForServices(containerService);
+  }
+
+  /// Wipe all containers and volumes, then rebuild everything
+  Future<void> _wipeAllWithVolumes(
+    ContainerService containerService,
+    List<String> availableServices,
+    LocalDeployOptions options,
+  ) async {
+    Console.warning(
+      'This will remove ALL containers and volumes including database!',
+    );
 
     if (!Console.confirm('Are you absolutely sure?')) {
       Console.info('Cancelled');
@@ -615,6 +753,17 @@ class DeployLocalCommand extends Command<void> {
     await containerService.removeVolumes();
     await containerService.pruneImages();
     Console.success('All services and volumes removed');
+
+    Console.info('Rebuilding everything from scratch...');
+    await _deployServices(
+      containerService: containerService,
+      availableServices: availableServices,
+      options: LocalDeployOptions(
+        configPath: options.configPath,
+        rebuildStrategy: RebuildStrategy.all,
+        forceRecreate: true,
+      ),
+    );
   }
 
   /// Deploy services based on rebuild strategy
@@ -743,6 +892,32 @@ class DeployLocalCommand extends Command<void> {
     }
 
     _printSuccess(containerService);
+  }
+
+  // ---------------------------------------------------------------------------
+  // SUCCESS OUTPUT
+  // ---------------------------------------------------------------------------
+
+  // ---------------------------------------------------------------------------
+  // ACTION HANDLERS
+  // ---------------------------------------------------------------------------
+
+  /// Handle start action
+  Future<void> _handleStartAction(ContainerService containerService) async {
+    Console.header('Starting Services');
+    await _startStoppedServices(containerService);
+  }
+
+  /// Handle stop action
+  Future<void> _handleStopAction(ContainerService containerService) async {
+    Console.header('Stopping Services');
+    await _stopServices(containerService);
+  }
+
+  /// Handle restart action
+  Future<void> _handleRestartAction(ContainerService containerService) async {
+    Console.header('Restarting Services');
+    await _restartServices(containerService);
   }
 
   // ---------------------------------------------------------------------------

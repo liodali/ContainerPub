@@ -167,6 +167,19 @@ class ContainerService {
     return result.exitCode == 0;
   }
 
+  Future<bool> restartServices() async {
+    final parts = _compose.split(' ');
+    final result = await _run(parts.first, [
+      ...parts.skip(1),
+      '-p',
+      config.projectName,
+      '-f',
+      config.composeFile,
+      'restart',
+    ]);
+    return result.exitCode == 0;
+  }
+
   Future<bool> removeVolumes() async {
     final parts = _compose.split(' ');
     final result = await _run(parts.first, [
