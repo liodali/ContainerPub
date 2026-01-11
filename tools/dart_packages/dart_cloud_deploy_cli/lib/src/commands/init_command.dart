@@ -2,6 +2,7 @@ import 'package:args/command_runner.dart';
 import '../services/venv_service.dart';
 import '../utils/console.dart';
 import '../utils/config_paths.dart';
+import '../utils/venv_detector.dart';
 
 class InitCommand extends Command<void> {
   @override
@@ -13,11 +14,6 @@ class InitCommand extends Command<void> {
 
   InitCommand() {
     argParser
-      ..addOption(
-        'venv-path',
-        help: 'Path for Python virtual environment',
-        defaultsTo: '.venv',
-      )
       ..addFlag(
         'force',
         abbr: 'f',
@@ -33,11 +29,8 @@ class InitCommand extends Command<void> {
 
   @override
   Future<void> run() async {
-    final venvPath = argResults!['venv-path'] as String;
     final force = argResults!['force'] as bool;
     final skipCollections = argResults!['skip-collections'] as bool;
-
-    final venvService = VenvService(venvPath: venvPath);
 
     if (force) {
       Console.warning('Force mode: will reinstall everything');
@@ -49,6 +42,26 @@ class InitCommand extends Command<void> {
     Console.info('Creating config directory...');
     await ConfigPaths.ensureAllDirsExist();
     Console.success('Config directory: ${ConfigPaths.configDir}');
+
+    // Detect venv location
+    Console.info('Detecting Python virtual environment location...');
+    final venvLocation = await VenvDetector.detectVenvLocation();
+
+    if (venvLocation.exists && !force) {
+      Console.success(
+        'Using existing virtual environment in ${venvLocation.description}: ${venvLocation.path}',
+      );
+    } else if (venvLocation.isParent && venvLocation.exists) {
+      Console.success(
+        'Found virtual environment in parent directory: ${venvLocation.path}',
+      );
+    } else {
+      Console.info(
+        'Virtual environment will be created in ${venvLocation.description}: ${venvLocation.path}',
+      );
+    }
+
+    final venvService = VenvService(venvPath: venvLocation.path);
 
     // Check Python
     Console.info('Checking Python installation...');
@@ -100,7 +113,8 @@ class InitCommand extends Command<void> {
     Console.header('Initialization Complete');
     Console.divider();
     Console.keyValue('Config Directory', ConfigPaths.configDir);
-    Console.keyValue('Virtual Environment', venvPath);
+    Console.keyValue('Virtual Environment', venvLocation.path);
+    Console.keyValue('Venv Location', venvLocation.description);
     Console.keyValue(
       'Ansible',
       await venvService.getAnsibleVersion() ?? 'installed',
@@ -110,6 +124,7 @@ class InitCommand extends Command<void> {
     Console.info('You can now use:');
     Console.step('  dart_cloud_deploy deploy-dev    # Deploy to remote server');
     Console.step('  dart_cloud_deploy deploy-local  # Deploy locally');
+    Console.step('  dart_cloud_deploy prune         # Clean config directory');
     Console.info('');
     Console.info('To activate venv manually:');
     Console.step('  ${venvService.activateCommand}');
