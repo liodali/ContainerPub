@@ -7,7 +7,9 @@ This guide provides simple examples to get you started with the Dart Cloud Deplo
 - [Installation](#installation)
 - [Basic Local Deployment](#basic-local-deployment)
 - [Remote Server Deployment](#remote-server-deployment)
+- [Container Registry Operations](#container-registry-operations)
 - [Working with Secrets](#working-with-secrets)
+- [System Management](#system-management)
 - [Common Workflows](#common-workflows)
 - [Examples by Use Case](#examples-by-use-case)
 
@@ -111,6 +113,94 @@ dart_cloud_deploy deploy-dev -c deploy-dev.yaml
 ```bash
 dart_cloud_deploy deploy-dev -c deploy-dev.yaml --dry-run
 ```
+
+---
+
+## Container Registry Operations
+
+Build and push container images to Gitea/GitHub registries.
+
+### Basic Build and Push
+
+```bash
+# Build and push with default settings
+dart_cloud_deploy build-push -i myapp/backend -t v1.0.0
+```
+
+### Build Options
+
+```bash
+# Build only (no push)
+dart_cloud_deploy build-push -i myapp/backend --no-push
+
+# Custom Dockerfile
+dart_cloud_deploy build-push -i myapp/backend -d Dockerfile.prod
+
+# Custom build context
+dart_cloud_deploy build-push -i myapp/backend -c ./backend
+
+# With build arguments
+dart_cloud_deploy build-push -i myapp/backend \
+  --build-arg NODE_ENV=production \
+  --build-arg VERSION=1.0.0
+
+# Verbose output
+dart_cloud_deploy build-push -i myapp/backend -v
+```
+
+### Registry Configuration
+
+Configure your registry in `deploy.yaml`:
+
+```yaml
+registry:
+  url: ghcr.io # or your Gitea instance
+  username: myuser
+  token_base64: base64_encoded_token
+```
+
+---
+
+## System Management
+
+### Environment File Conversion
+
+Convert `.env` files to JSON for debugging:
+
+```bash
+# Convert default .env file
+dart_cloud_deploy env-to-json
+
+# Convert specific file
+dart_cloud_deploy env-to-json -f .env.production
+
+# Output example
+{
+  "DATABASE_URL": "postgres://user:pass@localhost:5432/db",
+  "API_KEY": "secret-key",
+  "DEBUG": "true"
+}
+```
+
+### System Cleanup
+
+Remove all deployment configurations and cached data:
+
+```bash
+# Interactive cleanup
+dart_cloud_deploy prune
+
+# Force cleanup (skip confirmation)
+dart_cloud_deploy prune -y
+```
+
+This removes:
+
+- Virtual environment (`.venv/`)
+- Deployment configs
+- Cache and logs
+- Generated playbooks
+- Ansible inventory files
 
 ---
 
@@ -221,6 +311,19 @@ dart_cloud_deploy deploy-local -s backend
 dart_cloud_deploy deploy-local -s postgres
 ```
 
+### Build and Deploy Workflow
+
+```bash
+# 1. Build and push new version
+dart_cloud_deploy build-push -i myapp/backend -t v2.0.0
+
+# 2. Deploy with new image
+dart_cloud_deploy deploy-dev
+
+# 3. Or deploy locally for testing
+dart_cloud_deploy deploy-local
+```
+
 ### View Current Configuration
 
 ```bash
@@ -309,7 +412,22 @@ jobs:
           SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
 ```
 
-### Example 4: Database Backup
+### Example 4: Container Registry Workflow
+
+Build and push images before deployment:
+
+```bash
+# 1. Build and push backend image
+dart_cloud_deploy build-push -i myapp/backend -t v1.2.0
+
+# 2. Build and push frontend image
+dart_cloud_deploy build-push -i myapp/frontend -t v1.2.0
+
+# 3. Deploy with new images
+dart_cloud_deploy deploy-dev -c deploy-prod.yaml
+```
+
+### Example 5: Database Backup
 
 Run a backup on your remote server:
 
@@ -317,7 +435,7 @@ Run a backup on your remote server:
 dart_cloud_deploy deploy-dev -t backup -c deploy-prod.yaml
 ```
 
-### Example 5: Verbose Debugging
+### Example 6: Verbose Debugging
 
 When deployment fails and you need more info:
 
@@ -332,7 +450,7 @@ dart_cloud_deploy secrets check
 dart_cloud_deploy config validate
 ```
 
-### Example 6: Custom Ansible Variables
+### Example 7: Custom Ansible Variables
 
 Pass extra variables to Ansible:
 
@@ -343,7 +461,7 @@ dart_cloud_deploy deploy-dev \
   -e max_connections=100
 ```
 
-### Example 7: Selective Deployment with Tags
+### Example 8: Selective Deployment with Tags
 
 Run only specific parts of the playbook:
 
@@ -454,20 +572,23 @@ ssh_key_path = "~/.ssh/id_rsa"
 
 ## Quick Reference
 
-| Task                   | Command                                    |
-| ---------------------- | ------------------------------------------ |
-| Initialize environment | `dart_cloud_deploy init`                   |
-| Create local config    | `dart_cloud_deploy config init -e local`   |
-| Create staging config  | `dart_cloud_deploy config init -e staging` |
-| Validate config        | `dart_cloud_deploy config validate`        |
-| Deploy locally         | `dart_cloud_deploy deploy-local`           |
-| Deploy to server       | `dart_cloud_deploy deploy-dev`             |
-| Fetch secrets          | `dart_cloud_deploy secrets fetch`          |
-| Check secrets          | `dart_cloud_deploy secrets check`          |
-| Show config            | `dart_cloud_deploy show`                   |
-| Dry run                | `dart_cloud_deploy deploy-dev --dry-run`   |
-| Verbose mode           | `dart_cloud_deploy deploy-dev -v`          |
-| Force rebuild          | `dart_cloud_deploy deploy-local --force`   |
+| Task                   | Command                                         |
+| ---------------------- | ----------------------------------------------- |
+| Initialize environment | `dart_cloud_deploy init`                        |
+| Create local config    | `dart_cloud_deploy config init -e local`        |
+| Create staging config  | `dart_cloud_deploy config init -e staging`      |
+| Validate config        | `dart_cloud_deploy config validate`             |
+| Deploy locally         | `dart_cloud_deploy deploy-local`                |
+| Deploy to server       | `dart_cloud_deploy deploy-dev`                  |
+| Build and push image   | `dart_cloud_deploy build-push -i myapp/backend` |
+| Fetch secrets          | `dart_cloud_deploy secrets fetch`               |
+| Check secrets          | `dart_cloud_deploy secrets check`               |
+| Convert .env to JSON   | `dart_cloud_deploy env-to-json -f .env`         |
+| Show config            | `dart_cloud_deploy show`                        |
+| Clean system           | `dart_cloud_deploy prune -y`                    |
+| Dry run                | `dart_cloud_deploy deploy-dev --dry-run`        |
+| Verbose mode           | `dart_cloud_deploy deploy-dev -v`               |
+| Force rebuild          | `dart_cloud_deploy deploy-local --force`        |
 
 ---
 

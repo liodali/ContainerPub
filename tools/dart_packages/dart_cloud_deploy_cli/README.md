@@ -12,12 +12,15 @@ A robust deployment CLI for managing Dart Cloud Backend deployments with OpenBao
 - **Local Deployment**: Deploy locally using Podman/Docker without Ansible
 - **Dev Deployment**: Deploy to remote VPS using Ansible playbooks
 - **Secrets Management**: Fetch secrets from OpenBao and generate `.env` files
+- **Container Registry**: Build and push container images to Gitea/GitHub registries
 - **Configuration**: Support for YAML and TOML configuration files
 - **Python Venv Management**: Auto-creates Python venv and installs Ansible
 - **Dynamic Playbooks**: Generates playbooks on-demand with modern Ansible syntax (`ansible.builtin.*`)
 - **Auto Cleanup**: Removes generated playbooks after deployment
 - **Interactive Menus**: User-friendly prompts for service management
 - **Health Checks**: Automatic service health verification after deployment
+- **System Prune**: Clean up all deployment configurations and cached data
+- **Env Conversion**: Convert .env files to JSON format for easier debugging
 
 ## Installation
 
@@ -159,6 +162,38 @@ dart_cloud_deploy deploy-dev --tags setup,deploy
 
 # Skip specific tags
 dart_cloud_deploy deploy-dev --skip-tags cleanup
+```
+
+### 6. Build and Push Container Images
+
+```bash
+# Build and push to registry
+dart_cloud_deploy build-push -i myapp/backend -t v1.0.0
+
+# Build only (no push)
+dart_cloud_deploy build-push -i myapp/backend --no-push
+
+# Custom Dockerfile and build context
+dart_cloud_deploy build-push -i myapp/backend -d Dockerfile.prod -c ./backend
+
+# With build arguments
+dart_cloud_deploy build-push -i myapp/backend --build-arg NODE_ENV=production --build-arg VERSION=1.0.0
+
+# Verbose build output
+dart_cloud_deploy build-push -i myapp/backend -v
+```
+
+### 7. System Management
+
+```bash
+# Convert .env to JSON for debugging
+dart_cloud_deploy env-to-json -f .env.local
+
+# Show current configuration
+dart_cloud_deploy show
+
+# Clean up all configurations and cached data
+dart_cloud_deploy prune -y
 ```
 
 ## Configuration File (deploy.yaml)
@@ -368,6 +403,37 @@ Deploy to dev/production server using Ansible.
 | `--config` | `-c`  | Configuration file path                               | `deploy.yaml` |
 | `--env`    | `-e`  | Environment to use (`local`, `staging`, `production`) | `local`       |
 
+### `build-push` - Build and Push Container Images
+
+Build container images and push to Gitea/GitHub registry.
+
+| Option         | Short | Description                                       | Default       |
+| -------------- | ----- | ------------------------------------------------- | ------------- |
+| `--config`     | `-c`  | Configuration file path                           | `deploy.yaml` |
+| `--image-name` | `-i`  | Image name (without registry URL)                 | required      |
+| `--tag`        | `-t`  | Image tag                                         | `latest`      |
+| `--dockerfile` | `-d`  | Path to Dockerfile                                | `Dockerfile`  |
+| `--context`    |       | Build context path                                | `.`           |
+| `--build-arg`  |       | Build arguments as `key=value` (multiple allowed) | none          |
+| `--no-push`    |       | Build only, do not push to registry               | `false`       |
+| `--verbose`    | `-v`  | Verbose output                                    | `false`       |
+
+### `prune` - Clean System
+
+Remove all deployment configurations and virtual environment.
+
+| Option  | Short | Description              | Default |
+| ------- | ----- | ------------------------ | ------- |
+| `--yes` | `-y`  | Skip confirmation prompt | `false` |
+
+### `env-to-json` - Convert .env to JSON
+
+Convert .env file to JSON format for debugging.
+
+| Option   | Short | Description    | Default |
+| -------- | ----- | -------------- | ------- |
+| `--file` | `-f`  | .env file path | `.env`  |
+
 ### `show` - Show Configuration
 
 Display current configuration settings.
@@ -451,6 +517,7 @@ The CLI uses **AppRole authentication** for secure secrets retrieval:
 - **Python**: 3.8+ (for Ansible venv)
 - **Container Runtime**: Podman or Docker (for local deployment)
 - **OpenBao/Vault**: Optional, for secrets management
+- **openbao_api**: Dart package for OpenBao integration (included as dependency)
 
 ## Generic Usage Patterns
 
