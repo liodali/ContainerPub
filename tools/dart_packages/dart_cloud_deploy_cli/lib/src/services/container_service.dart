@@ -62,9 +62,10 @@ class ContainerService {
   }
 
   Future<ContainerInfo> getContainerStatus(String containerName) async {
-    final result = await _run(_runtime.split(' ').last, [
-      'ps',
-      '-a',
+    Console.info('Checking container status: $containerName');
+    final result = await _run(_runtime, [
+      'container',
+      'ls',
       '--format',
       '{{.Names}}:{{.Status}}',
     ], silent: true);
@@ -234,15 +235,9 @@ class ContainerService {
   }
 
   Future<bool> execInContainer(String serviceName, List<String> command) async {
-    final parts = _compose.split(' ');
-    final result = await _run(parts.first, [
-      ...parts.skip(1),
-      '-p',
-      config.projectName,
-      '-f',
-      config.composeFile,
+    final result = await _run(_runtime, [
       'exec',
-      '-T',
+      '-t',
       serviceName,
       ...command,
     ]);

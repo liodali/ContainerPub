@@ -115,7 +115,7 @@ class DeployLocalCommand extends Command<void> {
 
   @override
   final String description =
-      'Deploy locally using Podman/Docker with flexible env and rebuild options';
+      'Deploy locally using Podman/Docker with actions (deploy/start/stop/restart), flexible rebuild options, and volume management';
 
   DeployLocalCommand() {
     _setupArgParser();
@@ -146,7 +146,8 @@ class DeployLocalCommand extends Command<void> {
       ..addOption(
         'action',
         abbr: 'a',
-        help: 'Action to perform: deploy, start, stop, restart',
+        help:
+            'Action: deploy (default), start, stop, restart. Deploy shows interactive menu if services exist',
         allowed: DeployActionExtension.names,
         defaultsTo: DeployAction.deploy.label,
       )
@@ -154,7 +155,8 @@ class DeployLocalCommand extends Command<void> {
       ..addOption(
         'rebuild',
         abbr: 'r',
-        help: 'Rebuild strategy: all, backend-only, none',
+        help:
+            'Rebuild strategy: all (rebuild everything), backend-only (keep database), none (start existing)',
         allowed: RebuildStrategyExtension.names,
         defaultsTo: RebuildStrategy.none.label,
         mandatory: false,
@@ -163,7 +165,8 @@ class DeployLocalCommand extends Command<void> {
       ..addFlag(
         'force',
         abbr: 'f',
-        help: 'Force recreate containers even if running',
+        help:
+            'Force recreate containers, bypassing interactive menu when services exist',
         defaultsTo: false,
       )
       // Target specific service
@@ -309,8 +312,9 @@ class DeployLocalCommand extends Command<void> {
 
       Console.success('Configuration loaded successfully');
       return config;
-    } catch (e) {
+    } catch (e, trace) {
       Console.error('Failed to load configuration: $e');
+      Console.error('$trace');
       exit(1);
     }
   }

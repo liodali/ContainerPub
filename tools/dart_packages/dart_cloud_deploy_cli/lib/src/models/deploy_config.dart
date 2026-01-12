@@ -138,7 +138,7 @@ class DeployConfig {
     return DeployConfig.fromMap(map);
   }
 
-  static Map<String, dynamic> _convertYamlToMap(dynamic yaml) {
+  static dynamic _convertYamlToMap(dynamic yaml) {
     if (yaml is YamlMap) {
       return yaml.map(
         (key, value) => MapEntry(key.toString(), _convertYamlToMap(value)),
