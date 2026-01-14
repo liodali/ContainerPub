@@ -49,6 +49,70 @@ class ConfigManager {
     return true;
   }
 
+  /// Update registry configuration in existing config
+  Future<bool> updateRegistry({
+    required Map<String, dynamic> registryConfig,
+  }) async {
+    if (!configExists) return false;
+
+    final config = await loadConfig();
+    if (config == null) return false;
+
+    // Read raw content and update registry section
+    final content = await File(workspace.configPath).readAsString();
+    final lines = content.split('\n');
+    final buffer = StringBuffer();
+
+    bool inRegistry = false;
+    bool registryUpdated = false;
+    int registryIndentLevel = 0;
+
+    for (int i = 0; i < lines.length; i++) {
+      final line = lines[i];
+      final trimmed = line.trim();
+
+      // Check if we're entering the registry section
+      if (trimmed.startsWith('registry:')) {
+        inRegistry = true;
+        registryIndentLevel = line.indexOf('registry:');
+        buffer.writeln(line);
+        // Write updated registry config
+        _writeMapAsYaml(
+          buffer,
+          registryConfig,
+          indent: registryIndentLevel + 2,
+        );
+        registryUpdated = true;
+        continue;
+      }
+
+      // Skip old registry content
+      if (inRegistry) {
+        // Check if we've reached another top-level key
+        if (trimmed.isNotEmpty &&
+            !line.startsWith(' ') &&
+            !line.startsWith('\t') &&
+            trimmed.contains(':') &&
+            !trimmed.startsWith('#')) {
+          // We've reached the next section
+          inRegistry = false;
+          buffer.writeln(line);
+        }
+        // Skip lines that are part of the old registry section
+        continue;
+      }
+
+      buffer.writeln(line);
+    }
+
+    if (registryUpdated) {
+      await File(workspace.configPath).writeAsString(buffer.toString());
+      return true;
+    }
+
+    return false;
+  }
+
   /// Add OpenBao configuration to an existing environment
   Future<bool> addOpenBaoToEnvironment({
     required String environment,
@@ -124,6 +188,7 @@ class ConfigManager {
     required String name,
     required String environment,
     String format = 'yaml',
+    Map<String, dynamic>? registry,
     Map<String, dynamic>? openbao,
     Map<String, dynamic>? container,
     Map<String, dynamic>? host,
@@ -138,6 +203,7 @@ class ConfigManager {
         ? _generateFullConfigToml(
             name: name,
             environment: environment,
+            registry: registry,
             openbao: openbao,
             container: container,
             host: host,
@@ -146,6 +212,7 @@ class ConfigManager {
         : _generateFullConfig(
             name: name,
             environment: environment,
+            registry: registry,
             openbao: openbao,
             container: container,
             host: host,
@@ -175,6 +242,21 @@ class ConfigManager {
     };
   }
 
+  /// Generate registry config defaults
+  static Map<String, dynamic> generateRegistryDefaults({
+    String? url,
+    String? registryCompanyHostName,
+    String? username,
+    String? tokenBase64,
+  }) {
+    return {
+      'url': url ?? 'https://gitea.example.com',
+      'registry_company_host_name': registryCompanyHostName ?? 'docker.io',
+      'username': username ?? 'your-username',
+      'token_base64': tokenBase64 ?? '<base64-encoded-token>',
+    };
+  }
+
   /// Generate container config defaults
   static Map<String, dynamic> generateContainerDefaults({
     String? runtime,
@@ -200,6 +282,7 @@ class ConfigManager {
   String _generateFullConfig({
     required String name,
     required String environment,
+    Map<String, dynamic>? registry,
     Map<String, dynamic>? openbao,
     Map<String, dynamic>? container,
     Map<String, dynamic>? host,
@@ -213,6 +296,13 @@ class ConfigManager {
     buffer.writeln('name: $name');
     buffer.writeln('project_path: .');
     buffer.writeln('');
+
+    // Registry section (global)
+    if (registry != null) {
+      buffer.writeln('registry:');
+      _writeMapAsYaml(buffer, registry, indent: 2);
+      buffer.writeln('');
+    }
 
     // Environment section
     buffer.writeln('# Environment: $environment');
@@ -296,6 +386,7 @@ class ConfigManager {
   String _generateFullConfigToml({
     required String name,
     required String environment,
+    Map<String, dynamic>? registry,
     Map<String, dynamic>? openbao,
     Map<String, dynamic>? container,
     Map<String, dynamic>? host,
@@ -309,6 +400,13 @@ class ConfigManager {
     buffer.writeln('name = "$name"');
     buffer.writeln('project_path = "."');
     buffer.writeln('');
+
+    // Registry section (global)
+    if (registry != null) {
+      buffer.writeln('[registry]');
+      _writeMapAsToml(buffer, registry, prefix: '');
+      buffer.writeln('');
+    }
 
     // Environment section
     buffer.writeln('# Environment: $environment');
