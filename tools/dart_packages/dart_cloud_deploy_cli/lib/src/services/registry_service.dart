@@ -74,7 +74,7 @@ class RegistryService {
     required String contextPath,
     List<String> buildArgs = const [],
   }) async {
-    final fullImageName = '${config.url}/$imageName:$tag';
+    final fullImageName = '${config.registryCompanyHostName}/$imageName:$tag';
     Console.info('Building image: $fullImageName');
 
     try {
@@ -117,7 +117,7 @@ class RegistryService {
     required String imageName,
     required String tag,
   }) async {
-    final fullImageName = '${config.url}/$imageName:$tag';
+    final fullImageName = '${config.registryCompanyHostName}/$imageName:$tag';
     Console.info('Pushing image: $fullImageName');
 
     try {
