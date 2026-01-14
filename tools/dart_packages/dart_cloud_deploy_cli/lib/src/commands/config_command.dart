@@ -75,6 +75,23 @@ class _ConfigInitCommand extends Command<void> {
       ..addOption(
         'openbao-role-name',
         help: 'OpenBao AppRole role name',
+      )
+      ..addOption(
+        'registry-url',
+        help: 'Container registry URL (e.g., https://gitea.example.com)',
+      )
+      ..addOption(
+        'registry-company-host',
+        help:
+            'Registry company host name (e.g., docker.io, gitea.example.com/company)',
+      )
+      ..addOption(
+        'registry-username',
+        help: 'Registry username for authentication',
+      )
+      ..addOption(
+        'registry-token',
+        help: 'Registry token (base64 encoded)',
       );
   }
 
@@ -89,6 +106,10 @@ class _ConfigInitCommand extends Command<void> {
     final openbaoSecretPath = argResults!['openbao-secret-path'] as String?;
     final openbaoRoleId = argResults!['openbao-role-id'] as String?;
     final openbaoRoleName = argResults!['openbao-role-name'] as String?;
+    final registryUrl = argResults!['registry-url'] as String?;
+    final registryCompanyHost = argResults!['registry-company-host'] as String?;
+    final registryUsername = argResults!['registry-username'] as String?;
+    final registryToken = argResults!['registry-token'] as String?;
 
     Console.header('Initializing Deployment Configuration');
 
@@ -121,6 +142,37 @@ class _ConfigInitCommand extends Command<void> {
 
     // Check if config exists
     if (configManager.configExists) {
+      final existingConfig = await configManager.loadConfig();
+
+      // Check if we should update registry
+      final hasRegistryFlags =
+          registryUrl != null ||
+          registryCompanyHost != null ||
+          registryUsername != null ||
+          registryToken != null;
+
+      if (hasRegistryFlags && existingConfig?['registry'] != null) {
+        Console.info('Registry exists, updating configuration...');
+
+        // Merge existing registry with new values
+        final existingRegistry = Map<String, dynamic>.from(
+          existingConfig!['registry'] as Map,
+        );
+
+        final updatedRegistry = {
+          'url': registryUrl ?? existingRegistry['url'],
+          'registry_company_host_name':
+              registryCompanyHost ??
+              existingRegistry['registry_company_host_name'],
+          'username': registryUsername ?? existingRegistry['username'],
+          'token_base64': registryToken ?? existingRegistry['token_base64'],
+        };
+
+        await configManager.updateRegistry(registryConfig: updatedRegistry);
+        Console.success('Registry configuration updated');
+        return;
+      }
+
       // Config exists - check if we should add environment section
       final hasEnv = await configManager.hasEnvironmentSection(environment);
 
@@ -136,7 +188,6 @@ class _ConfigInitCommand extends Command<void> {
           Console.info(
             'Environment $environment exists, checking OpenBao configuration...',
           );
-          final existingConfig = await configManager.loadConfig();
           final envConfig = existingConfig?[environment];
 
           if (envConfig != null && envConfig['openbao'] == null) {
@@ -225,11 +276,28 @@ class _ConfigInitCommand extends Command<void> {
       projectName: name,
     );
 
+    // Generate registry config if any registry option is provided
+    final hasRegistryFlags =
+        registryUrl != null ||
+        registryCompanyHost != null ||
+        registryUsername != null ||
+        registryToken != null;
+
+    final registryConfig = hasRegistryFlags
+        ? ConfigManager.generateRegistryDefaults(
+            url: registryUrl,
+            registryCompanyHostName: registryCompanyHost,
+            username: registryUsername,
+            tokenBase64: registryToken,
+          )
+        : null;
+
     // Create config
     await configManager.createConfig(
       name: name,
       environment: environment,
       format: format,
+      registry: registryConfig,
       openbao: openbaoConfig,
       container: containerConfig,
       host: environment != 'local' ? _buildHostDefaults() : null,

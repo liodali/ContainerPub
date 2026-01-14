@@ -178,6 +178,6 @@ class RegistryService {
   }
 
   String getFullImageName(String imageName, String tag) {
-    return '${config.url}/$imageName:$tag';
+    return '${config.registryCompanyHostName}/$imageName:$tag';
   }
 }
