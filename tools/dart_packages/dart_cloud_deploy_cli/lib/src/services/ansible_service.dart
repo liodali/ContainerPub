@@ -38,7 +38,7 @@ class AnsibleService {
     return true;
   }
 
-  Future<String> generateInventory() async {
+  Future<void> generateInventory() async {
     final buffer = StringBuffer();
     buffer.writeln('[dart_cloud_servers]');
     buffer.write(host.host);
@@ -58,7 +58,10 @@ class AnsibleService {
       buffer.writeln('${entry.key}=${entry.value}');
     }
 
-    final tempDir = Directory.systemTemp;
+    var tempDir =  Directory(workingDirectory); //Directory.systemTemp;
+    if(!tempDir.existsSync()){
+      tempDir.createSync(recursive: true);
+    }
     final inventoryFile = File(
       p.join(
         tempDir.path,
@@ -69,7 +72,6 @@ class AnsibleService {
     _tempInventoryPath = inventoryFile.path;
 
     Console.info('Generated temporary inventory: ${inventoryFile.path}');
-    return inventoryFile.path;
   }
 
   Future<void> cleanup() async {

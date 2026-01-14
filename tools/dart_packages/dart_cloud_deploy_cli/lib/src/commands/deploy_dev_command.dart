@@ -109,12 +109,12 @@ class DeployDevCommand extends Command<void> {
       Console.error('Failed to load configuration: $e');
       exit(1);
     }
-
+    if (config.staging == null) {
+      Console.error('Staging configuration is required for dev deployment');
+      exit(1);
+    }
     // Determine target environment (default to staging if not set)
     Environment targetEnv = Environment.staging;
-    if (config.local != null) targetEnv = Environment.local;
-    if (config.staging != null) targetEnv = Environment.staging;
-    if (config.production != null) targetEnv = Environment.production;
 
     // Set current environment for backward compatibility
     config.setCurrentEnvironment(targetEnv);
