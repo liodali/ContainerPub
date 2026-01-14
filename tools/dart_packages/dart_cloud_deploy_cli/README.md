@@ -232,9 +232,10 @@ openbao:
     role_name: stg-production
 
 registry:
-  url: ghcr.io
+  url: https://gitea.dev.example.com
+  registry_company_host_name: gitea.dev.example.com/mycompany # or docker.io, ghcr.io, etc.
   username: myuser
-  token_base64: base64_encoded_token
+  token_base64: <your-base64-encoded-token>
 
 # Local environment configuration
 local:
@@ -330,11 +331,38 @@ Initializes Python virtual environment and installs Ansible with required collec
 
 #### `config init` - Create Configuration
 
-| Option          | Short | Description                                       | Default       |
-| --------------- | ----- | ------------------------------------------------- | ------------- |
-| `--format`      | `-f`  | Configuration file format (`yaml`, `toml`)        | `yaml`        |
-| `--output`      | `-o`  | Output file path                                  | `deploy.yaml` |
-| `--environment` | `-e`  | Target environment (`local`, `dev`, `production`) | `local`       |
+| Option                    | Short | Description                                       | Default       |
+| ------------------------- | ----- | ------------------------------------------------- | ------------- |
+| `--format`                | `-f`  | Configuration file format (`yaml`, `toml`)        | `yaml`        |
+| `--output`                | `-o`  | Output file path                                  | `deploy.yaml` |
+| `--environment`           | `-e`  | Target environment (`local`, `dev`, `production`) | `local`       |
+| `--registry-url`          |       | Container registry URL                            | none          |
+| `--registry-company-host` |       | Registry company host name (e.g., `docker.io`)    | none          |
+| `--registry-username`     |       | Registry username                                 | none          |
+| `--registry-token`        |       | Registry token (base64 encoded)                   | none          |
+| `--openbao-address`       |       | OpenBao server address                            | none          |
+| `--openbao-secret-path`   |       | OpenBao secret path                               | none          |
+| `--openbao-role-id`       |       | OpenBao AppRole role ID                           | none          |
+| `--openbao-role-name`     |       | OpenBao AppRole role name                         | none          |
+
+**Registry Configuration Examples:**
+
+```bash
+# Create config with registry
+dart_cloud_deploy config init -e local \
+  --registry-url https://gitea.dev.example.com \
+  --registry-company-host gitea.dev.example.com/mycompany \
+  --registry-username myuser \
+  --registry-token <base64-token>
+
+# Update existing registry token
+dart_cloud_deploy config init --registry-token <new-token>
+
+# Update multiple registry fields
+dart_cloud_deploy config init \
+  --registry-username newuser \
+  --registry-token <new-token>
+```
 
 #### `config validate` - Validate Configuration
 

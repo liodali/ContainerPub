@@ -54,6 +54,17 @@ dart_cloud_deploy config init -e local
 
 This creates `deploy.yaml` with local deployment settings.
 
+**Optional: Add Registry Configuration**
+
+```bash
+# Add registry during config creation
+dart_cloud_deploy config init -e local \
+  --registry-url https://gitea.example.com \
+  --registry-company-host gitea.example.com/mycompany \
+  --registry-username myuser \
+  --registry-token <base64-encoded-token>
+```
+
 ### Step 3: Deploy
 
 ```bash
@@ -150,13 +161,52 @@ dart_cloud_deploy build-push -i myapp/backend -v
 
 ### Registry Configuration
 
-Configure your registry in `deploy.yaml`:
+#### Option 1: Configure During Init
+
+```bash
+# Create config with registry
+dart_cloud_deploy config init -e local \
+  --registry-url https://gitea.dev.example.com \
+  --registry-company-host gitea.dev.example.com/mycompany \
+  --registry-username myuser \
+  --registry-token <your-base64-encoded-token>
+```
+
+#### Option 2: Update Existing Registry
+
+```bash
+# Update only the token
+dart_cloud_deploy config init --registry-token <new-base64-token>
+
+# Update multiple fields
+dart_cloud_deploy config init \
+  --registry-username newuser \
+  --registry-token <new-token>
+```
+
+#### Option 3: Manual Configuration
+
+Edit `deploy.yaml` directly:
 
 ```yaml
 registry:
-  url: ghcr.io # or your Gitea instance
+  url: https://gitea.dev.example.com
+  registry_company_host_name: gitea.dev.example.com/mycompany # or docker.io
   username: myuser
-  token_base64: base64_encoded_token
+  token_base64: <your-base64-encoded-token>
+```
+
+**Registry Company Host Examples:**
+
+- Docker Hub: `docker.io`
+- Gitea: `gitea.example.com/company`
+- GitHub: `ghcr.io/username`
+- GitLab: `registry.gitlab.com/group`
+
+**Generate Base64 Token:**
+
+```bash
+echo -n "your-registry-token" | base64
 ```
 
 ---
@@ -417,14 +467,24 @@ jobs:
 Build and push images before deployment:
 
 ```bash
-# 1. Build and push backend image
+# 1. Configure registry (one-time setup)
+dart_cloud_deploy config init \
+  --registry-url https://gitea.dev.example.com \
+  --registry-company-host gitea.dev.example.com/mycompany \
+  --registry-username myuser \
+  --registry-token <base64-token>
+
+# 2. Build and push backend image
 dart_cloud_deploy build-push -i myapp/backend -t v1.2.0
 
-# 2. Build and push frontend image
+# 3. Build and push frontend image
 dart_cloud_deploy build-push -i myapp/frontend -t v1.2.0
 
-# 3. Deploy with new images
+# 4. Deploy with new images
 dart_cloud_deploy deploy-dev -c deploy-prod.yaml
+
+# Update registry credentials later
+dart_cloud_deploy config init --registry-token <new-token>
 ```
 
 ### Example 5: Database Backup
@@ -484,22 +544,30 @@ dart_cloud_deploy deploy-dev --tags setup,deploy --skip-tags test
 
 ```yaml
 name: my_app
-environment: local
 project_path: .
 
-container:
-  runtime: podman
-  compose_file: docker-compose.yml
-  project_name: my_app
+local:
+  env_file_path: .env
+  container:
+    runtime: podman
+    compose_file: docker-compose.yml
+    project_name: my_app
 ```
 
-### Full Dev Config
+### Full Dev Config with Registry
 
 ```yaml
 name: my_app
-environment: staging
 project_path: .
-env_file_path: .env
+
+registry:
+  url: https://gitea.dev.example.com
+  registry_company_host_name: gitea.dev.example.com/mycompany
+  username: myuser
+  token_base64: <your-base64-encoded-token>
+
+staging:
+  env_file_path: .env
 
 openbao:
   address: http://vault.example.com:8200
@@ -553,15 +621,23 @@ dart_cloud_deploy config init -f toml -e dev -o deploy.toml
 
 ```toml
 name = "my_app"
-environment = "dev"
 project_path = "."
 
-[container]
+[registry]
+url = "https://gitea.dev.example.com"
+registry_company_host_name = "gitea.dev.example.com/mycompany"
+username = "myuser"
+token_base64 = "<your-base64-encoded-token>"
+
+[dev]
+env_file_path = ".env"
+
+[dev.container]
 runtime = "podman"
 compose_file = "docker-compose.yml"
 project_name = "my_app"
 
-[host]
+[dev.host]
 host = "dev.example.com"
 port = 22
 user = "deploy"
@@ -572,23 +648,25 @@ ssh_key_path = "~/.ssh/id_rsa"
 
 ## Quick Reference
 
-| Task                   | Command                                         |
-| ---------------------- | ----------------------------------------------- |
-| Initialize environment | `dart_cloud_deploy init`                        |
-| Create local config    | `dart_cloud_deploy config init -e local`        |
-| Create staging config  | `dart_cloud_deploy config init -e staging`      |
-| Validate config        | `dart_cloud_deploy config validate`             |
-| Deploy locally         | `dart_cloud_deploy deploy-local`                |
-| Deploy to server       | `dart_cloud_deploy deploy-dev`                  |
-| Build and push image   | `dart_cloud_deploy build-push -i myapp/backend` |
-| Fetch secrets          | `dart_cloud_deploy secrets fetch`               |
-| Check secrets          | `dart_cloud_deploy secrets check`               |
-| Convert .env to JSON   | `dart_cloud_deploy env-to-json -f .env`         |
-| Show config            | `dart_cloud_deploy show`                        |
-| Clean system           | `dart_cloud_deploy prune -y`                    |
-| Dry run                | `dart_cloud_deploy deploy-dev --dry-run`        |
-| Verbose mode           | `dart_cloud_deploy deploy-dev -v`               |
-| Force rebuild          | `dart_cloud_deploy deploy-local --force`        |
+| Task                   | Command                                                                       |
+| ---------------------- | ----------------------------------------------------------------------------- |
+| Initialize environment | `dart_cloud_deploy init`                                                      |
+| Create local config    | `dart_cloud_deploy config init -e local`                                      |
+| Create staging config  | `dart_cloud_deploy config init -e staging`                                    |
+| Add registry to config | `dart_cloud_deploy config init --registry-url <url> --registry-token <token>` |
+| Update registry token  | `dart_cloud_deploy config init --registry-token <new-token>`                  |
+| Validate config        | `dart_cloud_deploy config validate`                                           |
+| Deploy locally         | `dart_cloud_deploy deploy-local`                                              |
+| Deploy to server       | `dart_cloud_deploy deploy-dev`                                                |
+| Build and push image   | `dart_cloud_deploy build-push -i myapp/backend`                               |
+| Fetch secrets          | `dart_cloud_deploy secrets fetch`                                             |
+| Check secrets          | `dart_cloud_deploy secrets check`                                             |
+| Convert .env to JSON   | `dart_cloud_deploy env-to-json -f .env`                                       |
+| Show config            | `dart_cloud_deploy show`                                                      |
+| Clean system           | `dart_cloud_deploy prune -y`                                                  |
+| Dry run                | `dart_cloud_deploy deploy-dev --dry-run`                                      |
+| Verbose mode           | `dart_cloud_deploy deploy-dev -v`                                             |
+| Force rebuild          | `dart_cloud_deploy deploy-local --force`                                      |
 
 ---
 
