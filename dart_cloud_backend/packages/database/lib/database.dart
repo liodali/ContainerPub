@@ -32,6 +32,7 @@ export 'src/entities/organization.dart';
 export 'src/entities/organization_member.dart';
 export 'src/entities/logs_entity.dart';
 export 'src/entities/api_key_entity.dart';
+export 'src/entities/email_verification_otp_entity.dart';
 
 // Relationship managers
 export 'src/relationship_manager.dart';
@@ -114,6 +115,43 @@ class Database {
     // Create index on UUID for fast lookups
     await connection.execute('''
       CREATE INDEX IF NOT EXISTS idx_users_uuid ON users(uuid)
+    ''');
+
+    // Migration: Add email verification columns
+    await connection.execute('''
+      DO \$\$ 
+      BEGIN
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns 
+                       WHERE table_name='users' AND column_name='is_email_verified') THEN
+          ALTER TABLE users ADD COLUMN is_email_verified BOOLEAN NOT NULL DEFAULT false;
+        END IF;
+        
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns 
+                       WHERE table_name='users' AND column_name='onboarding_complete') THEN
+          ALTER TABLE users ADD COLUMN onboarding_complete BOOLEAN NOT NULL DEFAULT false;
+        END IF;
+      END \$\$
+    ''');
+
+    // Email verification OTPs table - separate table for OTP storage
+    await connection.execute('''
+      CREATE TABLE IF NOT EXISTS email_verification_otps (
+        id SERIAL PRIMARY KEY,
+        user_uuid UUID UNIQUE NOT NULL REFERENCES users(uuid) ON DELETE CASCADE,
+        otp_hash VARCHAR(255) UNIQUE NOT NULL,
+        salt VARCHAR(500) NOT NULL,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      )
+    ''');
+
+    // Create index on user_uuid for fast lookups
+    await connection.execute('''
+      CREATE INDEX IF NOT EXISTS idx_email_verification_otps_user_uuid ON email_verification_otps(user_uuid)
+    ''');
+
+    // Create index on created_at for expiry checks
+    await connection.execute('''
+      CREATE INDEX IF NOT EXISTS idx_email_verification_otps_created_at ON email_verification_otps(created_at)
     ''');
 
     // Functions table with serial ID (internal) and UUID (public)
