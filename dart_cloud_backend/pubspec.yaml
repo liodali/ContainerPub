@@ -30,6 +30,8 @@ dependencies:
     path: packages/database
   s3_native_http_client:
     path: ../tools/dart_packages/s3_native_http_client
+  dart_cloud_email_client_api:
+    path: ../tools/dart_packages/dart_cloud_email_client_api
   cli_util: ^0.4.2
   sentry: ^9.9.1
   #s3_client_dart:

@@ -23,6 +23,33 @@ CREATE TABLE IF NOT EXISTS users (
 );
 \echo "Users table created"
 
+-- Add email verification columns to users table (if they don't exist)
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns 
+                   WHERE table_name='users' AND column_name='is_email_verified') THEN
+        ALTER TABLE users ADD COLUMN is_email_verified BOOLEAN NOT NULL DEFAULT false;
+        RAISE NOTICE 'Added is_email_verified column to users table';
+    END IF;
+    
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns 
+                   WHERE table_name='users' AND column_name='onboarding_complete') THEN
+        ALTER TABLE users ADD COLUMN onboarding_complete BOOLEAN NOT NULL DEFAULT false;
+        RAISE NOTICE 'Added onboarding_complete column to users table';
+    END IF;
+END $$;
+\echo "Email verification columns added to users table"
+
+-- Create email verification OTPs table
+CREATE TABLE IF NOT EXISTS email_verification_otps (
+    id SERIAL PRIMARY KEY,
+    user_uuid UUID UNIQUE NOT NULL REFERENCES users(uuid) ON DELETE CASCADE,
+    otp_hash VARCHAR(255) UNIQUE NOT NULL,
+    salt VARCHAR(500) NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+\echo "Email verification OTPs table created"
+
 -- Create functions table with serial ID (internal) and UUID (public)
 CREATE TABLE IF NOT EXISTS functions (
     id SERIAL PRIMARY KEY,
@@ -117,6 +144,7 @@ CREATE INDEX IF NOT EXISTS idx_function_deployments_uuid ON function_deployments
 CREATE INDEX IF NOT EXISTS idx_function_deploy_logs_uuid ON function_deploy_logs(uuid);
 CREATE INDEX IF NOT EXISTS idx_function_invocations_uuid ON function_invocations(uuid);
 CREATE INDEX IF NOT EXISTS idx_logs_uuid ON logs(uuid);
+CREATE INDEX IF NOT EXISTS idx_email_verification_otps_uuid ON email_verification_otps(user_uuid);
 
 -- Email index for authentication
 CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
@@ -136,6 +164,7 @@ CREATE INDEX IF NOT EXISTS idx_function_invocations_timestamp ON function_invoca
 CREATE INDEX IF NOT EXISTS idx_logs_created_at ON logs(created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_logs_action ON logs(action);
 CREATE INDEX IF NOT EXISTS idx_logs_level ON logs(level);
+CREATE INDEX IF NOT EXISTS idx_email_verification_otps_created_at ON email_verification_otps(created_at);
 
 -- Create updated_at trigger function
 CREATE OR REPLACE FUNCTION update_updated_at_column()
@@ -195,7 +224,8 @@ GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO dart_cloud;
 \echo '  ✓ functions_db    - Functions data storage'
 \echo ''
 \echo 'Created tables in dart_cloud:'
-\echo '  ✓ users                    (SERIAL + UUID)'
+\echo '  ✓ users                    (SERIAL + UUID, with email verification)'
+\echo '  ✓ email_verification_otps  (SERIAL + UUID, OTP storage)'
 \echo '  ✓ functions                (SERIAL + UUID, with deployment support)'
 \echo '  ✓ function_deployments     (SERIAL + UUID, versioned deployments)'
 \echo '  ✓ function_deploy_logs     (SERIAL + UUID)'
