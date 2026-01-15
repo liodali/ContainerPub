@@ -1,0 +1,14 @@
+name: otp_service
+description: A secure OTP (One-Time Password) service for email verification with time-based uniqueness and HMAC-SHA256 hashing.
+version: 1.0.0
+publish_to: none
+
+environment:
+  sdk: ^3.6.0
+
+dependencies:
+  crypto: ^3.0.3
+
+dev_dependencies:
+  lints: ^5.0.0
+  test: ^1.25.8
