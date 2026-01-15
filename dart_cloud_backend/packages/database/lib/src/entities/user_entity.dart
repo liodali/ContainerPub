@@ -9,6 +9,8 @@ class UserEntity extends Entity {
   final String? uuid;
   final String email;
   final String? passwordHash;
+  final bool isEmailVerified;
+  final bool onboardingComplete;
   final DateTime? createdAt;
   final DateTime? updatedAt;
   UserEntity({
@@ -16,6 +18,8 @@ class UserEntity extends Entity {
     this.uuid,
     required this.email,
     this.passwordHash,
+    this.isEmailVerified = false,
+    this.onboardingComplete = false,
     this.createdAt,
     this.updatedAt,
   });
@@ -28,6 +32,8 @@ class UserEntity extends Entity {
     return {
       if (uuid != null) 'uuid': uuid,
       'email': email,
+      'is_email_verified': isEmailVerified,
+      'onboarding_complete': onboardingComplete,
     };
   }
 
@@ -38,6 +44,8 @@ class UserEntity extends Entity {
       if (uuid != null) 'uuid': uuid,
       'email': email,
       if (passwordHash != null) 'password_hash': passwordHash,
+      'is_email_verified': isEmailVerified,
+      'onboarding_complete': onboardingComplete,
       if (createdAt != null) 'created_at': createdAt,
       if (updatedAt != null) 'updated_at': updatedAt,
     };
@@ -49,6 +57,8 @@ class UserEntity extends Entity {
       uuid: map['uuid'],
       email: map['email'] as String,
       passwordHash: map['password_hash'] as String?,
+      isEmailVerified: map['is_email_verified'] as bool? ?? false,
+      onboardingComplete: map['onboarding_complete'] as bool? ?? false,
       createdAt: map['created_at'] as DateTime?,
       updatedAt: map['updated_at'] as DateTime?,
     );
@@ -59,6 +69,8 @@ class UserEntity extends Entity {
     String? uuid,
     String? email,
     String? passwordHash,
+    bool? isEmailVerified,
+    bool? onboardingComplete,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
@@ -67,6 +79,8 @@ class UserEntity extends Entity {
       uuid: uuid ?? this.uuid,
       email: email ?? this.email,
       passwordHash: passwordHash ?? this.passwordHash,
+      isEmailVerified: isEmailVerified ?? this.isEmailVerified,
+      onboardingComplete: onboardingComplete ?? this.onboardingComplete,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );
