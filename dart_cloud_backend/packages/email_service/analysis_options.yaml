@@ -1,0 +1,11 @@
+include: package:lints/recommended.yaml
+
+formatter:
+  trailing_commas: preserve
+
+linter:
+  rules:
+    - always_declare_return_types
+    - prefer_const_constructors
+    - prefer_final_fields
+    - unnecessary_this
