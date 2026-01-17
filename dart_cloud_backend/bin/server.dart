@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 import 'package:dart_cloud_backend/services/s3_service.dart' show S3Service;
 import 'package:dart_cloud_backend/services/token_service.dart';
+import 'package:dart_cloud_backend/services/email_verification_service.dart';
 import 'package:s3_native_http_client/s3_native_http_client.dart'
     show S3RequestConfiguration;
 import 'package:sentry/sentry.dart';
@@ -19,6 +20,11 @@ void main() async {
   // Initialize database
   await Database.initialize(Config.databaseUrl);
   print('Database initialized');
+
+  // Initialize email verification service
+  EmailVerificationService().initialize();
+  print('Email verification service initialized');
+
   await initCrashlytics();
   // Initialize S3
   S3Service.initializeS3(
