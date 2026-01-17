@@ -9,6 +9,42 @@ import 'package:dart_cloud_backend/services/docker/podman_runtime.dart'
 import 'package:dart_cloud_backend/utils/commons.dart';
 import 'package:dotenv/dotenv.dart';
 
+class EmailConfiguration {
+  static late String emailApiKey;
+  static late String emailFromAddress;
+  static late String emailLogo;
+  static late String emailCompanyName;
+  static late String emailSupportEmail;
+
+  static Future<void> load(DotEnv env) async {
+    emailApiKey = env['EMAIL_API_KEY'] ?? Platform.environment['EMAIL_API_KEY'] ?? '';
+    emailFromAddress =
+        env['EMAIL_FROM_ADDRESS'] ??
+        Platform.environment['EMAIL_FROM_ADDRESS'] ??
+        'noreply@dartcloud.dev';
+    emailLogo =
+        env['EMAIL_LOGO'] ??
+        Platform.environment['EMAIL_LOGO'] ??
+        'https://dartcloud.dev/logo.png';
+    emailCompanyName =
+        env['EMAIL_COMPANY_NAME'] ??
+        Platform.environment['EMAIL_COMPANY_NAME'] ??
+        'DartCloud';
+    emailSupportEmail =
+        env['EMAIL_SUPPORT_EMAIL'] ??
+        Platform.environment['EMAIL_SUPPORT_EMAIL'] ??
+        'support@dartcloud.dev';
+  }
+
+  static void loadFake() {
+    emailApiKey = '';
+    emailFromAddress = 'noreply@dartcloud.dev';
+    emailLogo = 'https://dartcloud.dev/logo.png';
+    emailCompanyName = 'DartCloud';
+    emailSupportEmail = 'support@dartcloud.dev';
+  }
+}
+
 class Config {
   static late int port;
   static late String functionsDir;
@@ -48,12 +84,12 @@ class Config {
 
   static late String sentryDsn;
 
-  // Email Service Configuration
-  static late String emailApiKey;
-  static late String emailFromAddress;
-  static late String emailLogo;
-  static late String emailCompanyName;
-  static late String emailSupportEmail;
+  // Email Service Configuration - getters for backward compatibility
+  static String get emailApiKey => EmailConfiguration.emailApiKey;
+  static String get emailFromAddress => EmailConfiguration.emailFromAddress;
+  static String get emailLogo => EmailConfiguration.emailLogo;
+  static String get emailCompanyName => EmailConfiguration.emailCompanyName;
+  static String get emailSupportEmail => EmailConfiguration.emailSupportEmail;
 
   static String get fileEnv {
     return String.fromEnvironment('FILE_ENV', defaultValue: '.env');
@@ -136,24 +172,8 @@ class Config {
 
     sentryDsn = env['SENTRY_DSN'] ?? getValueFromEnv('SENTRY_DSN') ?? '';
 
-    // Email Service Configuration
-    emailApiKey = env['EMAIL_API_KEY'] ?? Platform.environment['EMAIL_API_KEY'] ?? '';
-    emailFromAddress =
-        env['EMAIL_FROM_ADDRESS'] ??
-        Platform.environment['EMAIL_FROM_ADDRESS'] ??
-        'noreply@dartcloud.dev';
-    emailLogo =
-        env['EMAIL_LOGO'] ??
-        Platform.environment['EMAIL_LOGO'] ??
-        'https://dartcloud.dev/logo.png';
-    emailCompanyName =
-        env['EMAIL_COMPANY_NAME'] ??
-        Platform.environment['EMAIL_COMPANY_NAME'] ??
-        'DartCloud';
-    emailSupportEmail =
-        env['EMAIL_SUPPORT_EMAIL'] ??
-        Platform.environment['EMAIL_SUPPORT_EMAIL'] ??
-        'support@dartcloud.dev';
+    // Load email configuration
+    await EmailConfiguration.load(env);
 
     // S3 Client Configuration
     s3ClientLibraryPath = env['S3_CLIENT_LIBRARY_PATH'] ?? './s3_client_dart.dylib';
@@ -229,6 +249,7 @@ class Config {
     functionDatabaseUrl = 'postgres://dart_cloud:dart_cloud@postgres:5432/dart_cloud';
     functionDatabaseMaxConnections = 5;
     functionDatabaseConnectionTimeoutMs = 5000;
+    EmailConfiguration.loadFake();
   }
 }
 
