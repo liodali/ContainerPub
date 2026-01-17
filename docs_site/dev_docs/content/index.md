@@ -31,6 +31,7 @@ Understand the system design and architecture of ContainerPub.
 
 - **[Backend Overview](./docs/backend)** - Backend documentation overview
 - **[System Architecture](./docs/backend/architecture)** - High-level architecture overview
+- **[Email Verification](./docs/backend/email-verification)** - Email OTP verification system
 - **[API Reference](./docs/backend/api-reference)** - Complete API documentation
 - **[Database System](./docs/database/database-system)** - Database design and structure
 

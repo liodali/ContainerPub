@@ -23,6 +23,7 @@ The `dart_cloud_backend` is the core platform that:
 ### Core Documentation
 
 - [Authentication System](./authentication.md) - Complete authentication flow and token management
+- [Email Verification System](./email-verification.md) - Email OTP verification for user authentication
 - [API Keys & Signing](./api-keys.md) - Secure function invocations with HMAC signatures
 - [Input Validation Middleware](./validation-middleware.md) - Schema-based request validation with Zard
 - [Statistics & Monitoring](./statistics.md) - Dashboard metrics and performance tracking
