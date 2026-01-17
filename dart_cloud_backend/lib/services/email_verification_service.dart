@@ -1,3 +1,4 @@
+import 'package:dart_cloud_backend/handlers/logs_utils/log_utils.dart';
 import 'package:database/database.dart';
 import 'package:otp_service/otp_service.dart';
 import 'package:email_service/email_service.dart';
@@ -106,8 +107,12 @@ class EmailVerificationService {
       }
 
       return isValid;
-    } catch (e) {
-      print('Error verifying email OTP: $e');
+    } catch (e, stackTrace) {
+      LogsUtils.logError(
+        'otp verification',
+        e.toString(),
+        stackTrace.toString(),
+      );
       return false;
     }
   }
@@ -120,8 +125,12 @@ class EmailVerificationService {
       );
 
       return user?.isEmailVerified ?? false;
-    } catch (e) {
-      print('Error checking email verification status: $e');
+    } catch (e, stackTrace) {
+      LogsUtils.logError(
+        'email verification status',
+        e.toString(),
+        stackTrace.toString(),
+      );
       return false;
     }
   }
@@ -145,8 +154,12 @@ class EmailVerificationService {
         email: email,
         userName: userName,
       );
-    } catch (e) {
-      print('Error resending email verification OTP: $e');
+    } catch (e, stackTrace) {
+      LogsUtils.logError(
+        'email verification resend',
+        e.toString(),
+        stackTrace.toString(),
+      );
       return false;
     }
   }
@@ -168,8 +181,12 @@ class EmailVerificationService {
           );
         }
       }
-    } catch (e) {
-      print('Error cleaning up expired OTPs: $e');
+    } catch (e, trace) {
+      LogsUtils.logError(
+        'cleanupExpiredOtps',
+        e.toString(),
+        trace.toString(),
+      );
     }
   }
 
