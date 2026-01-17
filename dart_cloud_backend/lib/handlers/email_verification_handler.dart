@@ -1,4 +1,6 @@
 import 'dart:convert';
+import 'package:dart_cloud_backend/handlers/logs_utils/log_utils.dart';
+import 'package:dart_cloud_backend/utils/commons.dart' show KeyCommons, StringExtension;
 import 'package:database/database.dart';
 import 'package:shelf/shelf.dart';
 import 'package:dart_cloud_backend/services/email_verification_service.dart';
@@ -12,44 +14,26 @@ class EmailVerificationHandler {
   /// Send email verification OTP
   static Future<Response> sendVerificationOtp(Request request) async {
     try {
-      // Get user from JWT token
-      final token = request.headers['authorization']?.split('Bearer ').last;
-      if (token == null) {
-        return Response.unauthorized(
-          jsonEncode({'error': 'No token provided'}),
-          headers: {'Content-Type': 'application/json'},
-        );
-      }
-
-      final jwt = JWT.verify(token, SecretKey(Config.jwtSecret));
-      final userUuid = jwt.payload['userId'] as String;
+      final String? userUuid = request.context[KeyCommons.userUUID] as String?;
 
       // Get user details
       final user = await DatabaseManagers.users.findOne(
         where: {'uuid': userUuid},
       );
 
-      if (user == null) {
-        return Response.notFound(
-          jsonEncode({'error': 'User not found'}),
-          headers: {'Content-Type': 'application/json'},
-        );
-      }
-
       // Check if email is already verified
-      if (user.isEmailVerified) {
+      if (user!.isEmailVerified) {
         return Response.badRequest(
           body: jsonEncode({'error': 'Email is already verified'}),
           headers: {'Content-Type': 'application/json'},
         );
       }
-
       // Initialize email service if needed
       _emailService.initialize();
 
       // Send OTP
       final sent = await _emailService.sendEmailVerificationOtp(
-        userUuid: userUuid,
+        userUuid: userUuid!,
         email: user.email,
       );
 
@@ -64,8 +48,12 @@ class EmailVerificationHandler {
           headers: {'Content-Type': 'application/json'},
         );
       }
-    } catch (e) {
-      print('Error sending verification OTP: $e');
+    } catch (e, trace) {
+      await LogsUtils.logError(
+        'email-verification',
+        e.toString(),
+        trace.toString(),
+      );
       return Response.internalServerError(
         body: jsonEncode({'error': 'Failed to send verification OTP'}),
         headers: {'Content-Type': 'application/json'},
@@ -77,27 +65,17 @@ class EmailVerificationHandler {
   static Future<Response> verifyOtp(Request request) async {
     try {
       final body = jsonDecode(await request.readAsString()) as Map<String, dynamic>;
-      final otp = body['otp'] as String?;
+      final otpB64 = body['otp'] as String?;
 
-      if (otp == null || otp.isEmpty) {
+      if (otpB64 == null || otpB64.isEmpty) {
         return Response.badRequest(
           body: jsonEncode({'error': 'OTP is required'}),
           headers: {'Content-Type': 'application/json'},
         );
       }
 
-      // Get user from JWT token
-      final token = request.headers['authorization']?.split('Bearer ').last;
-      if (token == null) {
-        return Response.unauthorized(
-          jsonEncode({'error': 'No token provided'}),
-          headers: {'Content-Type': 'application/json'},
-        );
-      }
-
-      final jwt = JWT.verify(token, SecretKey(Config.jwtSecret));
-      final userUuid = jwt.payload['userId'] as String;
-
+      final userUuid = request.context[KeyCommons.userUUID] as String;
+     final otp = otpB64.decode;
       // Verify OTP
       final isValid = await _emailService.verifyEmailOtp(
         userUuid: userUuid,
