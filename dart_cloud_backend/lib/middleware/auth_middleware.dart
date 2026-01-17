@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:dart_cloud_backend/handlers/function_handler/auth_utils.dart';
 import 'package:dart_cloud_backend/services/token_service.dart';
+import 'package:dart_cloud_backend/utils/commons.dart' show KeyCommons;
 import 'package:shelf/shelf.dart';
 import 'package:dart_jsonwebtoken/dart_jsonwebtoken.dart';
 import 'package:dart_cloud_backend/configuration/config.dart';
@@ -42,8 +43,8 @@ Middleware get authMiddleware {
         return handler(
           request.change(
             context: {
-              'userUUID': userUUID,
-              'userId': authUser.id,
+              KeyCommons.userUUID: userUUID,
+              KeyCommons.userId: authUser.id,
             },
           ),
         );
