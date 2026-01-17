@@ -3,6 +3,7 @@ import 'package:database/src/entities/organization.dart';
 import 'package:database/src/entities/user_information.dart';
 import 'package:database/src/entities/organization_member.dart';
 import 'package:database/src/entities/api_key_entity.dart';
+import 'package:database/src/entities/email_verification_otp_entity.dart';
 
 import 'database_manager_query.dart';
 import 'relationship_manager.dart';
@@ -78,6 +79,13 @@ class DatabaseManagers
     tableName: 'api_keys',
     fromMap: ApiKeyEntity.fromMap,
   );
+
+  /// Email verification OTP manager
+  static final emailVerificationOtps =
+      DatabaseManagerQuery<EmailVerificationOtpEntity>(
+        tableName: 'email_verification_otps',
+        fromMap: EmailVerificationOtpEntity.fromMap,
+      );
 
   /// Singleton instance for relationship methods
   static final _instance = DatabaseManagers._();
