@@ -61,19 +61,24 @@ The `docker-compose.yml` includes:
 
 All sensitive data is loaded from `.env` file:
 
-| Variable                   | Required | Default          | Description             |
-| -------------------------- | -------- | ---------------- | ----------------------- |
-| `POSTGRES_USER`            | No       | `dart_cloud`     | Database username       |
-| `POSTGRES_PASSWORD`        | **Yes**  | -                | Database password       |
-| `POSTGRES_DB`              | No       | `dart_cloud`     | Main database name      |
-| `POSTGRES_PORT`            | No       | `5432`           | PostgreSQL port         |
-| `FUNCTION_DB`              | No       | `functions_db`   | Functions database name |
-| `PORT`                     | No       | `8080`           | Backend API port        |
-| `JWT_SECRET`               | **Yes**  | -                | JWT signing secret      |
-| `FUNCTIONS_DIR`            | No       | `/app/functions` | Functions storage path  |
-| `FUNCTION_TIMEOUT_SECONDS` | No       | `5`              | Function timeout        |
-| `FUNCTION_MAX_MEMORY_MB`   | No       | `128`            | Memory limit            |
-| `FUNCTION_MAX_CONCURRENT`  | No       | `10`             | Concurrent executions   |
+| Variable                   | Required | Default                 | Description             |
+| -------------------------- | -------- | ----------------------- | ----------------------- |
+| `POSTGRES_USER`            | No       | `dart_cloud`            | Database username       |
+| `POSTGRES_PASSWORD`        | **Yes**  | -                       | Database password       |
+| `POSTGRES_DB`              | No       | `dart_cloud`            | Main database name      |
+| `POSTGRES_PORT`            | No       | `5432`                  | PostgreSQL port         |
+| `FUNCTION_DB`              | No       | `functions_db`          | Functions database name |
+| `PORT`                     | No       | `8080`                  | Backend API port        |
+| `JWT_SECRET`               | **Yes**  | -                       | JWT signing secret      |
+| `FUNCTIONS_DIR`            | No       | `/app/functions`        | Functions storage path  |
+| `FUNCTION_TIMEOUT_SECONDS` | No       | `5`                     | Function timeout        |
+| `FUNCTION_MAX_MEMORY_MB`   | No       | `128`                   | Memory limit            |
+| `FUNCTION_MAX_CONCURRENT`  | No       | `10`                    | Concurrent executions   |
+| `EMAIL_API_KEY`            | No       | ``                      | ForwardEmail API key    |
+| `EMAIL_FROM_ADDRESS`       | No       | `noreply@dartcloud.dev` | From email address      |
+| `EMAIL_LOGO`               | No       | ``                      | Company logo URL        |
+| `EMAIL_COMPANY_NAME`       | No       | `DartCloud`             | Company name            |
+| `EMAIL_SUPPORT_EMAIL`      | No       | `support@dartcloud.dev` | Support email           |
 
 ### Database Initialization
 
@@ -396,6 +401,7 @@ jobs:
 
 - 🚀 Deploy Dart functions via REST API
 - 🔐 JWT-based authentication
+- 📧 Email OTP verification system
 - 📊 Function execution monitoring
 - 📝 Logging and metrics
 - 🗄️ PostgreSQL database for metadata
@@ -632,6 +638,76 @@ Authorization: Bearer <token>
 ```http
 GET /api/auth/apikey/{function_id}/list
 Authorization: Bearer <token>
+```
+
+### Email Verification (Requires Authentication)
+
+Email verification endpoints for user account verification using One-Time Passwords (OTPs).
+
+#### Send Verification OTP
+
+```http
+POST /api/email-verification/send
+Authorization: Bearer <token>
+```
+
+**Response:**
+
+```json
+{
+  "message": "Verification OTP sent to your email"
+}
+```
+
+#### Verify OTP
+
+```http
+POST /api/email-verification/verify
+Authorization: Bearer <token>
+Content-Type: application/json
+
+{
+  "otp": "123456"
+}
+```
+
+**Response:**
+
+```json
+{
+  "message": "Email verified successfully"
+}
+```
+
+#### Resend Verification OTP
+
+```http
+POST /api/email-verification/resend
+Authorization: Bearer <token>
+```
+
+**Response:**
+
+```json
+{
+  "message": "Verification OTP resent to your email"
+}
+```
+
+#### Check Verification Status
+
+```http
+GET /api/email-verification/status
+Authorization: Bearer <token>
+```
+
+**Response:**
+
+```json
+{
+  "isEmailVerified": true,
+  "message": "Email is verified"
+}
 ```
 
 ## Function Structure
