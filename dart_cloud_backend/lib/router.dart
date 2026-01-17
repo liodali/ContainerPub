@@ -1,9 +1,13 @@
+import 'dart:convert';
+
+import 'package:dart_cloud_backend/middleware/email_verification_limiter.dart';
 import 'package:dart_cloud_backend/routers/api_key_routes.dart';
 import 'package:dart_cloud_backend/routers/functions_routes.dart';
 import 'package:shelf/shelf.dart';
 import 'package:shelf_router/shelf_router.dart';
 import 'package:dart_cloud_backend/handlers/auth_handler.dart';
 import 'package:dart_cloud_backend/handlers/statistics_handler.dart';
+import 'package:dart_cloud_backend/handlers/email_verification_handler.dart';
 import 'package:dart_cloud_backend/middleware/auth_middleware.dart';
 
 Router createRouter() {
@@ -14,6 +18,7 @@ Router createRouter() {
   });
   router.authRoutes();
   router.userRoutes();
+  router.emailVerificationRoutes();
   router.apiKeyRoutes();
   // Function routes (protected)
   router.functionRoutes();
@@ -67,5 +72,52 @@ extension ExtUserRouter on Router {
     post('/api/user/organization', AuthHandler.createOrganization);
     post('/api/user/upgrade', AuthHandler.upgrade);
     post('/api/user/add-member', AuthHandler.addMember);
+  }
+}
+
+extension ExtEmailVerificationRouter on Router {
+  void emailVerificationRoutes() {
+    // Email verification routes (protected)
+    post(
+      '/api/email-verification/send',
+      Pipeline()
+          .addMiddleware(authMiddleware)
+          .addMiddleware(
+            emailVerificationLimiter(
+              jsonEncode(
+                {'error': 'Too many requests'},
+              ),
+            ),
+          )
+          .addHandler(EmailVerificationHandler.sendVerificationOtp),
+    );
+
+    post(
+      '/api/email-verification/verify',
+      Pipeline()
+          .addMiddleware(authMiddleware)
+          .addMiddleware(
+            emailVerificationLimiter(
+              jsonEncode(
+                {'error': 'Too many requests'},
+              ),
+            ),
+          )
+          .addHandler(EmailVerificationHandler.verifyOtp),
+    );
+
+    post(
+      '/api/email-verification/resend',
+      Pipeline()
+          .addMiddleware(authMiddleware)
+          .addHandler(EmailVerificationHandler.resendVerificationOtp),
+    );
+
+    // get(
+    //   '/api/email-verification/status',
+    //   Pipeline()
+    //       .addMiddleware(authMiddleware)
+    //       .addHandler(EmailVerificationHandler.checkVerificationStatus),
+    // );
   }
 }
