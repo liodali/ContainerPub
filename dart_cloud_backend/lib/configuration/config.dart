@@ -9,41 +9,11 @@ import 'package:dart_cloud_backend/services/docker/podman_runtime.dart'
 import 'package:dart_cloud_backend/utils/commons.dart';
 import 'package:dotenv/dotenv.dart';
 
-class EmailConfiguration {
-  static late String emailApiKey;
-  static late String emailFromAddress;
-  static late String emailLogo;
-  static late String emailCompanyName;
-  static late String emailSupportEmail;
-
-  static Future<void> load(DotEnv env) async {
-    emailApiKey = env['EMAIL_API_KEY'] ?? Platform.environment['EMAIL_API_KEY'] ?? '';
-    emailFromAddress =
-        env['EMAIL_FROM_ADDRESS'] ??
-        Platform.environment['EMAIL_FROM_ADDRESS'] ??
-        'noreply@dartcloud.dev';
-    emailLogo =
-        env['EMAIL_LOGO'] ??
-        Platform.environment['EMAIL_LOGO'] ??
-        'https://dartcloud.dev/logo.png';
-    emailCompanyName =
-        env['EMAIL_COMPANY_NAME'] ??
-        Platform.environment['EMAIL_COMPANY_NAME'] ??
-        'DartCloud';
-    emailSupportEmail =
-        env['EMAIL_SUPPORT_EMAIL'] ??
-        Platform.environment['EMAIL_SUPPORT_EMAIL'] ??
-        'support@dartcloud.dev';
-  }
-
-  static void loadFake() {
-    emailApiKey = '';
-    emailFromAddress = 'noreply@dartcloud.dev';
-    emailLogo = 'https://dartcloud.dev/logo.png';
-    emailCompanyName = 'DartCloud';
-    emailSupportEmail = 'support@dartcloud.dev';
-  }
-}
+// Import configuration classes
+import 'email_configuration.dart';
+import 'function_configuration.dart';
+import 's3_configuration.dart';
+import 'docker_configuration.dart';
 
 class Config {
   static late int port;
@@ -54,35 +24,35 @@ class Config {
   static late bool databaseSSL;
   static late String jwtSecret;
 
-  // Function execution limits
-  static late int functionTimeoutSeconds;
-  static late int functionMaxMemoryMb;
-  static late int functionMaxConcurrentExecutions;
-  static late int functionMaxRequestSizeMb;
-
-  // Database access control
-  static late String? functionDatabaseUrl;
-  static late int functionDatabaseMaxConnections;
-  static late int functionDatabaseConnectionTimeoutMs;
-
-  // S3 Configuration
-  static late String s3Endpoint;
-  static late String s3BucketName;
-  static late String s3AccessKeyId;
-  static late String s3SecretAccessKey;
-  static late String s3Region;
-  static late String? s3SessionToken;
-  static late String? s3AccountId;
-
-  // S3 Client Configuration
-  static late String s3ClientLibraryPath;
-
-  // Docker Configuration
-  static late String dockerBaseImage;
-  static late String dockerRegistry;
-  static late String sharedVolumeName;
-
   static late String sentryDsn;
+
+  // Function Configuration - getters for backward compatibility
+  static int get functionTimeoutSeconds => FunctionConfiguration.functionTimeoutSeconds;
+  static int get functionMaxMemoryMb => FunctionConfiguration.functionMaxMemoryMb;
+  static int get functionMaxConcurrentExecutions =>
+      FunctionConfiguration.functionMaxConcurrentExecutions;
+  static int get functionMaxRequestSizeMb =>
+      FunctionConfiguration.functionMaxRequestSizeMb;
+  static String? get functionDatabaseUrl => FunctionConfiguration.functionDatabaseUrl;
+  static int get functionDatabaseMaxConnections =>
+      FunctionConfiguration.functionDatabaseMaxConnections;
+  static int get functionDatabaseConnectionTimeoutMs =>
+      FunctionConfiguration.functionDatabaseConnectionTimeoutMs;
+
+  // S3 Configuration - getters for backward compatibility
+  static String get s3Endpoint => S3Configuration.s3Endpoint;
+  static String get s3BucketName => S3Configuration.s3BucketName;
+  static String get s3AccessKeyId => S3Configuration.s3AccessKeyId;
+  static String get s3SecretAccessKey => S3Configuration.s3SecretAccessKey;
+  static String get s3Region => S3Configuration.s3Region;
+  static String? get s3SessionToken => S3Configuration.s3SessionToken;
+  static String? get s3AccountId => S3Configuration.s3AccountId;
+  static String get s3ClientLibraryPath => S3Configuration.s3ClientLibraryPath;
+
+  // Docker Configuration - getters for backward compatibility
+  static String get dockerBaseImage => DockerConfiguration.dockerBaseImage;
+  static String get dockerRegistry => DockerConfiguration.dockerRegistry;
+  static String get sharedVolumeName => DockerConfiguration.sharedVolumeName;
 
   // Email Service Configuration - getters for backward compatibility
   static String get emailApiKey => EmailConfiguration.emailApiKey;
@@ -130,85 +100,15 @@ class Config {
       throw Exception('JWT_SECRET is not set');
     }
     // Function execution limits
-    functionTimeoutSeconds = int.parse(
-      env['FUNCTION_TIMEOUT_SECONDS'] ??
-          Platform.environment['FUNCTION_TIMEOUT_SECONDS'] ??
-          '5',
-    );
-
-    functionMaxMemoryMb = int.parse(
-      env['FUNCTION_MAX_MEMORY_MB'] ??
-          Platform.environment['FUNCTION_MAX_MEMORY_MB'] ??
-          '20',
-    );
-
-    functionMaxConcurrentExecutions = int.parse(
-      env['FUNCTION_MAX_CONCURRENT'] ??
-          Platform.environment['FUNCTION_MAX_CONCURRENT'] ??
-          '10',
-    );
-
-    functionMaxRequestSizeMb = int.parse(
-      env['FUNCTION_MAX_REQUEST_SIZE_MB'] ??
-          Platform.environment['FUNCTION_MAX_REQUEST_SIZE_MB'] ??
-          '5',
-    );
-
-    // Database access for functions
-    functionDatabaseUrl =
-        env['FUNCTION_DATABASE_URL'] ?? Platform.environment['FUNCTION_DATABASE_URL'];
-
-    functionDatabaseMaxConnections = int.parse(
-      env['FUNCTION_DB_MAX_CONNECTIONS'] ??
-          Platform.environment['FUNCTION_DB_MAX_CONNECTIONS'] ??
-          '5',
-    );
-
-    functionDatabaseConnectionTimeoutMs = int.parse(
-      env['FUNCTION_DB_TIMEOUT_MS'] ??
-          Platform.environment['FUNCTION_DB_TIMEOUT_MS'] ??
-          '5000',
-    );
+    // (Moved to FunctionConfiguration.load())
 
     sentryDsn = env['SENTRY_DSN'] ?? getValueFromEnv('SENTRY_DSN') ?? '';
 
-    // Load email configuration
+    // Load all configuration modules
+    await FunctionConfiguration.load(env);
+    await S3Configuration.load(env);
+    await DockerConfiguration.load(env, functionsDir);
     await EmailConfiguration.load(env);
-
-    // S3 Client Configuration
-    s3ClientLibraryPath = env['S3_CLIENT_LIBRARY_PATH'] ?? './s3_client_dart.dylib';
-
-    // S3 Configuration
-    s3Endpoint =
-        env['S3_ENDPOINT'] ??
-        Platform.environment['S3_ENDPOINT'] ??
-        'https://s3.amazonaws.com';
-    s3BucketName =
-        env['S3_BUCKET_NAME'] ??
-        Platform.environment['S3_BUCKET_NAME'] ??
-        'dart-cloud-functions';
-    s3AccessKeyId =
-        env['S3_ACCESS_KEY_ID'] ?? Platform.environment['S3_ACCESS_KEY_ID'] ?? '';
-    s3SecretAccessKey =
-        env['S3_SECRET_ACCESS_KEY'] ?? Platform.environment['S3_SECRET_ACCESS_KEY'] ?? '';
-    s3Region = env['S3_REGION'] ?? Platform.environment['S3_REGION'] ?? 'us-east-1';
-    s3SessionToken =
-        ''; //env['S3_SESSION_TOKEN'] ?? Platform.environment['S3_SESSION_TOKEN'];
-    s3AccountId = env['S3_ACCOUNT_ID'] ?? Platform.environment['S3_ACCOUNT_ID'];
-
-    // Docker Configuration
-    dockerBaseImage =
-        env['DOCKER_BASE_IMAGE'] ??
-        Platform.environment['DOCKER_BASE_IMAGE'] ??
-        'dart:stable';
-    dockerRegistry =
-        env['DOCKER_REGISTRY'] ??
-        Platform.environment['DOCKER_REGISTRY'] ??
-        'localhost:5000';
-    sharedVolumeName =
-        getValueFromEnv('SHARED_VOLUME_NAME') ??
-        env['SHARED_VOLUME_NAME'] ??
-        'functions_data';
 
     // Ensure functions directory exists
     final dir = Directory(functionsDir);
@@ -244,11 +144,9 @@ class Config {
   }
 
   static void loadFake() {
-    dockerRegistry = 'localhost:5000';
-    functionMaxMemoryMb = 128;
-    functionDatabaseUrl = 'postgres://dart_cloud:dart_cloud@postgres:5432/dart_cloud';
-    functionDatabaseMaxConnections = 5;
-    functionDatabaseConnectionTimeoutMs = 5000;
+    FunctionConfiguration.loadFake();
+    S3Configuration.loadFake();
+    DockerConfiguration.loadFake();
     EmailConfiguration.loadFake();
   }
 }
