@@ -2,6 +2,13 @@ import 'dart:convert';
 
 import 'package:collection/collection.dart';
 
+
+
+class KeyCommons {
+  static const String userUUID = 'userUUID';
+  static const String userId = 'userId';
+}
+
 enum DeploymentStatus { init, building, active, disabled, deleted }
 
 enum DeployStatus { active, disabled, archived }
